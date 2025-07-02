@@ -17,7 +17,7 @@ func main() {
 		return
 	}
 
-	if _, err := client.AuthenticateWithPassword(ctx, "users", "user@example.com", "1q2w3e4r"); err != nil {
+	if _, err := client.WithPassword(ctx, "users", "user@example.com", "1q2w3e4r"); err != nil {
 		fmt.Printf("Authentication failed: %v\n", err)
 		return
 	}

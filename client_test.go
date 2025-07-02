@@ -28,7 +28,7 @@ func TestAuthenticateAsAdmin(t *testing.T) {
 	}))
 	defer srv.Close()
 	c := NewClient(srv.URL)
-	res, err := c.AuthenticateAsAdmin(context.Background(), "a", "b")
+	res, err := c.WithAdminPassword(context.Background(), "a", "b")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -64,7 +64,7 @@ func TestAuthenticateWithPassword(t *testing.T) {
 	}))
 	defer srv.Close()
 	c := NewClient(srv.URL)
-	res, err := c.AuthenticateWithPassword(context.Background(), "users", "e", "p")
+	res, err := c.WithPassword(context.Background(), "users", "e", "p")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -84,7 +84,7 @@ func TestAuthenticateAsAdminBadCredentials(t *testing.T) {
 	}))
 	defer srv.Close()
 	c := NewClient(srv.URL)
-	_, err := c.AuthenticateAsAdmin(context.Background(), "a", "b")
+	_, err := c.WithAdminPassword(context.Background(), "a", "b")
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -106,7 +106,7 @@ func (errorRoundTripper) RoundTrip(*http.Request) (*http.Response, error) {
 func TestAuthenticateWithPasswordNetworkError(t *testing.T) {
 	c := NewClient("http://example.com")
 	c.HTTPClient = &http.Client{Transport: errorRoundTripper{}}
-	_, err := c.AuthenticateWithPassword(context.Background(), "users", "e", "p")
+	_, err := c.WithPassword(context.Background(), "users", "e", "p")
 	if err == nil {
 		t.Fatal("expected error")
 	}

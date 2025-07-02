@@ -37,7 +37,7 @@ func main() {
 		log.Fatalf("❌ Could not connect to PocketBase server: %v\n   Please ensure the server is running at http://127.0.0.1:8090", err)
 	}
 
-	if _, err := client.AuthenticateAsAdmin(ctx, "admin@example.com", "1q2w3e4r5t"); err != nil {
+	if _, err := client.WithAdminPassword(ctx, "admin@example.com", "1q2w3e4r5t"); err != nil {
 		log.Fatalf("❌ Admin authentication failed: %v", err)
 	}
 	fmt.Println("✅ Admin authentication successful!")

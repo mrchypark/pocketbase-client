@@ -224,16 +224,8 @@ func (c *Client) do(ctx context.Context, method, path string, body io.Reader, co
 	return nil
 }
 
-// AuthenticateAsAdmin authenticates as an admin and stores the authentication information.
-func (c *Client) AuthenticateAsAdmin(ctx context.Context, identity, password string) (*AuthResponse, error) {
-	c.ClearAuthStore()
-
-	return c.AuthenticateWithPassword(ctx, "_superusers", identity, password)
-
-}
-
-// AuthenticateWithPassword authenticates as a regular user and stores the authentication information.
-func (c *Client) AuthenticateWithPassword(ctx context.Context, collection, identity, password string) (*AuthResponse, error) {
+// WithPassword authenticates as a regular user and stores the authentication information.
+func (c *Client) WithPassword(ctx context.Context, collection, identity, password string) (*AuthResponse, error) {
 	c.ClearAuthStore()
 
 	reqBody := map[string]string{
@@ -250,6 +242,19 @@ func (c *Client) AuthenticateWithPassword(ctx context.Context, collection, ident
 	c.AuthStore.Set(authResponse.Token, authResponse.Record)
 
 	return &authResponse, nil
+}
+
+// WithAdminPassword authenticates as an admin and stores the authentication information.
+func (c *Client) WithAdminPassword(ctx context.Context, identity, password string) (*AuthResponse, error) {
+	c.ClearAuthStore()
+
+	return c.WithPassword(ctx, "_superusers", identity, password)
+}
+
+// WithToken authenticates as an admin and stores the authentication information.
+func (c *Client) WithToken(token string) {
+	c.ClearAuthStore()
+	c.AuthStore.Set(token, nil)
 }
 
 // HealthCheck checks the health status of the PocketBase server.

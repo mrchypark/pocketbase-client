@@ -18,7 +18,7 @@ func main() {
 		return
 	}
 
-	if _, err := client.AuthenticateAsAdmin(ctx, "admin@example.com", "1q2w3e4r5t"); err != nil {
+	if _, err := client.WithAdminPassword(ctx, "admin@example.com", "1q2w3e4r5t"); err != nil {
 		fmt.Printf("Authentication failed: %v\n", err)
 		return
 	}
