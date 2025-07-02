@@ -1,0 +1,249 @@
+# PocketBase Go Client
+
+[](https://www.google.com/search?q=https://pkg.go.dev/github.com/mrchypark/pocketbase-client)
+[](https://www.google.com/search?q=https://goreportcard.com/report/github.com/mrchypark/pocketbase-client)
+[](https://www.google.com/search?q=https://github.com/mrchypark/pocketbase-client/actions/workflows/go.yml)
+[](https://www.google.com/search?q=LICENSE)
+
+A robust, type-safe, and easy-to-use Go client for the [PocketBase API](https://pocketbase.io/). This library provides a clean interface for all major PocketBase features, including record management, authentication, real-time event subscriptions, and file handling.
+
+## ✨ Features
+
+  * **Full API Coverage**: Interact with all PocketBase endpoints, including Records, Collections, Admins, Users, Logs, and Settings.
+  * **Type-Safe**: Go structs for all PocketBase models (`Record`, `Admin`, `Collection`, etc.) with proper JSON tagging.
+  * **Fluent API**: A logically structured client that is easy to read and use.
+  * **Automatic Auth Handling**: The client automatically manages and injects authentication tokens for all relevant requests.
+  * **Real-time Subscriptions**: Subscribe to real-time events on your collections with a simple callback function.
+  * **File Management**: Easy-to-use methods for uploading, downloading, and managing files.
+  * **Batch Operations**: Execute multiple create, update, or delete operations in a single atomic request.
+  * **Context-Aware**: All network requests use `context.Context` for timeouts, deadlines, and cancellation.
+
+## 💾 Installation
+
+To add the library to your project, use `go get`:
+
+```bash
+go get github.com/mrchypark/pocketbase-client
+```
+
+## 🚀 Quick Start
+
+Here's a quick example to get you started. This snippet authenticates as an admin and fetches a list of records from the `posts` collection.
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "log"
+
+    pocketbase "github.com/mrchypark/pocketbase-client"
+)
+
+func main() {
+    client := pocketbase.NewClient("http://127.0.0.1:8090")
+
+    // Authenticate as an admin
+    _, err := client.AuthenticateAsAdmin(context.Background(), "admin@example.com", "password")
+    if err != nil {
+        log.Fatalf("Failed to authenticate: %v", err)
+    }
+    fmt.Println("Authenticated successfully!")
+
+    // Fetch a list of records
+    list, err := client.Records.GetList(context.Background(), "posts", &pocketbase.ListOptions{
+        Page:    1,
+        PerPage: 10,
+    })
+    if err != nil {
+        log.Fatalf("Failed to get record list: %v", err)
+    }
+
+    fmt.Printf("Retrieved %d records:\n", len(list.Items))
+    for _, record := range list.Items {
+        fmt.Printf("- ID: %s, Title: %v\n", record.ID, record.Data["title"])
+    }
+}
+```
+
+## 📚 Usage
+
+### Client Initialization
+
+Create a new client by providing the URL of your PocketBase instance.
+
+```go
+client := pocketbase.NewClient("http://127.0.0.1:8090")
+```
+
+You can also provide a custom `http.Client` for more advanced configurations, such as setting a timeout.
+
+```go
+httpClient := &http.Client{Timeout: 10 * time.Second}
+client := pocketbase.NewClient("http://127.0.0.1:8090", pocketbase.WithHTTPClient(httpClient))
+```
+
+### Authentication
+
+The client supports authentication for both admins and regular users. Once authenticated, the client will automatically handle token refreshes and include the auth token in subsequent requests.
+
+```go
+ctx := context.Background()
+
+// Authenticate as an admin
+adminAuth, err := client.AuthenticateAsAdmin(ctx, "admin@example.com", "password")
+if err != nil { /* ... */ }
+
+// Authenticate as a user from the 'users' collection
+userAuth, err := client.AuthenticateWithPassword(ctx, "users", "username_or_email", "password")
+if err != nil { /* ... */ }
+```
+
+### Record Operations (CRUD)
+
+Perform Create, Read, Update, and Delete operations on your records.
+
+```go
+ctx := context.Background()
+collection := "posts"
+
+// Create a new record
+newRecord, err := client.Records.Create(ctx, collection, map[string]any{
+    "title":   "Hello, World!",
+    "content": "This is a test post.",
+})
+if err != nil { /* ... */ }
+fmt.Printf("Created record: %s\n", newRecord.ID)
+
+// Get a single record
+record, err := client.Records.GetOne(ctx, collection, newRecord.ID, nil)
+if err != nil { /* ... */ }
+
+// Update a record
+updatedRecord, err := client.Records.Update(ctx, collection, newRecord.ID, map[string]any{
+    "title": "Hello, Updated World!",
+})
+if err != nil { /* ... */ }
+
+// Delete a record
+err = client.Records.Delete(ctx, collection, updatedRecord.ID)
+if err != nil { /* ... */ }
+fmt.Println("Record deleted successfully.")
+```
+
+### File Management
+
+Upload and download files associated with a record.
+
+#### File Upload
+
+```go
+// Assume 'post' is an existing record
+file, err := os.Open("image.png")
+if err != nil { /* ... */ }
+defer file.Close()
+
+// Upload the file to the 'image' field of the record
+recordWithFile, err := client.Files.Upload(ctx, "posts", post.ID, "image", "image.png", file)
+if err != nil { /* ... */ }
+fmt.Println("File uploaded successfully.")
+```
+
+#### File Download
+
+The `Download` method returns an `io.ReadCloser` which you must close.
+
+```go
+// Download a file (or a thumbnail version of it)
+rc, err := client.Files.Download(ctx, "posts", record.ID, "image.png", &pocketbase.FileDownloadOptions{
+    Thumb: "100x100", // Optional: request a thumbnail
+})
+if err != nil { /* ... */ }
+defer rc.Close()
+
+// Read the file content
+fileData, err := io.ReadAll(rc)
+if err != nil { /* ... */ }
+fmt.Printf("Downloaded %d bytes.\n", len(fileData))
+```
+
+### Real-time Subscriptions
+
+Subscribe to create, update, and delete events on your collections.
+
+```go
+// Use a context to manage the subscription lifecycle
+ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+defer stop()
+
+unsubscribe, err := client.Realtime.Subscribe(ctx, []string{"posts"}, func(e *pocketbase.RealtimeEvent, err error) {
+    if err != nil {
+        log.Println("Subscription error:", err)
+        return
+    }
+
+    // Handle the event
+    fmt.Printf("Received event: Action=%s, RecordID=%s\n", e.Action, e.Record.ID)
+})
+if err != nil {
+    log.Fatal(err)
+}
+defer unsubscribe() // Ensure you unsubscribe when done
+
+fmt.Println("Subscribed to 'posts'. Press Ctrl+C to exit.")
+<-ctx.Done() // Wait for interrupt signal
+
+fmt.Println("Shutting down...")
+```
+
+### Batch Operations
+
+Combine multiple operations into a single HTTP request for better performance.
+
+```go
+// 1. Create requests for batch execution
+createReq, _ := client.Records.NewCreateRequest("posts", map[string]any{"title": "From Batch"})
+updateReq, _ := client.Records.NewUpdateRequest("posts", "RECORD_ID_TO_UPDATE", map[string]any{"title": "Updated by Batch"})
+deleteReq, _ := client.Records.NewDeleteRequest("posts", "RECORD_ID_TO_DELETE")
+
+// 2. Execute the batch
+requests := []*pocketbase.BatchRequest{createReq, updateReq, deleteReq}
+results, err := client.Batch.Execute(ctx, requests)
+if err != nil {
+    log.Fatalf("Batch execution failed: %v", err)
+}
+
+// 3. Process the results
+for i, result := range results {
+    fmt.Printf("Result for request %d: StatusCode=%d\n", i, result.StatusCode)
+    if result.Error != "" {
+        fmt.Printf("  Error: %s\n", result.Error)
+        if result.ParsedError != nil {
+            fmt.Printf("  Parsed Error Data: %v\n", result.ParsedError.Data)
+        }
+    } else {
+        fmt.Printf("  Data: %v\n", result.Data)
+    }
+}
+```
+
+## 📖 API Documentation
+
+For a complete list of available methods and types, please see the [Go package documentation](https://www.google.com/search?q=https://pkg.go.dev/github.com/mrchypark/pocketbase-client).
+
+## 🤝 Contributing
+
+Contributions are welcome\! If you find a bug or have a suggestion for improvement, please open an issue or submit a pull request.
+
+1.  **Fork the repository**
+2.  **Create a new branch**: `git checkout -b my-feature-branch`
+3.  **Make your changes**
+4.  **Run tests**: `go test ./...`
+5.  **Commit your changes**: `git commit -m "feat: Add some feature"`
+6.  **Push to the branch**: `git push origin my-feature-branch`
+7.  **Open a pull request**
+
+## 📜 License
+
+This project is licensed under the **MIT License**. See the [LICENSE](https://www.google.com/search?q=LICENSE) file for details.
