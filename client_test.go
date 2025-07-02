@@ -17,7 +17,7 @@ import (
 func TestAuthenticateAsAdmin(t *testing.T) {
 	token := "abc"
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/api/admins/auth-with-password" {
+		if r.URL.Path != "/api/collections/_superusers/auth-with-password" {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
 		_ = json.NewEncoder(w).Encode(AuthResponse{

@@ -26,7 +26,7 @@ func main() {
 		// event.Action 대신 event.Name 을 사용해야 할 수도 있습니다. (라이브러리 구조 확인 필요)
 		log.Printf("Received event: Action=%s, RecordID=%s, Message=%v",
 			event.Action, // realtime.go를 보면 Name 필드는 없지만, RealtimeEvent 구조체에 따라 Action 또는 Name을 사용
-			event.Record,
+			event.Record.ID,
 			event.Record.Data["message"],
 		)
 	}

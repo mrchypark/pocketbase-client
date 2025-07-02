@@ -30,7 +30,6 @@ type Client struct {
 	AuthStore   *AuthStore           // Authentication state manager
 	Collections CollectionServiceAPI // Service for managing collections
 	Records     RecordServiceAPI     // Service for record CRUD operations
-	Files       FileServiceAPI       // Service for file uploads and related operations
 	Realtime    RealtimeServiceAPI   // Service for real-time subscriptions
 	Admins      AdminServiceAPI      // Service for managing administrators
 	Users       UserServiceAPI       // Service for general user-related operations
@@ -76,7 +75,6 @@ func NewClient(baseURL string, opts ...ClientOption) *Client {
 	c.HTTPClient.Transport = &authInjector{client: c, next: transport}
 	c.Collections = &CollectionService{Client: c}
 	c.Records = &RecordService{Client: c}
-	c.Files = &FileService{Client: c}
 	c.Realtime = &RealtimeService{Client: c}
 	c.Admins = &AdminService{Client: c}
 	c.Users = &UserService{Client: c}
