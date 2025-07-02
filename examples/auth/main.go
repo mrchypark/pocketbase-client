@@ -23,33 +23,17 @@ func main() {
 		return
 	}
 
-	rec, err := client.Records.Create(ctx, "posts", map[string]any{"title": "hello"})
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println("created", rec.ID)
+	t, _ := client.AuthStore.Token()
+	fmt.Println("token", t)
 
-	read, err := client.Records.GetOne(ctx, "posts", rec.ID, nil)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println("read", read.ID)
+	client.ClearAuthStore()
 
-	l, err := client.Records.GetList(ctx, "posts", &pocketbase.ListOptions{})
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println("read", l.TotalItems)
+	ct, _ := client.AuthStore.Token()
+	fmt.Println("token", ct)
 
-	rec, err = client.Records.Update(ctx, "posts", rec.ID, map[string]any{"title": "updated"})
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println("updated", rec.ID)
+	client.WithToken(t)
 
-	if err := client.Records.Delete(ctx, "posts", rec.ID); err != nil {
-		panic(err)
-	}
-	fmt.Println("deleted", rec.ID)
+	wt, _ := client.AuthStore.Token()
+	fmt.Println("token", wt)
 
 }
