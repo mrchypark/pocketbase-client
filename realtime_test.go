@@ -11,6 +11,7 @@ import (
 	"time"
 )
 
+// TestRealtimeServiceSubscribe tests the Subscribe method of RealtimeService.
 func TestRealtimeServiceSubscribe(t *testing.T) {
 	var mu sync.Mutex
 	var postBody []byte

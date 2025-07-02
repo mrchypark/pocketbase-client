@@ -9,6 +9,7 @@ import (
 	"github.com/goccy/go-json"
 )
 
+// TestClientHealthCheck tests the HealthCheck method of the Client.
 func TestClientHealthCheck(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/api/health" {

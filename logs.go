@@ -47,6 +47,7 @@ func (s *LogService) GetRequest(ctx context.Context, requestID string) (map[stri
 }
 
 // LogStatItem represents the number of requests within a specific time period.
+// LogStatItem represents the number of requests within a specific time period.
 type LogStatItem struct {
 	Time  string `json:"time"`
 	Count int    `json:"count"`

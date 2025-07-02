@@ -13,6 +13,9 @@ import (
 // Do sends req using client and returns the response body.
 // Responses with status code >= 400 are returned as errors including the body
 // text to make debugging easier.
+// Do sends req using client and returns the response body.
+// Responses with status code >= 400 are returned as errors including the body
+// text to make debugging easier.
 func Do(client *http.Client, req *http.Request) ([]byte, error) {
 	resp, err := client.Do(req)
 	if err != nil {
@@ -29,6 +32,9 @@ func Do(client *http.Client, req *http.Request) ([]byte, error) {
 	return data, nil
 }
 
+// JSONRequest creates a new http.Request with the given method and URL.
+// When body is non-nil it is marshaled to JSON and the Content-Type header
+// is set accordingly.
 // JSONRequest creates a new http.Request with the given method and URL.
 // When body is non-nil it is marshaled to JSON and the Content-Type header
 // is set accordingly.
@@ -51,6 +57,8 @@ func JSONRequest(method, url string, body any) (*http.Request, error) {
 	return req, nil
 }
 
+// RawRequest creates a new http.Request using the provided reader as the body.
+// The Content-Type header is set when contentType is not empty and body is not nil.
 // RawRequest creates a new http.Request using the provided reader as the body.
 // The Content-Type header is set when contentType is not empty and body is not nil.
 func RawRequest(method, url string, body io.Reader, contentType string) (*http.Request, error) {

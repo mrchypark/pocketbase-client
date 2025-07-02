@@ -21,6 +21,7 @@ type AuthStore struct {
 	tokenExp      time.Time
 }
 
+// newAuthStore creates a new AuthStore instance.
 func newAuthStore(c *Client) *AuthStore {
 	return &AuthStore{client: c}
 }

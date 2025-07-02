@@ -9,7 +9,7 @@ type APIError struct {
 	Data    map[string]interface{} `json:"data"`
 }
 
-// Error는 error 인터페이스를 구현합니다.
+// Error implements the error interface.
 func (e *APIError) Error() string {
 	return fmt.Sprintf("pocketbase: API error (code=%d): %s", e.Code, e.Message)
 }

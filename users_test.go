@@ -9,6 +9,7 @@ import (
 	"github.com/goccy/go-json"
 )
 
+// TestUserServiceRequestPasswordReset tests the RequestPasswordReset method of UserService.
 func TestUserServiceRequestPasswordReset(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {

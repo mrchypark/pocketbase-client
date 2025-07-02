@@ -10,6 +10,7 @@ import (
 	"github.com/goccy/go-json"
 )
 
+// TestCollectionServiceGetList tests the GetList method of CollectionService.
 func TestCollectionServiceGetList(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/api/collections" {

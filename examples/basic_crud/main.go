@@ -7,6 +7,7 @@ import (
 	pocketbase "github.com/mrchypark/pocketbase-client"
 )
 
+// main demonstrates basic CRUD operations using the PocketBase client.
 func main() {
 	ctx := context.Background()
 	client := pocketbase.NewClient("http://127.0.0.1:8090")

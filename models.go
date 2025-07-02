@@ -82,13 +82,13 @@ type RealtimeEvent struct {
 
 // UnmarshalJSON is a custom unmarshaler for the Record struct.
 func (r *Record) UnmarshalJSON(data []byte) error {
-	// 1. 맵으로 한 번만 언마샬링합니다.
+	// 1. Unmarshal into a map once.
 	var allData map[string]interface{}
 	if err := json.Unmarshal(data, &allData); err != nil {
 		return err
 	}
 
-	// 2. 맵에서 알려진 키를 찾아 구조체 필드에 할당합니다.
+	// 2. Assign known keys from the map to struct fields.
 	if v, ok := allData["id"].(string); ok {
 		r.ID = v
 	}
@@ -99,7 +99,7 @@ func (r *Record) UnmarshalJSON(data []byte) error {
 		r.CollectionName = v
 	}
 
-	// 2-1. 시간 필드는 파싱이 필요합니다.
+	// 2-1. Parse time fields.
 	if v, ok := allData["created"].(string); ok {
 		if t, err := time.Parse(time.RFC3339Nano, v); err == nil {
 			r.Created = t
@@ -110,7 +110,7 @@ func (r *Record) UnmarshalJSON(data []byte) error {
 			r.Updated = t
 		}
 	}
-	// expand 필드 처리
+	// Handle expand field.
 	if exp, ok := allData["expand"]; ok {
 		b, err := json.Marshal(exp)
 		if err == nil {
@@ -118,7 +118,7 @@ func (r *Record) UnmarshalJSON(data []byte) error {
 		}
 	}
 
-	// 3. 사용된 키를 맵에서 제거합니다.
+	// 3. Remove used keys from the map.
 	delete(allData, "id")
 	delete(allData, "created")
 	delete(allData, "updated")
@@ -126,7 +126,7 @@ func (r *Record) UnmarshalJSON(data []byte) error {
 	delete(allData, "collectionName")
 	delete(allData, "expand")
 
-	// 4. 남은 맵을 Data 필드에 할당합니다.
+	// 4. Assign the remaining map to the Data field.
 	r.Data = allData
 
 	return nil

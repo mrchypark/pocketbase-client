@@ -8,6 +8,7 @@ import (
 )
 
 // RecordServiceAPI defines the API operations related to records.
+// RecordServiceAPI defines the API operations related to records.
 type RecordServiceAPI interface {
 	GetList(ctx context.Context, collection string, opts *ListOptions) (*ListResult, error)
 	GetOne(ctx context.Context, collection, recordID string, opts *GetOneOptions) (*Record, error)

@@ -7,6 +7,7 @@ import (
 )
 
 // SettingServiceAPI defines operations for viewing and modifying settings.
+// SettingServiceAPI defines operations for viewing and modifying settings.
 type SettingServiceAPI interface {
 	GetAll(ctx context.Context) (map[string]interface{}, error)
 	Update(ctx context.Context, body interface{}) (map[string]interface{}, error)

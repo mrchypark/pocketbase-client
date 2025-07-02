@@ -8,6 +8,7 @@ import (
 )
 
 // UserServiceAPI defines the API operations related to regular user accounts.
+// UserServiceAPI defines the API operations related to regular user accounts.
 type UserServiceAPI interface {
 	RequestPasswordReset(ctx context.Context, collection, email string) error
 	ConfirmPasswordReset(ctx context.Context, collection, token, newPassword, newPasswordConfirm string) error

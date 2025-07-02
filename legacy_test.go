@@ -9,6 +9,7 @@ import (
 	"github.com/goccy/go-json"
 )
 
+// TestLegacyAdminAuthRefresh tests the AdminAuthRefresh method of LegacyService.
 func TestLegacyAdminAuthRefresh(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/api/admins/auth-refresh" {
@@ -31,6 +32,7 @@ func TestLegacyAdminAuthRefresh(t *testing.T) {
 	}
 }
 
+// TestLegacyRecordAuthRefresh tests the RecordAuthRefresh method of LegacyService.
 func TestLegacyRecordAuthRefresh(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/api/collections/posts/auth-refresh" {
@@ -51,6 +53,7 @@ func TestLegacyRecordAuthRefresh(t *testing.T) {
 	}
 }
 
+// TestLegacyRequestEmailChange tests the RequestEmailChange method of LegacyService.
 func TestLegacyRequestEmailChange(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
@@ -77,6 +80,7 @@ func TestLegacyRequestEmailChange(t *testing.T) {
 	}
 }
 
+// TestLegacyConfirmEmailChange tests the ConfirmEmailChange method of LegacyService.
 func TestLegacyConfirmEmailChange(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/api/collections/users/confirm-email-change" {
@@ -93,6 +97,7 @@ func TestLegacyConfirmEmailChange(t *testing.T) {
 	}
 }
 
+// TestLegacyListExternalAuths tests the ListExternalAuths method of LegacyService.
 func TestLegacyListExternalAuths(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/api/collections/users/records/1/external-auths" {

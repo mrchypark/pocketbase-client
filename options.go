@@ -6,6 +6,7 @@ import (
 )
 
 // ClientOption configures a Client instance.
+// ClientOption configures a Client instance.
 type ClientOption func(*Client)
 
 // WithHTTPClient sets the HTTP client used for requests.

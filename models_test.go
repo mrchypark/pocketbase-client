@@ -6,8 +6,8 @@ import (
 	"github.com/goccy/go-json"
 )
 
-// 테스트에 사용할 샘플 JSON 데이터입니다.
-// 실제 데이터처럼 기본 필드와 추가 데이터 필드를 포함합니다.
+// sampleRecordJSON is sample JSON data for testing.
+// It includes basic fields and additional data fields, similar to real data.
 var sampleRecordJSON = []byte(`{
     "id": "RECORD_ID",
     "collectionId": "COLLECTION_ID",
@@ -21,8 +21,8 @@ var sampleRecordJSON = []byte(`{
     "tags": ["go", "pocketbase", "benchmark"]
 }`)
 
-// BenchmarkUnmarshalCurrent는 현재 구현된 UnmarshalJSON의 성능을 측정합니다.
-// (JSON -> Struct, JSON -> Map 두 번의 언마샬링 수행)
+// BenchmarkUnmarshalCurrent measures the performance of the current UnmarshalJSON implementation.
+// (Performs two unmarshaling operations: JSON -> Struct, then JSON -> Map)
 func BenchmarkUnmarshalCurrent(b *testing.B) {
 	b.ReportAllocs() // 메모리 할당량 보고
 	for i := 0; i < b.N; i++ {

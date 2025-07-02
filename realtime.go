@@ -47,9 +47,10 @@ func (s *RealtimeService) Subscribe(ctx context.Context, topics []string, callba
 		return nil, fmt.Errorf("pocketbase: failed to create sse request: %w", err)
 	}
 
-	// sse.Client는 http.Client의 포인터를 받으므로, 복사하여 새로운 인스턴스를 만듭니다.
+	// Create a new HTTP client instance by copying the existing one,
+	// as sse.Client expects a pointer to http.Client.
 	sseHTTPClient := *s.Client.HTTPClient
-	// 스트리밍 연결이 타임아웃으로 끊기지 않도록 설정합니다.
+	// Set the timeout to 0 to prevent the streaming connection from timing out.
 	sseHTTPClient.Timeout = 0
 
 	sseClient := sse.Client{HTTPClient: &sseHTTPClient}
@@ -58,7 +59,7 @@ func (s *RealtimeService) Subscribe(ctx context.Context, topics []string, callba
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	// 이벤트 핸들러 등록
+	// Register event handler
 	conn.SubscribeToAll(func(event sse.Event) {
 		if event.Type == "PB_CONNECT" {
 			var connectEvent struct {
@@ -76,7 +77,7 @@ func (s *RealtimeService) Subscribe(ctx context.Context, topics []string, callba
 				return
 			}
 
-			// 이벤트 루프를 막지 않도록 별도 고루틴에서 구독 요청 전송
+			// Send subscription request in a separate goroutine to avoid blocking the event loop.
 			go func() {
 
 				if err := s.sendSubscriptionRequest(context.Background(), path, connectEvent.ClientID, topics); err != nil {
@@ -90,7 +91,7 @@ func (s *RealtimeService) Subscribe(ctx context.Context, topics []string, callba
 			return
 		}
 
-		if len(event.Data) == 0 { // Keep-alive 등 빈 데이터 무시
+		if len(event.Data) == 0 { // Ignore empty data, e.g., keep-alive messages
 			return
 		}
 
@@ -102,10 +103,10 @@ func (s *RealtimeService) Subscribe(ctx context.Context, topics []string, callba
 		callback(&rtEvent, nil)
 	})
 
-	// 별도 고루틴에서 연결 시작
+	// Start connection in a separate goroutine.
 	go func() {
 		defer wg.Done()
-		// Connect()는 연결이 끊길 때까지 블로킹됩니다.
+		// Connect() blocks until the connection is closed.
 		if err := conn.Connect(); err != nil && !errors.Is(err, context.Canceled) {
 			callback(nil, fmt.Errorf("pocketbase: sse subscription failed: %w", err))
 		}
@@ -119,7 +120,7 @@ func (s *RealtimeService) Subscribe(ctx context.Context, topics []string, callba
 	return unsubscribe, nil
 }
 
-// sendSubscriptionRequest는 독립된 http.Client를 사용하여 구독 정보를 전송합니다.
+// sendSubscriptionRequest sends subscription information using an independent http.Client.
 func (s *RealtimeService) sendSubscriptionRequest(ctx context.Context, path, clientID string, topics []string) error {
 	bodyMap := map[string]interface{}{
 		"clientId":      clientID,

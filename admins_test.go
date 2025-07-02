@@ -9,6 +9,7 @@ import (
 	"github.com/goccy/go-json"
 )
 
+// TestAdminServiceGetList tests the GetList method of AdminService.
 func TestAdminServiceGetList(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/api/admins" {
@@ -27,6 +28,7 @@ func TestAdminServiceGetList(t *testing.T) {
 	}
 }
 
+// TestAdminServiceGetOne tests the GetOne method of AdminService.
 func TestAdminServiceGetOne(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/api/admins/1" {

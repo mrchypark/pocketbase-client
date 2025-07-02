@@ -36,7 +36,8 @@ func (s *LegacyService) AdminAuthRefresh(ctx context.Context) (*AuthResponse, er
 	return &res, nil
 }
 
-// AuthenticateAsAdmin22 V22 pocketbase authenticates as an admin and stores the authentication information.
+// AuthenticateAsAdmin authenticates as an admin and stores the authentication information.
+// This method is for PocketBase v0.22 and older.
 func (s *LegacyService) AuthenticateAsAdmin(ctx context.Context, identity, password string) (*AuthResponse, error) {
 	s.Client.ClearAuthStore()
 

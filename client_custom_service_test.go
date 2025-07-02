@@ -41,6 +41,7 @@ func (m *mockRecordService) NewUpsertRequest(collection string, body map[string]
 	return &BatchRequest{}, nil
 }
 
+// TestClientAllowsCustomRecordService tests that a custom RecordService can be set on the client.
 func TestClientAllowsCustomRecordService(t *testing.T) {
 	c := NewClient("http://example.com")
 	mock := &mockRecordService{}

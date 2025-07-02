@@ -9,6 +9,7 @@ import (
 	"github.com/goccy/go-json"
 )
 
+// TestSettingServiceGetAll tests the GetAll method of SettingService.
 func TestSettingServiceGetAll(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/api/settings" {

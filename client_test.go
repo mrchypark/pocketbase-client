@@ -14,6 +14,7 @@ import (
 	"github.com/goccy/go-json"
 )
 
+// TestAuthenticateAsAdmin tests the AuthenticateAsAdmin method.
 func TestAuthenticateAsAdmin(t *testing.T) {
 	token := "abc"
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -43,6 +44,7 @@ func TestAuthenticateAsAdmin(t *testing.T) {
 	}
 }
 
+// TestAuthenticateWithPassword tests the AuthenticateWithPassword method.
 func TestAuthenticateWithPassword(t *testing.T) {
 	token := "user"
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -155,7 +157,7 @@ func TestSendWithWriter(t *testing.T) {
 	}
 }
 
-// flushWriter는 Flush가 호출될 때마다 카운트하는 io.Writer입니다.
+// flushWriter is an io.Writer that counts each time Flush is called.
 type flushWriter struct {
 	bytes.Buffer
 	flushCount int

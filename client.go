@@ -23,6 +23,11 @@ import (
 // BaseURL represents the root URL of the PocketBase server.
 // HTTPClient is used for all requests and can be customized as needed.
 // Service fields like Records provide specific endpoint operations.
+// Client is the primary object for interacting with the PocketBase API.
+//
+// BaseURL represents the root URL of the PocketBase server.
+// HTTPClient is used for all requests and can be customized as needed.
+// Service fields like Records provide specific endpoint operations.
 type Client struct {
 	BaseURL    string       // Base URL of the PocketBase server
 	HTTPClient *http.Client // HTTP client used for requests

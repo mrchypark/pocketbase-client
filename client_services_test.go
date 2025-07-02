@@ -2,6 +2,7 @@ package pocketbase
 
 import "testing"
 
+// TestNewClientServices tests that all client services are initialized.
 func TestNewClientServices(t *testing.T) {
 	c := NewClient("http://example.com")
 	if c.Collections == nil {

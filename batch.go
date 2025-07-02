@@ -9,6 +9,7 @@ import (
 )
 
 // BatchServiceAPI defines the functionality for executing batch operations.
+// BatchServiceAPI defines the functionality for executing batch operations.
 type BatchServiceAPI interface {
 	Execute(ctx context.Context, requests []*BatchRequest) ([]*BatchResponse, error)
 }
@@ -20,6 +21,7 @@ type BatchService struct {
 
 var _ BatchServiceAPI = (*BatchService)(nil)
 
+// BatchRequest represents a single batch operation.
 // BatchRequest represents a single batch operation.
 type BatchRequest struct {
 	Method string         `json:"method"`

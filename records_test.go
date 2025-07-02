@@ -10,6 +10,7 @@ import (
 	"github.com/goccy/go-json"
 )
 
+// TestRecordServiceGetList tests the GetList method of RecordService.
 func TestRecordServiceGetList(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/api/collections/posts/records" {
@@ -32,6 +33,7 @@ func TestRecordServiceGetList(t *testing.T) {
 	}
 }
 
+// TestRecordServiceGetListFieldsSkipTotal tests the GetList method with fields and skipTotal options.
 func TestRecordServiceGetListFieldsSkipTotal(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Query().Get("fields") != "id,title" {
@@ -51,6 +53,7 @@ func TestRecordServiceGetListFieldsSkipTotal(t *testing.T) {
 	}
 }
 
+// TestRecordServiceGetOne tests the GetOne method of RecordService.
 func TestRecordServiceGetOne(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/api/collections/posts/records/1" {
@@ -70,6 +73,7 @@ func TestRecordServiceGetOne(t *testing.T) {
 	}
 }
 
+// TestRecordServiceGetOneFields tests the GetOne method with fields option.
 func TestRecordServiceGetOneFields(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Query().Get("fields") != "id,title" {
@@ -86,6 +90,7 @@ func TestRecordServiceGetOneFields(t *testing.T) {
 	}
 }
 
+// TestRecordServiceCreate tests the Create method of RecordService.
 func TestRecordServiceCreate(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
@@ -108,6 +113,7 @@ func TestRecordServiceCreate(t *testing.T) {
 	}
 }
 
+// TestRecordServiceCreateWithQuery tests the CreateWithOptions method with query parameters.
 func TestRecordServiceCreateWithQuery(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Query().Get("expand") != "rel" {
@@ -127,6 +133,7 @@ func TestRecordServiceCreateWithQuery(t *testing.T) {
 	}
 }
 
+// TestRecordServiceUpdate tests the Update method of RecordService.
 func TestRecordServiceUpdate(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPatch {

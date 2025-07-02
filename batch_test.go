@@ -11,6 +11,7 @@ import (
 	"github.com/mrchypark/pocketbase-client"
 )
 
+// TestBatchExecuteSuccess tests the successful execution of batch requests.
 func TestBatchExecuteSuccess(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
@@ -59,6 +60,7 @@ func TestBatchExecuteSuccess(t *testing.T) {
 	}
 }
 
+// TestBatchExecutePartialFailure tests batch execution with a partial failure.
 func TestBatchExecutePartialFailure(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		responses := []*pocketbase.BatchResponse{
@@ -98,6 +100,7 @@ func TestBatchExecutePartialFailure(t *testing.T) {
 	}
 }
 
+// TestBatchExecuteFailure tests batch execution with a complete failure.
 func TestBatchExecuteFailure(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
@@ -112,6 +115,7 @@ func TestBatchExecuteFailure(t *testing.T) {
 	}
 }
 
+// TestBatchExecuteParsedError tests batch execution where a parsed error is returned.
 func TestBatchExecuteParsedError(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		responses := []*pocketbase.BatchResponse{
@@ -144,6 +148,7 @@ func TestBatchExecuteParsedError(t *testing.T) {
 	}
 }
 
+// TestBatchExecuteForbidden tests batch execution when forbidden.
 func TestBatchExecuteForbidden(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusForbidden)
@@ -168,6 +173,7 @@ func TestBatchExecuteForbidden(t *testing.T) {
 	}
 }
 
+// TestNewUpsertRequestMissingID tests the NewUpsertRequest with a missing ID.
 func TestNewUpsertRequestMissingID(t *testing.T) {
 	c := pocketbase.NewClient("http://example.com")
 	if _, err := c.Records.NewUpsertRequest("posts", map[string]any{"title": "a"}); err == nil {

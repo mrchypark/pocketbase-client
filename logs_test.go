@@ -9,6 +9,7 @@ import (
 	"github.com/goccy/go-json"
 )
 
+// TestLogServiceGetRequestsList tests the GetRequestsList method of LogService.
 func TestLogServiceGetRequestsList(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/api/logs/requests" {
