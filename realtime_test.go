@@ -28,10 +28,10 @@ func TestRealtimeServiceSubscribe(t *testing.T) {
 				t.Fatal("no flusher")
 			}
 			_, _ = io.WriteString(w, "event: PB_CONNECT\ndata: {\"clientId\":\"test-client-id\"}\n\n")
-            flusher.Flush()
-            <-postReceived
-            _, _ = io.WriteString(w, "data: {\"action\":\"update\"}\n\n")
-            flusher.Flush()
+			flusher.Flush()
+			<-postReceived
+			_, _ = io.WriteString(w, "data: {\"action\":\"update\"}\n\n")
+			flusher.Flush()
 		case http.MethodPost:
 			if r.URL.Path != "/api/realtime" {
 				t.Fatalf("unexpected path: %s", r.URL.Path)

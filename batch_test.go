@@ -64,7 +64,7 @@ func TestBatchExecutePartialFailure(t *testing.T) {
 		responses := []*pocketbase.BatchResponse{
 			{
 				Status: http.StatusBadRequest,
-				Body: json.RawMessage(`{"code":400,"message":"invalid","data":{"title":"required"}}`),
+				Body:   json.RawMessage(`{"code":400,"message":"invalid","data":{"title":"required"}}`),
 				ParsedError: &pocketbase.APIError{
 					Code:    400,
 					Message: "invalid",
@@ -117,7 +117,7 @@ func TestBatchExecuteParsedError(t *testing.T) {
 		responses := []*pocketbase.BatchResponse{
 			{
 				Status: http.StatusBadRequest,
-				Body: json.RawMessage(`{"code":400,"message":"validation failed","data":{"title":"required"}}`),
+				Body:   json.RawMessage(`{"code":400,"message":"validation failed","data":{"title":"required"}}`),
 				ParsedError: &pocketbase.APIError{
 					Code:    400,
 					Message: "validation failed",
@@ -147,7 +147,7 @@ func TestBatchExecuteParsedError(t *testing.T) {
 func TestBatchExecuteForbidden(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusForbidden)
-		_ = json.NewEncoder(w).Encode(pocketbase.APIError{Code: 403, Message: "Batch requests are not allowed." })
+		_ = json.NewEncoder(w).Encode(pocketbase.APIError{Code: 403, Message: "Batch requests are not allowed."})
 	}))
 	defer srv.Close()
 
@@ -156,7 +156,7 @@ func TestBatchExecuteForbidden(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error")
 	}
-		apiErr := &pocketbase.APIError{}
+	apiErr := &pocketbase.APIError{}
 	if !errors.As(err, &apiErr) {
 		t.Fatalf("expected APIError, got %T", err)
 	}

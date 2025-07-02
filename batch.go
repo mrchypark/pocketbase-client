@@ -29,8 +29,8 @@ type BatchRequest struct {
 
 // BatchResponse contains the result of an individual batch operation.
 type BatchResponse struct {
-	Status int    `json:"status"`
-	Body   any    `json:"body"`
+	Status int `json:"status"`
+	Body   any `json:"body"`
 
 	// ParsedError contains structured error information from a failed response.
 	ParsedError *APIError `json:"-"`
