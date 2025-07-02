@@ -79,7 +79,7 @@ func (s *RealtimeService) Subscribe(ctx context.Context, topics []string, callba
 			// 이벤트 루프를 막지 않도록 별도 고루틴에서 구독 요청 전송
 			go func() {
 
-				if err := s.sendSubscriptionRequest(subCtx, path, connectEvent.ClientID, topics); err != nil {
+				if err := s.sendSubscriptionRequest(context.Background(), path, connectEvent.ClientID, topics); err != nil {
 
 					callback(nil, fmt.Errorf("pocketbase: failed to send subscription request: %w", err))
 					cancel()
