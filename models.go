@@ -1,16 +1,15 @@
 package pocketbase
 
 import (
-	"time"
-
 	"github.com/goccy/go-json"
+	"github.com/pocketbase/pocketbase/tools/types"
 )
 
 // BaseModel provides common fields for all PocketBase models.
 type BaseModel struct {
-	ID      string    `json:"id"`
-	Created time.Time `json:"created"`
-	Updated time.Time `json:"updated"`
+	ID      string         `json:"id"`
+	Created types.DateTime `json:"created"`
+	Updated types.DateTime `json:"updated"`
 }
 
 // Admin represents a PocketBase administrator.
@@ -101,13 +100,13 @@ func (r *Record) UnmarshalJSON(data []byte) error {
 
 	// 2-1. Parse time fields.
 	if v, ok := allData["created"].(string); ok {
-		if t, err := time.Parse(time.RFC3339Nano, v); err == nil {
-			r.Created = t
+		if d, err := types.ParseDateTime(v); err == nil {
+			r.Created = d
 		}
 	}
 	if v, ok := allData["updated"].(string); ok {
-		if t, err := time.Parse(time.RFC3339Nano, v); err == nil {
-			r.Updated = t
+		if d, err := types.ParseDateTime(v); err == nil {
+			r.Updated = d
 		}
 	}
 	// Handle expand field.
