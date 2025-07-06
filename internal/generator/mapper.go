@@ -5,44 +5,61 @@ import (
 	"unicode"
 )
 
-// MapPbTypeToGoType는 PocketBase 필드 타입을 Go 타입으로 매핑합니다.
-func MapPbTypeToGoType(field FieldSchema) string {
+// MapPbTypeToGoType maps PocketBase field types to Go types.
+// It now takes the omitEmpty flag as an argument to determine if a pointer type should be used.
+func MapPbTypeToGoType(field FieldSchema, omitEmpty bool) (string, string) {
+	var goType string
+	var comment string
+
 	switch field.Type {
 	case "text", "email", "url", "editor":
-		return "string"
+		goType = "string"
 	case "number":
-		return "float64"
+		goType = "float64"
 	case "bool":
-		return "bool"
+		goType = "bool"
 	case "date", "authdate":
-		// 'autodate'는 PocketBase 구버전 스키마일 수 있으나, 최신 버전은 'date'를 사용하며
-		// 생성/수정 시간은 레코드의 최상위 필드에 있습니다.
-		return "types.DateTime"
+		goType = "types.DateTime"
 	case "json":
-		return "json.RawMessage"
-
+		goType = "json.RawMessage"
 	case "relation", "file":
+		// If maxSelect option is not present or not equal to 1, treat as multiple selection.
 		if field.Options == nil || field.Options.MaxSelect == nil || *field.Options.MaxSelect != 1 {
-			return "[]string"
+			goType = "[]string"
+			comment = "// Multiple relations/files" // Translated
+		} else {
+			goType = "string"
+			comment = "// Single relation/file" // Translated
 		}
-		return "string"
-
 	case "select":
 		if field.Options != nil && field.Options.MaxSelect != nil && *field.Options.MaxSelect != 1 {
-			return "[]string"
+			goType = "[]string"
+		} else {
+			goType = "string"
 		}
-		return "string"
-
 	default:
-		return "interface{}"
+		goType = "interface{}"
+		comment = "// Unknown PocketBase type" // Translated
 	}
+
+	// If omitEmpty is true and the type can be a pointer (not a slice or map),
+	// change the type to a pointer type.
+	if omitEmpty && !strings.HasPrefix(goType, "[]") && !strings.HasPrefix(goType, "map[") {
+		// json.RawMessage already behaves like a pointer, so it's an exception.
+		if goType != "json.RawMessage" {
+			goType = "*" + goType
+		}
+	}
+
+	return goType, comment
 }
 
-// ToPascalCase는 snake_case를 PascalCase로 변환합니다.
+// ToPascalCase converts snake_case to PascalCase.
 func ToPascalCase(s string) string {
 	if s == "" {
 		return ""
 	}
+	// Handle common abbreviations
 	switch strings.ToLower(s) {
 	case "id":
 		return "ID"
