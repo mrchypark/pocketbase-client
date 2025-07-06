@@ -30,6 +30,12 @@ go get github.com/mrchypark/pocketbase-client
 
 `pbc-gen` is a command-line tool that generates type-safe Go models from your PocketBase `pb_schema.json` file. This ensures your Go application's data structures are always in sync with your PocketBase collections.
 
+### install
+
+```sh
+curl -sL https://raw.githubusercontent.com/mrchypark/pocketbase-client/main/install.sh | sh
+```
+
 ### Usage
 
 1.  **Export your PocketBase schema**: First, export your PocketBase schema to a `pb_schema.json` file. You can typically do this from the PocketBase Admin UI or via its CLI.
