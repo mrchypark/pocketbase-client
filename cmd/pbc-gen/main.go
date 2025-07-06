@@ -1,14 +1,22 @@
 package main
 
 import (
+	// 1. embed 패키지를 추가합니다.
+	_ "embed"
 	"flag"
 	"log"
 	"os"
 	"text/template"
 
-	"github.com/mrchypark/pocketbase-client/internal/generator" // 여러분의 실제 경로로 수정하세요
+	"github.com/mrchypark/pocketbase-client/internal/generator"
 	"golang.org/x/tools/imports"
 )
+
+// 2. go:embed 지시어를 사용해 템플릿 파일의 내용을 변수에 저장합니다.
+// 이 코드는 main.go 파일 기준으로 템플릿 파일의 상대 경로를 지정해야 합니다.
+//
+//go:embed template.go.tpl
+var templateFile string
 
 func main() {
 	schemaPath := flag.String("schema", "./pb_schema.json", "Input file path (pb_schema.json)")
@@ -30,8 +38,6 @@ func main() {
 	}
 
 	for _, s := range schemas {
-		// 'view' 타입 컬렉션은 SQL 쿼리로 정의되므로 실제 필드가 없을 수 있습니다.
-		// 이 경우에도 빈 구조체를 생성하도록 합니다.
 		if s.Type == "view" && len(s.Fields) == 0 {
 			log.Printf("Collection '%s' is a view, generating an empty struct.", s.Name)
 		}
@@ -43,7 +49,6 @@ func main() {
 		}
 
 		for _, field := range s.Fields {
-			// 시스템 필드는 일반적으로 클라이언트 모델에 포함하지 않습니다.
 			if field.System {
 				continue
 			}
@@ -58,8 +63,8 @@ func main() {
 		tplData.Collections = append(tplData.Collections, collectionData)
 	}
 
-	// 템플릿 파일 경로는 실제 프로젝트 구조에 맞게 수정해주세요.
-	tpl, err := template.ParseFiles("internal/generator/template.go.tpl")
+	// 3. 파일 시스템에서 읽는 대신, embed로 주입된 변수(templateFile)를 파싱합니다.
+	tpl, err := template.New("models").Parse(templateFile)
 	if err != nil {
 		log.Fatalf("Error parsing template: %v", err)
 	}
@@ -70,15 +75,12 @@ func main() {
 	}
 	defer outputFile.Close()
 
-	// 템플릿 실행 전에 임시 파일에 쓰고 포매팅 후 최종 파일에 쓰는 것이 더 안전합니다.
-	// 여기서는 간결함을 위해 바로 씁니다.
 	err = tpl.Execute(outputFile, tplData)
 	if err != nil {
 		log.Fatalf("Error executing template: %v", err)
 	}
-	outputFile.Close() // 파일을 닫아야 다음 단계에서 읽을 수 있습니다.
+	outputFile.Close()
 
-	// 생성된 코드 포매팅 및 임포트 정리
 	formattedBytes, err := imports.Process(*outputPath, nil, nil)
 	if err != nil {
 		log.Fatalf("Error formatting generated code: %v", err)
