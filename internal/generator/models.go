@@ -2,6 +2,7 @@ package generator
 
 type TemplateData struct {
 	PackageName string
+	JsonLibrary string
 	Collections []CollectionData
 }
 
@@ -15,5 +16,5 @@ type FieldData struct {
 	JsonName  string // 'is_published'
 	GoName    string // 'IsPublished'
 	GoType    string // 'bool'
-	OmitEmpty bool   // 'required: false'일 경우 true
+	OmitEmpty bool   //
 }

@@ -22,6 +22,7 @@ func main() {
 	schemaPath := flag.String("schema", "./pb_schema.json", "Input file path (pb_schema.json)")
 	outputPath := flag.String("path", "./models.gen.go", "Output file path")
 	pkgName := flag.String("pkgname", "models", "Package name for the generated file")
+	jsonLib := flag.String("jsonlib", "encoding/json", "JSON library to use (e.g., github.com/goccy/go-json)")
 
 	flag.Parse()
 
@@ -34,6 +35,7 @@ func main() {
 
 	tplData := generator.TemplateData{
 		PackageName: *pkgName,
+		JsonLibrary: *jsonLib,
 		Collections: make([]generator.CollectionData, 0, len(schemas)),
 	}
 
