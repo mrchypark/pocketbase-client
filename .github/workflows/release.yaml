@@ -1,0 +1,37 @@
+# .github/workflows/release.yml
+name: GoReleaser
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  goreleaser:
+    runs-on: ubuntu-latest
+    steps:
+      - name: "🛎️ Checkout"
+        uses: actions/checkout@v4
+        with:
+          # Git의 모든 히스토리를 가져와서 changelog를 정확하게 생성합니다.
+          fetch-depth: 0
+
+      - name: "🔧 Set up Go"
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.21" # 프로젝트에서 사용하는 Go 버전에 맞게 수정하세요.
+
+      - name: "🏃 Run GoReleaser"
+        uses: goreleaser/goreleaser-action@v5
+        with:
+          # goreleaser 버전을 지정합니다. 'latest'를 사용하면 항상 최신 버전을 사용합니다.
+          version: latest
+          # 워크플로우에 전달할 인수
+          args: release --clean
+        env:
+          # GitHub 릴리스 생성을 위해 필요한 토큰
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

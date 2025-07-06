@@ -44,3 +44,7 @@ pb_clean:
 pb_snapshot pb_snap pb_ss: ./database/pocketbase
 	./database/pocketbase migrate collections
 
+.PHONY: gen
+gen:
+	go run ./cmd/pbc-gen
+

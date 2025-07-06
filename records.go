@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+
+	"github.com/goccy/go-json"
 )
 
 // RecordServiceAPI defines the API operations related to records.
@@ -167,4 +169,50 @@ func (s *RecordService) NewUpsertRequest(collection string, body map[string]any)
 		URL:    fmt.Sprintf("/api/collections/%s/records", url.PathEscape(collection)),
 		Body:   body,
 	}, nil
+}
+
+// GetListAs RecordService를 사용하여 레코드 목록을 가져오고, 지정된 타입의 슬라이스로 변환합니다.
+func GetListAs[T any](ctx context.Context, s *RecordService, collection string, opts *ListOptions) ([]*T, error) {
+	listResult, err := s.GetList(ctx, collection, opts)
+	if err != nil {
+		return nil, fmt.Errorf("pocketbase: get list failed: %w", err)
+	}
+
+	results := make([]*T, 0, len(listResult.Items))
+	for _, record := range listResult.Items {
+		goStruct, err := ToGoStruct[T](record)
+		if err != nil {
+			return nil, fmt.Errorf("pocketbase: failed to convert record ID '%s': %w", record.ID, err)
+		}
+		results = append(results, goStruct)
+	}
+
+	return results, nil
+}
+
+// GetOneAs RecordService를 사용하여 단일 레코드를 가져오고, 지정된 타입으로 변환합니다.
+func GetOneAs[T any](ctx context.Context, s *RecordService, collection, recordID string, opts *GetOneOptions) (*T, error) {
+	record, err := s.GetOne(ctx, collection, recordID, opts)
+	if err != nil {
+		return nil, fmt.Errorf("pocketbase: get one failed: %w", err)
+	}
+
+	return ToGoStruct[T](record)
+}
+
+// ToGoStruct Record의 Data 필드를 지정된 Go 구조체로 변환합니다.
+func ToGoStruct[T any](record *Record) (*T, error) {
+	// 1. record.Data (map[string]interface{})를 JSON 바이트로 마샬링합니다.
+	jsonData, err := json.Marshal(record.Data)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal record data to JSON: %w", err)
+	}
+
+	// 2. 생성된 JSON 바이트를 목표 구조체(T)의 인스턴스로 언마샬링합니다.
+	var result T
+	if err := json.Unmarshal(jsonData, &result); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal JSON to target struct: %w", err)
+	}
+
+	return &result, nil
 }
