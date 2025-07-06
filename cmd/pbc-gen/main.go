@@ -52,7 +52,7 @@ func main() {
 			if field.System {
 				continue
 			}
-			goType, _ := generator.MapPbTypeToGoType(field)
+			goType := generator.MapPbTypeToGoType(field)
 			collectionData.Fields = append(collectionData.Fields, generator.FieldData{
 				JsonName:  field.Name,
 				GoName:    generator.ToPascalCase(field.Name),
