@@ -17,11 +17,14 @@ func main() {
 		fmt.Println("Please ensure the PocketBase server is running at http://127.0.0.1:8090")
 		return
 	}
-
-	if _, err := client.WithAdminPassword(ctx, "admin@example.com", "1q2w3e4r5t"); err != nil {
+	r, err := client.WithAdminPassword(ctx, "admin@example.com", "1q2w3e4r5t")
+	if err != nil {
 		fmt.Printf("Authentication failed: %v\n", err)
 		return
 	}
+
+	fmt.Printf("Authenticated as admin: %s\n", r.Record.ID)
+	fmt.Printf("Authenticated as admin: %s\n", r.Record.Data["email"])
 
 	rec, err := client.Records.Create(ctx, "posts", map[string]any{"title": "hello"})
 	if err != nil {

@@ -54,7 +54,7 @@ func main() {
 			if field.System {
 				continue
 			}
-			goType := generator.MapPbTypeToGoType(field)
+			goType, _ := generator.MapPbTypeToGoType(field, !field.Required)
 			collectionData.Fields = append(collectionData.Fields, generator.FieldData{
 				JsonName:  field.Name,
 				GoName:    generator.ToPascalCase(field.Name),

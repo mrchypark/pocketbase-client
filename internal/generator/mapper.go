@@ -24,18 +24,18 @@ func MapPbTypeToGoType(field FieldSchema, omitEmpty bool) (string, string) {
 		goType = "json.RawMessage"
 	case "relation", "file":
 		// If maxSelect option is not present or not equal to 1, treat as multiple selection.
-		if field.Options == nil || field.Options.MaxSelect == nil || *field.Options.MaxSelect != 1 {
-			goType = "[]string"
-			comment = "// Multiple relations/files" // Translated
-		} else {
+		if field.Options != nil && field.Options.MaxSelect != nil && *field.Options.MaxSelect == 1 {
 			goType = "string"
 			comment = "// Single relation/file" // Translated
+		} else {
+			goType = "[]string"
+			comment = "// Multiple relations/files" // Translated
 		}
 	case "select":
-		if field.Options != nil && field.Options.MaxSelect != nil && *field.Options.MaxSelect != 1 {
-			goType = "[]string"
-		} else {
+		if field.Options != nil && field.Options.MaxSelect != nil && *field.Options.MaxSelect == 1 {
 			goType = "string"
+		} else {
+			goType = "[]string"
 		}
 	default:
 		goType = "interface{}"
@@ -44,9 +44,9 @@ func MapPbTypeToGoType(field FieldSchema, omitEmpty bool) (string, string) {
 
 	// If omitEmpty is true and the type can be a pointer (not a slice or map),
 	// change the type to a pointer type.
-	if omitEmpty && !strings.HasPrefix(goType, "[]") && !strings.HasPrefix(goType, "map[") {
-		// json.RawMessage already behaves like a pointer, so it's an exception.
-		if goType != "json.RawMessage" {
+	if omitEmpty {
+		switch goType {
+		case "string", "float64", "bool", "types.DateTime":
 			goType = "*" + goType
 		}
 	}

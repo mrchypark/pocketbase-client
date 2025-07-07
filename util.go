@@ -31,4 +31,7 @@ func applyListOptions(q url.Values, opts *ListOptions) {
 	if opts.SkipTotal {
 		q.Set("skipTotal", "1")
 	}
+	for k, v := range opts.QueryParams {
+		q.Set(k, v)
+	}
 }

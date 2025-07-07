@@ -39,13 +39,14 @@ type ListResult struct {
 
 // ListOptions defines query parameters for listing records.
 type ListOptions struct {
-	Page      int
-	PerPage   int
-	Sort      string
-	Filter    string
-	Expand    string
-	Fields    string
-	SkipTotal bool
+	Page        int
+	PerPage     int
+	Sort        string
+	Filter      string
+	Expand      string
+	Fields      string
+	SkipTotal   bool
+	QueryParams map[string]string
 }
 
 // GetOneOptions defines query parameters for retrieving a single record.
