@@ -88,12 +88,19 @@ func TestAuthenticateAsAdminBadCredentials(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error")
 	}
-	apiErr, ok := err.(*APIError)
-	if !ok {
-		t.Fatalf("unexpected error type: %T", err)
+
+	// CORRECTED: Use errors.As to check for the underlying error type.
+	var apiErr *APIError
+	if !errors.As(err, &apiErr) {
+		t.Fatalf("expected error to wrap *APIError, but it did not (got %T)", err)
 	}
 	if apiErr.Code != 400 {
 		t.Fatalf("unexpected code: %d", apiErr.Code)
+	}
+
+	// PREFERRED: Use errors.Is to check against our predefined error values.
+	if !errors.Is(err, ErrBadRequest) {
+		t.Fatalf("expected error to be ErrBadRequest, got %v", err)
 	}
 }
 
