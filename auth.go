@@ -8,6 +8,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/golang-jwt/jwt/v5" // JWT 파싱을 위한 라이브러리 추가
 	"golang.org/x/sync/singleflight"
 )
 
@@ -91,8 +92,6 @@ func (a *PasswordAuth) Token(client *Client) (string, error) {
 }
 
 func (a *PasswordAuth) refreshToken(client *Client) error {
-	// 네트워크 요청은 잠금 없이 수행
-
 	path := fmt.Sprintf("/api/collections/%s/auth-with-password", url.PathEscape(a.collection))
 	body := map[string]string{"identity": a.identity, "password": a.password}
 
@@ -101,11 +100,29 @@ func (a *PasswordAuth) refreshToken(client *Client) error {
 		return err
 	}
 
-	// 갱신된 정보를 담을 새로운 authToken 생성
+	// --- ✨ 수정된 부분: JWT 파싱 로직 ---
+	var expiry time.Time
+	// 등록된 클레임(RegisteredClaims)을 포함하는 MapClaims를 사용하여 토큰을 파싱합니다.
+	// 여기서는 서명 검증은 하지 않고 만료 시간 정보만 추출합니다.
+	token, _, err := new(jwt.Parser).ParseUnverified(authResponse.Token, jwt.MapClaims{})
+	if err == nil {
+		// 'exp' 클레임을 가져옵니다.
+		exp, err := token.Claims.GetExpirationTime()
+		if err == nil && exp != nil {
+			expiry = exp.Time
+		}
+	}
+
+	// 파싱에 실패하거나 만료 시간이 없는 경우, 안전을 위해 짧은 만료 시간을 설정합니다.
+	if expiry.IsZero() {
+		// 예: 1분 후 만료로 처리하여 다음 요청 시 다시 갱신하도록 유도
+		expiry = time.Now().Add(1 * time.Minute)
+	}
+	// --- ✨ 수정 끝 ---
+
 	newAuth := &authToken{
-		token: authResponse.Token,
-		// 토큰 만료 시간을 넉넉하게 설정 (실제로는 JWT 파싱해서 설정하는 것이 더 정확)
-		tokenExp: time.Now().Add(59 * time.Minute),
+		token:    authResponse.Token,
+		tokenExp: expiry, // 파싱된 만료 시간으로 설정
 	}
 	if authResponse.Admin != nil {
 		newAuth.model = authResponse.Admin
@@ -113,7 +130,6 @@ func (a *PasswordAuth) refreshToken(client *Client) error {
 		newAuth.model = authResponse.Record
 	}
 
-	// 새로운 인증 정보를 원자적으로 저장
 	a.auth.Store(newAuth)
 
 	return nil
