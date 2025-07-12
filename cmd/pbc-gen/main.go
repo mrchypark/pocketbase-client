@@ -54,12 +54,16 @@ func main() {
 			if field.System {
 				continue
 			}
-			goType, _ := generator.MapPbTypeToGoType(field, !field.Required)
+			// --- ✨ 수정된 부분 ---
+			// goType, _, getter 로 3개의 반환 값을 모두 받습니다.
+			// 주석(comment)은 현재 사용하지 않으므로 '_'로 무시합니다.
+			goType, _, getter := generator.MapPbTypeToGoType(field, !field.Required)
 			collectionData.Fields = append(collectionData.Fields, generator.FieldData{
-				JsonName:  field.Name,
-				GoName:    generator.ToPascalCase(field.Name),
-				GoType:    goType,
-				OmitEmpty: !field.Required,
+				JsonName:     field.Name,
+				GoName:       generator.ToPascalCase(field.Name),
+				GoType:       goType,
+				OmitEmpty:    !field.Required,
+				GetterMethod: getter, // 새로 추가된 GetterMethod 필드에 값을 할당합니다.
 			})
 		}
 		tplData.Collections = append(tplData.Collections, collectionData)

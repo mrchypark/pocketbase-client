@@ -39,7 +39,7 @@ func BuildTemplateData(schemas []CollectionSchema, packageName string) TemplateD
 				continue
 			}
 
-			goType, _ := MapPbTypeToGoType(f, !f.Required)
+			goType, _, _ := MapPbTypeToGoType(f, !f.Required)
 			fields = append(fields, FieldData{
 				JsonName:  f.Name,
 				GoName:    ToPascalCase(f.Name),

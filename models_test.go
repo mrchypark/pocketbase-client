@@ -21,9 +21,13 @@ var sampleRecordJSON = []byte(`{
     "tags": ["go", "pocketbase", "benchmark"]
 }`)
 
-// BenchmarkUnmarshalCurrent measures the performance of the current UnmarshalJSON implementation.
-// (Performs two unmarshaling operations: JSON -> Struct, then JSON -> Map)
-func BenchmarkUnmarshalCurrent(b *testing.B) {
+// BenchmarkUnmarshalCurrent (기존 방식)은 비교를 위해 남겨둡니다.
+// 이 테스트를 실행하려면 이전 버전의 Record 구조체와 UnmarshalJSON이 필요합니다.
+// func BenchmarkUnmarshalCurrent(b *testing.B) { ... }
+
+// BenchmarkUnmarshalLazy measures the performance of the new lazy-parsing UnmarshalJSON.
+// (Performs one unmarshaling operation for top-level fields, delaying the 'Data' field)
+func BenchmarkUnmarshalLazy(b *testing.B) {
 	b.ReportAllocs() // 메모리 할당량 보고
 	for i := 0; i < b.N; i++ {
 		var r Record
@@ -45,7 +49,10 @@ func TestRecordUnmarshalInvalidExpand(t *testing.T) {
 	if r.Expand != nil {
 		t.Fatalf("expected nil expand: %#v", r.Expand)
 	}
-	if r.Data["foo"] != "bar" {
-		t.Fatalf("unexpected data: %#v", r.Data)
+
+	// Access data to trigger lazy parsing
+	if r.GetString("foo") != "bar" {
+		r.parseData() // Manually parse for debugging
+		t.Fatalf("unexpected data: %#v", r.deserializedData)
 	}
 }

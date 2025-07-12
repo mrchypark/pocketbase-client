@@ -13,8 +13,9 @@ type CollectionData struct {
 }
 
 type FieldData struct {
-	JsonName  string // 'is_published'
-	GoName    string // 'IsPublished'
-	GoType    string // 'bool'
-	OmitEmpty bool   //
+	JsonName     string // 'is_published'
+	GoName       string // 'IsPublished'
+	GoType       string // 'bool'
+	OmitEmpty    bool   //
+	GetterMethod string // Getter 메서드 이름 (예: GetString, GetBool)
 }

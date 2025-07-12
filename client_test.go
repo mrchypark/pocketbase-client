@@ -72,8 +72,9 @@ func TestAuthenticateWithPassword(t *testing.T) {
 	if tok != token {
 		t.Fatal("token not stored")
 	}
-	if res.Record.Data["username"] != "user1" {
-		t.Fatalf("unexpected username: %v", res.Record.Data["username"])
+	u := res.Record.GetString("username")
+	if u != "user1" {
+		t.Fatalf("unexpected username: %v", u)
 	}
 }
 

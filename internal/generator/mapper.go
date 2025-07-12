@@ -5,61 +5,77 @@ import (
 	"unicode"
 )
 
-// MapPbTypeToGoType maps PocketBase field types to Go types.
-// It now takes the omitEmpty flag as an argument to determine if a pointer type should be used.
-func MapPbTypeToGoType(field FieldSchema, omitEmpty bool) (string, string) {
-	var goType string
-	var comment string
+// MapPbTypeToGoType maps PocketBase field types to Go types and their corresponding getter methods.
+func MapPbTypeToGoType(field FieldSchema, omitEmpty bool) (string, string, string) {
+	var goType, comment, getterMethod string
 
 	switch field.Type {
 	case "text", "email", "url", "editor":
 		goType = "string"
+		getterMethod = "GetString"
+		if omitEmpty {
+			getterMethod = "GetStringPointer"
+		}
 	case "number":
 		goType = "float64"
+		getterMethod = "GetFloat"
+		if omitEmpty {
+			getterMethod = "GetFloatPointer"
+		}
 	case "bool":
 		goType = "bool"
-	case "date", "authdate":
+		getterMethod = "GetBool"
+		if omitEmpty {
+			getterMethod = "GetBoolPointer"
+		}
+	case "date", "autodate":
 		goType = "types.DateTime"
+		getterMethod = "GetDateTime"
+		if omitEmpty {
+			getterMethod = "GetDateTimePointer"
+		}
 	case "json":
 		goType = "json.RawMessage"
+		getterMethod = "GetRawMessage" // 범용 Get 사용 후 사용자가 직접 Unmarshal
 	case "relation", "file":
-		// If maxSelect option is not present or not equal to 1, treat as multiple selection.
 		if field.Options != nil && field.Options.MaxSelect != nil && *field.Options.MaxSelect == 1 {
 			goType = "string"
-			comment = "// Single relation/file" // Translated
+			getterMethod = "GetString"
+			if omitEmpty {
+				getterMethod = "GetStringPointer"
+			}
 		} else {
 			goType = "[]string"
-			comment = "// Multiple relations/files" // Translated
+			getterMethod = "GetStringSlice"
 		}
 	case "select":
 		if field.Options != nil && field.Options.MaxSelect != nil && *field.Options.MaxSelect == 1 {
 			goType = "string"
+			getterMethod = "GetString"
+			if omitEmpty {
+				getterMethod = "GetStringPointer"
+			}
 		} else {
 			goType = "[]string"
+			getterMethod = "GetStringSlice"
 		}
 	default:
 		goType = "interface{}"
-		comment = "// Unknown PocketBase type" // Translated
+		getterMethod = "Get"
 	}
 
-	// If omitEmpty is true and the type can be a pointer (not a slice or map),
-	// change the type to a pointer type.
-	if omitEmpty {
-		switch goType {
-		case "string", "float64", "bool", "types.DateTime":
-			goType = "*" + goType
-		}
+	if omitEmpty && !strings.HasPrefix(goType, "[]") && goType != "json.RawMessage" && goType != "interface{}" {
+		goType = "*" + goType
 	}
 
-	return goType, comment
+	return goType, comment, getterMethod
 }
 
-// ToPascalCase converts snake_case to PascalCase.
+// ... ToPascalCase 함수는 동일 ...
 func ToPascalCase(s string) string {
 	if s == "" {
 		return ""
 	}
-	// Handle common abbreviations
 	switch strings.ToLower(s) {
 	case "id":
 		return "ID"
