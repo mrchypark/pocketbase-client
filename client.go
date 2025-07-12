@@ -33,7 +33,7 @@ type Client struct {
 	BaseURL    string       // Base URL of the PocketBase server
 	HTTPClient *http.Client // HTTP client used for requests
 
-	AuthStore   *AuthStore           // Authentication state manager
+	AuthStore   AuthStrategy
 	Collections CollectionServiceAPI // Service for managing collections
 	Records     RecordServiceAPI     // Service for record CRUD operations
 	Realtime    RealtimeServiceAPI   // Service for real-time subscriptions
@@ -51,8 +51,11 @@ type authInjector struct {
 }
 
 func (t *authInjector) RoundTrip(req *http.Request) (*http.Response, error) {
+	if strings.Contains(req.URL.Path, "auth-with-password") {
+		return t.next.RoundTrip(req)
+	}
 	if t.client.AuthStore != nil {
-		tok, err := t.client.AuthStore.Token()
+		tok, err := t.client.AuthStore.Token(t.client)
 		if err != nil {
 			return nil, err
 		}
@@ -69,7 +72,7 @@ func NewClient(baseURL string, opts ...ClientOption) *Client {
 		BaseURL:    baseURL,
 		HTTPClient: &http.Client{},
 	}
-	c.AuthStore = newAuthStore(c)
+	c.AuthStore = &NilAuth{}
 	for _, opt := range opts {
 		opt(c)
 	}
@@ -95,6 +98,8 @@ func NewClient(baseURL string, opts ...ClientOption) *Client {
 func (c *Client) ClearAuthStore() {
 	if c.AuthStore != nil {
 		c.AuthStore.Clear()
+		// 다시 NilAuth로 교체하여 인증되지 않은 상태로 만듭니다.
+		c.AuthStore = &NilAuth{}
 	}
 }
 
@@ -229,37 +234,56 @@ func (c *Client) do(ctx context.Context, method, path string, body io.Reader, co
 	return nil
 }
 
-// WithPassword authenticates as a regular user and stores the authentication information.
+// WithPassword는 PasswordAuth 전략을 생성하고 클라이언트에 설정합니다.
 func (c *Client) WithPassword(ctx context.Context, collection, identity, password string) (*AuthResponse, error) {
-	c.ClearAuthStore()
+	// 새로운 PasswordAuth 전략 설정
+	authStrategy := NewPasswordAuth(c, collection, identity, password)
+	c.AuthStore = authStrategy
 
-	reqBody := map[string]string{
-		"identity": identity,
-		"password": password,
-	}
-
-	var authResponse AuthResponse
-	path := fmt.Sprintf("/api/collections/%s/auth-with-password", url.PathEscape(collection))
-	if err := c.send(ctx, http.MethodPost, path, reqBody, &authResponse); err != nil {
+	// 첫 인증 토큰을 즉시 가져옵니다.
+	token, err := authStrategy.Token(c)
+	if err != nil {
+		c.ClearAuthStore() // 실패 시 인증 정보 초기화
 		return nil, err
 	}
 
-	c.AuthStore.Set(authResponse.Token, authResponse.Record)
+	// PasswordAuth 내부의 model을 기반으로 AuthResponse를 재구성합니다.
+	authStrategy.mu.RLock()
+	defer authStrategy.mu.RUnlock()
 
-	return &authResponse, nil
+	res := &AuthResponse{Token: token}
+	if admin, ok := authStrategy.model.(*Admin); ok {
+		res.Admin = admin
+	}
+	if record, ok := authStrategy.model.(*Record); ok {
+		res.Record = record
+	}
+
+	return res, nil
 }
 
-// WithAdminPassword authenticates as an admin and stores the authentication information.
+// WithAdminPassword는 WithPassword의 편의 메소드입니다.
 func (c *Client) WithAdminPassword(ctx context.Context, identity, password string) (*AuthResponse, error) {
-	c.ClearAuthStore()
-
 	return c.WithPassword(ctx, "_superusers", identity, password)
 }
 
-// WithToken authenticates as an admin and stores the authentication information.
+// WithToken은 TokenAuth 전략을 클라이언트에 설정합니다.
 func (c *Client) WithToken(token string) {
-	c.ClearAuthStore()
-	c.AuthStore.Set(token, nil)
+	c.AuthStore = NewTokenAuth(token)
+}
+
+// UseAuthResponse는 AuthResponse를 받아 클라이언트 인증 상태를 설정합니다.
+// OAuth2나 토큰 갱신 등, 이미 토큰을 발급받은 경우 이 메서드를 사용해 클라이언트를 설정합니다.
+func (c *Client) UseAuthResponse(res *AuthResponse) *Client {
+	if res == nil || res.Token == "" {
+		c.ClearAuthStore()
+		return c
+	}
+
+	// 받은 토큰은 정적이므로 TokenAuth 전략을 사용합니다.
+	c.AuthStore = NewTokenAuth(res.Token)
+
+	return c
 }
 
 // HealthCheck checks the health status of the PocketBase server.

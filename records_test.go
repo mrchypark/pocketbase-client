@@ -195,15 +195,19 @@ func TestRecordServiceDelete(t *testing.T) {
 
 func TestRecordServiceAuthHeader(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// 헤더 검증
 		if r.Header.Get("Authorization") != "tok" {
-			t.Fatalf("missing auth header: %s", r.Header.Get("Authorization"))
+			t.Fatalf("missing auth header: got %q, want 'tok'", r.Header.Get("Authorization"))
 		}
+		w.WriteHeader(http.StatusOK) // 성공 응답 명시
 		_ = json.NewEncoder(w).Encode(ListResult{})
 	}))
 	defer srv.Close()
 
 	c := NewClient(srv.URL)
-	c.AuthStore.Set("tok", &Record{CollectionName: "posts"})
+	// ✨ 수정된 부분: WithToken으로 인증 토큰 설정
+	c.WithToken("tok")
+
 	if _, err := c.Records.GetList(context.Background(), "posts", nil); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

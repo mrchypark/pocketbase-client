@@ -35,7 +35,7 @@ func TestAuthenticateAsAdmin(t *testing.T) {
 	if res.Token != token {
 		t.Fatalf("unexpected token: %s", res.Token)
 	}
-	tok, _ := c.AuthStore.Token()
+	tok, _ := c.AuthStore.Token(c)
 	if tok != token {
 		t.Fatal("token not stored")
 	}
@@ -68,7 +68,7 @@ func TestAuthenticateWithPassword(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	tok, _ := c.AuthStore.Token()
+	tok, _ := c.AuthStore.Token(c)
 	if tok != token {
 		t.Fatal("token not stored")
 	}
@@ -228,7 +228,7 @@ func TestNewClientWithHTTPClientTransportWrapped(t *testing.T) {
 	rt := &recordingRoundTripper{}
 	hc := &http.Client{Transport: rt}
 	c := NewClient("http://example.com", WithHTTPClient(hc))
-	c.AuthStore.Set("tok", &Admin{})
+	c.AuthStore = NewTokenAuth("tok")
 	err := c.Send(context.Background(), http.MethodGet, "/", nil, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)

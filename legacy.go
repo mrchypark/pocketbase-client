@@ -32,7 +32,7 @@ func (s *LegacyService) AdminAuthRefresh(ctx context.Context) (*AuthResponse, er
 	if err := s.Client.send(ctx, http.MethodPost, path, nil, &res); err != nil {
 		return nil, fmt.Errorf("pocketbase: refresh admin auth: %w", err)
 	}
-	s.Client.AuthStore.Set(res.Token, res.Admin)
+	s.Client.UseAuthResponse(&res)
 	return &res, nil
 }
 
@@ -52,8 +52,6 @@ func (s *LegacyService) AuthenticateAsAdmin(ctx context.Context, identity, passw
 		return nil, err
 	}
 
-	s.Client.AuthStore.Set(authResponse.Token, authResponse.Admin)
-
 	return &authResponse, nil
 }
 
@@ -64,7 +62,7 @@ func (s *LegacyService) RecordAuthRefresh(ctx context.Context, collection string
 	if err := s.Client.send(ctx, http.MethodPost, path, nil, &res); err != nil {
 		return nil, fmt.Errorf("pocketbase: refresh record auth: %w", err)
 	}
-	s.Client.AuthStore.Set(res.Token, res.Record)
+	s.Client.UseAuthResponse(&res)
 	return &res, nil
 }
 
@@ -123,10 +121,6 @@ func (s *LegacyService) AuthWithOAuth2(ctx context.Context, collection string, r
 	if err := s.Client.send(ctx, http.MethodPost, path, req, &res); err != nil {
 		return nil, fmt.Errorf("pocketbase: auth with oauth2: %w", err)
 	}
-	if res.Admin != nil {
-		s.Client.AuthStore.Set(res.Token, res.Admin)
-	} else {
-		s.Client.AuthStore.Set(res.Token, res.Record)
-	}
+
 	return &res, nil
 }

@@ -122,7 +122,7 @@ func TestUserServiceAuthRefresh(t *testing.T) {
 	defer srv.Close()
 
 	c := NewClient(srv.URL)
-	c.AuthStore.Set("tok", &Record{CollectionName: "users"})
+	c.WithToken("tok")
 	_, err := c.Users.AuthRefresh(context.Background(), "users")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -170,7 +170,6 @@ func TestUserServiceRequestEmailChange(t *testing.T) {
 	defer srv.Close()
 
 	c := NewClient(srv.URL)
-	c.AuthStore.Set("tok", &Record{CollectionName: "users"})
 	if err := c.Users.RequestEmailChange(context.Background(), "users", "a@b.com"); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -201,12 +200,11 @@ func TestUserServiceImpersonate(t *testing.T) {
 	defer srv.Close()
 
 	c := NewClient(srv.URL)
-	c.AuthStore.Set("tok", &Record{CollectionName: "users"})
 	imp, err := c.Users.Impersonate(context.Background(), "users", "abc", 0)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	tok, err := imp.AuthStore.Token()
+	tok, err := imp.AuthStore.Token(c)
 	if err != nil || tok != "imp" {
 		t.Fatalf("unexpected token: %s", tok)
 	}

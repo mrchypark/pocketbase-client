@@ -141,8 +141,15 @@ func (s *RealtimeService) sendSubscriptionRequest(ctx context.Context, path, cli
 		return fmt.Errorf("failed to create subscription request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	if token := s.Client.AuthStore.token; token != "" {
-		req.Header.Set("Authorization", token)
+	if s.Client.AuthStore != nil {
+		token, err := s.Client.AuthStore.Token(s.Client)
+		if err != nil {
+			// 토큰 획득/갱신 실패 시 구독 요청도 실패 처리하는 것이 안전합니다.
+			return fmt.Errorf("failed to get auth token for subscription: %w", err)
+		}
+		if token != "" {
+			req.Header.Set("Authorization", token)
+		}
 	}
 
 	// 이 요청만을 위한 일회용, 독립적인 HTTP 클라이언트를 생성합니다.

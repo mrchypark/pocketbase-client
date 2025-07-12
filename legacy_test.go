@@ -21,12 +21,11 @@ func TestLegacyAdminAuthRefresh(t *testing.T) {
 
 	c := NewClient(srv.URL)
 	c.Legacy = &LegacyService{Client: c}
-	c.AuthStore.Set("old", &Admin{})
 	res, err := c.Legacy.AdminAuthRefresh(context.Background())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	tok, _ := c.AuthStore.Token()
+	tok, _ := c.AuthStore.Token(c)
 	if res.Token != "t" || tok != "t" {
 		t.Fatalf("token not refreshed: %v", res.Token)
 	}

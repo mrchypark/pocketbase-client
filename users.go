@@ -98,11 +98,7 @@ func (s *UserService) AuthWithOAuth2(ctx context.Context, collection, provider, 
 	if err := s.Client.send(ctx, http.MethodPost, path, body, &res); err != nil {
 		return nil, fmt.Errorf("pocketbase: auth with oauth2: %w", err)
 	}
-	if res.Record != nil {
-		s.Client.AuthStore.Set(res.Token, res.Record)
-	} else {
-		s.Client.AuthStore.Set(res.Token, res.Admin)
-	}
+
 	return &res, nil
 }
 
@@ -113,11 +109,7 @@ func (s *UserService) AuthRefresh(ctx context.Context, collection string) (*Auth
 	if err := s.Client.send(ctx, http.MethodPost, path, nil, &res); err != nil {
 		return nil, fmt.Errorf("pocketbase: auth refresh: %w", err)
 	}
-	if res.Record != nil {
-		s.Client.AuthStore.Set(res.Token, res.Record)
-	} else {
-		s.Client.AuthStore.Set(res.Token, res.Admin)
-	}
+
 	return &res, nil
 }
 
@@ -140,7 +132,7 @@ func (s *UserService) AuthWithOTP(ctx context.Context, collection, otpID, passwo
 	if err := s.Client.send(ctx, http.MethodPost, path, body, &res); err != nil {
 		return nil, fmt.Errorf("pocketbase: auth with otp: %w", err)
 	}
-	s.Client.AuthStore.Set(res.Token, res.Record)
+
 	return &res, nil
 }
 
@@ -173,6 +165,6 @@ func (s *UserService) Impersonate(ctx context.Context, collection, id string, du
 		return nil, fmt.Errorf("pocketbase: impersonate user: %w", err)
 	}
 	client := NewClient(s.Client.BaseURL)
-	client.AuthStore.Set(res.Token, res.Record)
+	client.UseAuthResponse(&res)
 	return client, nil
 }
