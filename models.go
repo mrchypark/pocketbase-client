@@ -1,10 +1,7 @@
 package pocketbase
 
 import (
-	"bytes"
-	"sync"
-
-	"github.com/goccy/go-json"
+	"github.com/goccy/go-json" // gocc/go-json을 직접 사용하도록 수정
 	"github.com/pocketbase/pocketbase/tools/types"
 )
 
@@ -23,16 +20,14 @@ type Admin struct {
 }
 
 // Record represents a PocketBase record.
-// It uses json.RawMessage for the Data field to delay parsing, improving performance.
+// ✅ 수정: Data 필드를 제거하고 deserializedData를 직접 사용합니다.
 type Record struct {
 	BaseModel
 	CollectionID   string               `json:"collectionId"`
 	CollectionName string               `json:"collectionName"`
 	Expand         map[string][]*Record `json:"expand,omitempty"`
 
-	Data json.RawMessage `json:"-"`
-
-	once             sync.Once
+	// 데이터를 저장할 맵. 이제부터 이 필드가 유일한 데이터 소스입니다.
 	deserializedData map[string]interface{}
 }
 
@@ -45,7 +40,7 @@ type ListResult struct {
 	Items      []*Record `json:"items"`
 }
 
-// ListOptions defines query parameters for listing records.
+// ... (ListOptions, GetOneOptions 등 나머지 옵션 구조체는 동일)
 type ListOptions struct {
 	Page        int
 	PerPage     int
@@ -57,19 +52,16 @@ type ListOptions struct {
 	QueryParams map[string]string
 }
 
-// GetOneOptions defines query parameters for retrieving a single record.
 type GetOneOptions struct {
 	Expand string
 	Fields string
 }
 
-// WriteOptions defines query parameters for creating/updating records.
 type WriteOptions struct {
 	Expand string
 	Fields string
 }
 
-// FileDownloadOptions defines query parameters for downloading files.
 type FileDownloadOptions struct {
 	Thumb    string
 	Download bool
@@ -88,71 +80,92 @@ type RealtimeEvent struct {
 	Record *Record `json:"record"`
 }
 
-// UnmarshalJSON implements a custom unmarshaler for the Record struct.
+// ✅ 수정: UnmarshalJSON을 훨씬 단순하고 효율적으로 변경합니다.
 func (r *Record) UnmarshalJSON(data []byte) error {
-	type RecordAlias Record
-	alias := &struct {
-		*RecordAlias
-		RawData map[string]json.RawMessage `json:"-"`
-	}{
-		RecordAlias: (*RecordAlias)(r),
-		RawData:     make(map[string]json.RawMessage),
-	}
-
-	decoder := json.NewDecoder(bytes.NewReader(data))
-	if err := decoder.Decode(&alias.RawData); err != nil {
+	// 임시 map에 모든 JSON 데이터를 한 번에 디코딩합니다.
+	var allData map[string]interface{}
+	if err := json.Unmarshal(data, &allData); err != nil {
 		return err
 	}
 
-	if rawID, ok := alias.RawData["id"]; ok {
-		_ = json.Unmarshal(rawID, &r.ID)
-		delete(alias.RawData, "id")
+	// 공통 필드를 Record 구조체에 직접 할당합니다.
+	if id, ok := allData["id"].(string); ok {
+		r.ID = id
 	}
-	if rawCreated, ok := alias.RawData["created"]; ok {
-		_ = json.Unmarshal(rawCreated, &r.Created)
-		delete(alias.RawData, "created")
+	if created, ok := allData["created"].(string); ok {
+		r.Created, _ = types.ParseDateTime(created)
 	}
-	if rawUpdated, ok := alias.RawData["updated"]; ok {
-		_ = json.Unmarshal(rawUpdated, &r.Updated)
-		delete(alias.RawData, "updated")
+	if updated, ok := allData["updated"].(string); ok {
+		r.Updated, _ = types.ParseDateTime(updated)
 	}
-	if rawColID, ok := alias.RawData["collectionId"]; ok {
-		_ = json.Unmarshal(rawColID, &r.CollectionID)
-		delete(alias.RawData, "collectionId")
+	if colID, ok := allData["collectionId"].(string); ok {
+		r.CollectionID = colID
 	}
-	if rawColName, ok := alias.RawData["collectionName"]; ok {
-		_ = json.Unmarshal(rawColName, &r.CollectionName)
-		delete(alias.RawData, "collectionName")
+	if colName, ok := allData["collectionName"].(string); ok {
+		r.CollectionName = colName
 	}
-	if rawExpand, ok := alias.RawData["expand"]; ok {
-		_ = json.Unmarshal(rawExpand, &r.Expand)
-		delete(alias.RawData, "expand")
+	// Expand 필드도 처리합니다.
+	if expandData, ok := allData["expand"]; ok {
+		// expand 데이터를 다시 JSON으로 직렬화한 후 Record의 Expand 필드로 디코딩합니다.
+		// 이는 expand가 복잡한 중첩 구조를 가질 수 있기 때문에 가장 안전한 방법입니다.
+		expandBytes, err := json.Marshal(expandData)
+		if err == nil {
+			json.Unmarshal(expandBytes, &r.Expand)
+		}
 	}
 
-	remainingData, err := json.Marshal(alias.RawData)
-	if err != nil {
-		return err
-	}
-	r.Data = remainingData
+	// 공통 필드와 expand를 map에서 제거합니다.
+	delete(allData, "id")
+	delete(allData, "created")
+	delete(allData, "updated")
+	delete(allData, "collectionId")
+	delete(allData, "collectionName")
+	delete(allData, "expand")
+
+	// 나머지 데이터는 deserializedData에 저장합니다.
+	r.deserializedData = allData
+
 	return nil
 }
 
-func (r *Record) parseData() {
-	r.once.Do(func() {
-		if len(r.Data) == 0 {
-			r.deserializedData = make(map[string]interface{})
-			return
-		}
-		if err := json.Unmarshal(r.Data, &r.deserializedData); err != nil {
-			r.deserializedData = make(map[string]interface{})
-		}
-	})
-}
+// ✅ 제거: parseData와 once 필드는 더 이상 필요 없습니다.
+/*
+func (r *Record) parseData() { ... }
+*/
 
 // Get returns a raw interface{} value for a given key.
 func (r *Record) Get(key string) interface{} {
-	r.parseData()
+	if r.deserializedData == nil {
+		r.deserializedData = make(map[string]interface{})
+	}
 	return r.deserializedData[key]
+}
+
+// Set stores a key-value pair in the record's data.
+func (r *Record) Set(key string, value interface{}) {
+	if r.deserializedData == nil {
+		r.deserializedData = make(map[string]interface{})
+	}
+	r.deserializedData[key] = value
+}
+
+// ✅ 수정: MarshalJSON도 deserializedData를 직접 사용하도록 변경합니다.
+func (r *Record) MarshalJSON() ([]byte, error) {
+	combinedData := make(map[string]interface{}, len(r.deserializedData)+6)
+	for k, v := range r.deserializedData {
+		combinedData[k] = v
+	}
+
+	combinedData["id"] = r.ID
+	combinedData["collectionId"] = r.CollectionID
+	combinedData["collectionName"] = r.CollectionName
+	combinedData["created"] = r.Created
+	combinedData["updated"] = r.Updated
+	if r.Expand != nil {
+		combinedData["expand"] = r.Expand
+	}
+
+	return json.Marshal(combinedData)
 }
 
 // GetString returns a string value for a given key.
@@ -286,35 +299,4 @@ func (r *Record) GetDateTimePointer(key string) *types.DateTime {
 		}
 	}
 	return nil
-}
-
-// Set stores a key-value pair in the record's data.
-func (r *Record) Set(key string, value interface{}) {
-	r.parseData()
-	r.deserializedData[key] = value
-
-	newData, err := json.Marshal(r.deserializedData)
-	if err == nil {
-		r.Data = newData
-	}
-}
-
-// MarshalJSON implements a custom marshaler for the Record struct.
-func (r *Record) MarshalJSON() ([]byte, error) {
-	r.parseData()
-	combinedData := make(map[string]interface{}, len(r.deserializedData)+6)
-	for k, v := range r.deserializedData {
-		combinedData[k] = v
-	}
-
-	combinedData["id"] = r.ID
-	combinedData["collectionId"] = r.CollectionID
-	combinedData["collectionName"] = r.CollectionName
-	combinedData["created"] = r.Created
-	combinedData["updated"] = r.Updated
-	if r.Expand != nil {
-		combinedData["expand"] = r.Expand
-	}
-
-	return json.Marshal(combinedData)
 }

@@ -61,8 +61,8 @@ func Get{{.StructName}}(client pocketbase.RecordServiceAPI, id string, opts *poc
 	return New{{.StructName}}(r), nil
 }
 
-// Get{{.StructName}}s fetches a list of {{.StructName}} records.
-func Get{{.StructName}}s(client pocketbase.RecordServiceAPI, opts *pocketbase.ListOptions) (*{{.StructName}}Collection, error) {
+// Get{{.StructName}}List fetches a list of {{.StructName}} records.
+func Get{{.StructName}}List(client pocketbase.RecordServiceAPI, opts *pocketbase.ListOptions) (*{{.StructName}}Collection, error) {
 	listResult, err := client.GetList(context.Background(), "{{.CollectionName}}", opts)
 	if err != nil {
 		return nil, err

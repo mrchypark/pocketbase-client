@@ -58,9 +58,7 @@ func (s *BatchService) Execute(ctx context.Context, requests []*BatchRequest) ([
 			if err := json.Unmarshal(rawRes.Body, &apiErr); err == nil {
 				res.ParsedError = &apiErr
 			}
-			if err := json.Unmarshal(rawRes.Body, &res.Body); err != nil {
-				res.Body = string(rawRes.Body)
-			}
+			res.Body = rawRes.Body
 		} else {
 			if err := json.Unmarshal(rawRes.Body, &res.Body); err != nil {
 				res.Body = string(rawRes.Body)

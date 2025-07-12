@@ -1,0 +1,20 @@
+{
+  "go.coverOnSave": true,
+  "go.coverShowCounts": true,
+  "go.coverOnSingleTest": true, 
+  "go.coverageDecorator": {
+    "type": "gutter",
+    "coveredHighlightColor": "rgba(64,128,128,0.5)",
+    "uncoveredHighlightColor": "rgba(128,64,64,0.25)",
+    "coveredGutterStyle": "blockgreen",
+    "uncoveredGutterStyle": "blockred"
+  },
+  "emeraldwalk.runOnSave": {
+    "commands": [
+      {
+        "match": "\\.go$", // .go 파일이 저장될 때
+        "cmd": "go test -v ${fileDirname}" // 현재 파일이 속한 패키지의 테스트를 실행
+      }
+    ]
+  }
+}
