@@ -3,12 +3,100 @@ package pocketbase
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/goccy/go-json"
 )
+
+// 벤치마크를 위한 ListResult 정의 (Lazy 버전)
+type ListResultLazy struct {
+	Page       int           `json:"page"`
+	PerPage    int           `json:"perPage"`
+	TotalItems int           `json:"totalItems"`
+	TotalPages int           `json:"totalPages"`
+	Items      []*RecordLazy `json:"items"`
+}
+
+// --- 벤치마크 헬퍼 ---
+
+// 벤치마크 테스트에 사용할 대량의 레코드 목록 JSON을 생성합니다.
+func generateBenchListResponse(numRecords int) []byte {
+	items := make([]map[string]interface{}, numRecords)
+	for i := 0; i < numRecords; i++ {
+		items[i] = map[string]interface{}{
+			"id":             fmt.Sprintf("rec_%d", i),
+			"collectionId":   "posts_col",
+			"collectionName": "posts",
+			"created":        "2025-07-02T10:30:00.123Z",
+			"updated":        "2025-07-02T10:30:00.456Z",
+			"title":          fmt.Sprintf("Title %d", i),
+			"is_published":   true,
+			"view_count":     i * 10,
+		}
+	}
+	response := map[string]interface{}{
+		"page":       1,
+		"perPage":    numRecords,
+		"totalItems": numRecords,
+		"totalPages": 1,
+		"items":      items,
+	}
+	data, _ := json.Marshal(response)
+	return data
+}
+
+// --- 통합 벤치마크 테스트 ---
+
+var benchResponse = generateBenchListResponse(100) // 100개의 레코드로 테스트
+
+// ✅ BenchmarkGetListLazy: 기존 방식(지연 파싱)의 목록 조회 성능 측정
+func BenchmarkGetListLazy(b *testing.B) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(benchResponse)
+	}))
+	defer srv.Close()
+
+	c := NewClient(srv.URL)
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		// GetList와 유사한 로직이지만, ListResultLazy를 사용하도록 수정
+		path := fmt.Sprintf("/api/collections/%s/records", "posts")
+		var result ListResultLazy // Lazy 버전을 사용
+		if err := c.send(context.Background(), http.MethodGet, path, nil, &result); err != nil {
+			b.Fatalf("unexpected error: %v", err)
+		}
+	}
+}
+
+// ✅ BenchmarkGetListEager: 새로운 방식(즉시 파싱)의 목록 조회 성능 측정
+func BenchmarkGetListEager(b *testing.B) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(benchResponse)
+	}))
+	defer srv.Close()
+
+	c := NewClient(srv.URL)
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		// 실제 Records.GetList 메서드 사용
+		_, err := c.Records.GetList(context.Background(), "posts", &ListOptions{})
+		if err != nil {
+			b.Fatalf("unexpected error: %v", err)
+		}
+	}
+}
+
+// --- 기존 단위 테스트 (수정 없음) ---
+// (이하 기존의 모든 Test... 함수들은 그대로 유지됩니다)
 
 // TestRecordServiceGetList tests the GetList method of RecordService.
 func TestRecordServiceGetList(t *testing.T) {
