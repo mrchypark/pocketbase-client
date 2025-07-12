@@ -82,46 +82,44 @@ func (a *PasswordAuth) Token(client *Client) (string, error) {
 }
 
 func (a *PasswordAuth) refreshToken(client *Client) error {
-	a.mu.Lock()
-	defer a.mu.Unlock()
+	// 1. 네트워크 요청에 필요한 정보만 먼저 준비합니다.
+	a.mu.RLock()
+	model := a.model
+	collection := a.collection
+	identity := a.identity
+	password := a.password
+	a.mu.RUnlock()
 
 	var path string
 	var body interface{}
 
-	// 기존 토큰/모델이 있으면 refresh, 없으면 새로 인증
-	if a.model != nil {
-		// 토큰 갱신 로직
-		switch m := a.model.(type) {
+	if model != nil {
+		switch m := model.(type) {
 		case *Admin:
-			// 관리자 갱신은 이 경로를 유지합니다. (LegacyService에서 사용)
 			path = "/api/admins/auth-refresh"
 		case *Record:
 			path = fmt.Sprintf("/api/collections/%s/auth-refresh", url.PathEscape(m.CollectionName))
 		default:
-			// 비정상적인 경우, 다시 비밀번호로 인증합니다.
-			path = fmt.Sprintf("/api/collections/%s/auth-with-password", url.PathEscape(a.collection))
-			body = map[string]string{
-				"identity": a.identity,
-				"password": a.password,
-			}
+			path = fmt.Sprintf("/api/collections/%s/auth-with-password", url.PathEscape(collection))
+			body = map[string]string{"identity": identity, "password": password}
 		}
 	} else {
-		// ✨ 수정된 부분: _superusers 특별 취급 로직 제거
-		// 이제 항상 /api/collections/{collection}/auth-with-password 경로를 사용합니다.
-		path = fmt.Sprintf("/api/collections/%s/auth-with-password", url.PathEscape(a.collection))
-		body = map[string]string{
-			"identity": a.identity,
-			"password": a.password,
-		}
+		path = fmt.Sprintf("/api/collections/%s/auth-with-password", url.PathEscape(collection))
+		body = map[string]string{"identity": identity, "password": password}
 	}
 
+	// 2. 잠금을 해제한 상태로 네트워크 요청을 보냅니다.
 	var authResponse AuthResponse
 	if err := client.send(context.Background(), http.MethodPost, path, body, &authResponse); err != nil {
 		return err
 	}
 
+	// 3. 응답을 받은 후, 실제 데이터를 쓸 때만 잠금을 사용합니다.
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
 	a.token = authResponse.Token
-	a.tokenExp = time.Now().Add(60 * time.Minute) // 갱신 주기 설정
+	a.tokenExp = time.Now().Add(60 * time.Minute)
 	if authResponse.Admin != nil {
 		a.model = authResponse.Admin
 	} else {
