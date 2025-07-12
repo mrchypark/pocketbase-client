@@ -247,15 +247,19 @@ func (c *Client) WithPassword(ctx context.Context, collection, identity, passwor
 		return nil, err
 	}
 
-	// PasswordAuth 내부의 model을 기반으로 AuthResponse를 재구성합니다.
-	authStrategy.mu.RLock()
-	defer authStrategy.mu.RUnlock()
+	// ✅ 수정된 부분: authStrategy에서 직접 model을 가져오는 대신,
+	// 내부의 authToken 포인터를 로드하여 model 정보를 가져옵니다.
+	currentAuth := authStrategy.auth.Load()
+	if currentAuth == nil {
+		// 토큰은 가져왔지만 인증 정보가 없는 비정상적인 상황
+		return nil, fmt.Errorf("authentication succeeded but no auth data is available")
+	}
 
 	res := &AuthResponse{Token: token}
-	if admin, ok := authStrategy.model.(*Admin); ok {
+	if admin, ok := currentAuth.model.(*Admin); ok {
 		res.Admin = admin
 	}
-	if record, ok := authStrategy.model.(*Record); ok {
+	if record, ok := currentAuth.model.(*Record); ok {
 		res.Record = record
 	}
 
