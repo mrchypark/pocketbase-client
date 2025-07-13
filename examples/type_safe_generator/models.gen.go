@@ -30,7 +30,7 @@ func NewSuperusers() *Superusers {
 	return &Superusers{Record: pocketbase.Record{}}
 }
 
-// ToSuperusers creates a To instance of Superusers with the provided record.
+// ToSuperusers creates a new instance of Superusers with the provided record.
 func ToSuperusers(r *pocketbase.Record) *Superusers {
 	return &Superusers{Record: *r}
 }
@@ -61,7 +61,7 @@ func NewUsers() *Users {
 	return &Users{Record: pocketbase.Record{}}
 }
 
-// ToUsers creates a To instance of Users with the provided record.
+// ToUsers creates a new instance of Users with the provided record.
 func ToUsers(r *pocketbase.Record) *Users {
 	return &Users{Record: *r}
 }
@@ -73,16 +73,16 @@ func (m *Users) ToMap() map[string]any {
 
 	// non-zero, non-empty, and non-nil values will be added to the map.
 	if val := m.Name(); val != nil {
-		data["name"] = val
+		data["name"] = *val // Dereference pointer
 	}
-	if val := m.Avatar(); val != nil {
+	if val := m.Avatar(); len(val) > 0 {
 		data["avatar"] = val
 	}
 	if val := m.Created(); val != nil {
-		data["created"] = val
+		data["created"] = *val // Dereference pointer
 	}
 	if val := m.Updated(); val != nil {
-		data["updated"] = val
+		data["updated"] = *val // Dereference pointer
 	}
 
 	return data
@@ -95,7 +95,11 @@ func (m *Users) Name() *string {
 
 // SetName sets the value of the 'name' field.
 func (m *Users) SetName(value *string) {
-	m.Set("name", value)
+	if value != nil {
+		m.Set("name", *value) // ✨ 수정: 포인터를 역참조하여 실제 값을 저장
+	} else {
+		m.Set("name", nil)
+	}
 }
 
 // Avatar returns the value of the 'avatar' field.
@@ -115,7 +119,11 @@ func (m *Users) Created() *types.DateTime {
 
 // SetCreated sets the value of the 'created' field.
 func (m *Users) SetCreated(value *types.DateTime) {
-	m.Set("created", value)
+	if value != nil {
+		m.Set("created", *value) // ✨ 수정: 포인터를 역참조하여 실제 값을 저장
+	} else {
+		m.Set("created", nil)
+	}
 }
 
 // Updated returns the value of the 'updated' field.
@@ -125,7 +133,11 @@ func (m *Users) Updated() *types.DateTime {
 
 // SetUpdated sets the value of the 'updated' field.
 func (m *Users) SetUpdated(value *types.DateTime) {
-	m.Set("updated", value)
+	if value != nil {
+		m.Set("updated", *value) // ✨ 수정: 포인터를 역참조하여 실제 값을 저장
+	} else {
+		m.Set("updated", nil)
+	}
 }
 
 // Posts represents a record from the 'posts' collection.
@@ -144,7 +156,7 @@ func NewPosts() *Posts {
 	return &Posts{Record: pocketbase.Record{}}
 }
 
-// ToPosts creates a To instance of Posts with the provided record.
+// ToPosts creates a new instance of Posts with the provided record.
 func ToPosts(r *pocketbase.Record) *Posts {
 	return &Posts{Record: *r}
 }
@@ -156,13 +168,13 @@ func (m *Posts) ToMap() map[string]any {
 
 	// non-zero, non-empty, and non-nil values will be added to the map.
 	if val := m.Title(); val != nil {
-		data["title"] = val
+		data["title"] = *val // Dereference pointer
 	}
 	if val := m.Created(); val != nil {
-		data["created"] = val
+		data["created"] = *val // Dereference pointer
 	}
 	if val := m.Updated(); val != nil {
-		data["updated"] = val
+		data["updated"] = *val // Dereference pointer
 	}
 
 	return data
@@ -175,7 +187,11 @@ func (m *Posts) Title() *string {
 
 // SetTitle sets the value of the 'title' field.
 func (m *Posts) SetTitle(value *string) {
-	m.Set("title", value)
+	if value != nil {
+		m.Set("title", *value) // ✨ 수정: 포인터를 역참조하여 실제 값을 저장
+	} else {
+		m.Set("title", nil)
+	}
 }
 
 // Created returns the value of the 'created' field.
@@ -185,7 +201,11 @@ func (m *Posts) Created() *types.DateTime {
 
 // SetCreated sets the value of the 'created' field.
 func (m *Posts) SetCreated(value *types.DateTime) {
-	m.Set("created", value)
+	if value != nil {
+		m.Set("created", *value) // ✨ 수정: 포인터를 역참조하여 실제 값을 저장
+	} else {
+		m.Set("created", nil)
+	}
 }
 
 // Updated returns the value of the 'updated' field.
@@ -195,7 +215,11 @@ func (m *Posts) Updated() *types.DateTime {
 
 // SetUpdated sets the value of the 'updated' field.
 func (m *Posts) SetUpdated(value *types.DateTime) {
-	m.Set("updated", value)
+	if value != nil {
+		m.Set("updated", *value) // ✨ 수정: 포인터를 역참조하여 실제 값을 저장
+	} else {
+		m.Set("updated", nil)
+	}
 }
 
 // ==============

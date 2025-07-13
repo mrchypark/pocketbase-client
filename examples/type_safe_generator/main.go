@@ -4,18 +4,19 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"os"
 
 	"github.com/mrchypark/pocketbase-client"
 )
 
 func main() {
 	// 클라이언트를 초기화합니다.
-	client := pocketbase.NewClient(os.Getenv("POCKETBASE_URL"))
+	// client := pocketbase.NewClient(os.Getenv("POCKETBASE_URL"))
+	client := pocketbase.NewClient("http://127.0.0.1:8090")
+
 	ctx := context.Background()
 
 	// 관리자 계정으로 인증합니다. (실제 환경에 맞게 수정해주세요)
-	if _, err := client.WithAdminPassword(ctx, "admin@example.com", "password123"); err != nil {
+	if _, err := client.WithAdminPassword(ctx, "admin@example.com", "1q2w3e4r5t"); err != nil {
 		log.Fatalf("Failed to authenticate: %v", err)
 	}
 	fmt.Println("Admin authenticated successfully.")
