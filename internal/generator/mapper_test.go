@@ -142,3 +142,31 @@ func TestMapPbTypeToGoType(t *testing.T) {
 		})
 	}
 }
+
+func TestToPascalCase(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{"empty string", "", ""},
+		{"simple word", "hello", "Hello"},
+		{"snake_case", "hello_world", "HelloWorld"},
+		{"kebab-case", "hello-world", "HelloWorld"},
+		{"space separated", "hello world", "HelloWorld"},
+		{"already PascalCase", "HelloWorld", "HelloWorld"},
+		{"special acronym id", "id", "ID"},
+		{"special acronym url", "url", "URL"},
+		{"special acronym html", "html", "HTML"},
+		{"special acronym json", "json", "JSON"},
+		{"mixed case with acronym", "some_id_field", "SomeIDField"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := ToPascalCase(tt.input); got != tt.want {
+				t.Errorf("ToPascalCase() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

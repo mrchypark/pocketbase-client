@@ -2,7 +2,6 @@ package generator
 
 import (
 	"strings"
-	"unicode"
 )
 
 // MapPbTypeToGoType maps PocketBase field types to Go types and their corresponding getter methods.
@@ -76,30 +75,25 @@ func ToPascalCase(s string) string {
 	if s == "" {
 		return ""
 	}
-	switch strings.ToLower(s) {
-	case "id":
-		return "ID"
-	case "url":
-		return "URL"
-	case "html":
-		return "HTML"
-	case "json":
-		return "JSON"
+
+	parts := strings.FieldsFunc(s, func(r rune) bool {
+		return r == '_' || r == '-' || r == ' '
+	})
+
+	for i, part := range parts {
+		switch strings.ToLower(part) {
+		case "id":
+			parts[i] = "ID"
+		case "url":
+			parts[i] = "URL"
+		case "html":
+			parts[i] = "HTML"
+		case "json":
+			parts[i] = "JSON"
+		default:
+			parts[i] = strings.Title(part)
+		}
 	}
 
-	var result strings.Builder
-	capitalizeNext := true
-	for _, r := range s {
-		if r == '_' || r == '-' || r == ' ' {
-			capitalizeNext = true
-			continue
-		}
-		if capitalizeNext {
-			result.WriteRune(unicode.ToUpper(r))
-			capitalizeNext = false
-		} else {
-			result.WriteRune(r)
-		}
-	}
-	return result.String()
+	return strings.Join(parts, "")
 }

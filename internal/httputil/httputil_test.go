@@ -80,3 +80,14 @@ func TestDoServerError(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
+
+func TestRawRequest(t *testing.T) {
+	body := strings.NewReader("test")
+	req, err := RawRequest(http.MethodPost, "http://example.com", body, "text/plain")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if req.Header.Get("Content-Type") != "text/plain" {
+		t.Fatal("expected content-type")
+	}
+}

@@ -156,3 +156,117 @@ func TestLoadSchema(t *testing.T) {
 		t.Errorf("Expected an error for non-existent file, but got none")
 	}
 }
+
+func TestBuildTemplateData(t *testing.T) {
+	schemas := []CollectionSchema{
+		{
+			Name:   "posts",
+			System: false,
+			Fields: []FieldSchema{
+				{Name: "title", Type: "text", Required: true},
+				{Name: "content", Type: "editor", Required: false},
+				{Name: "user_id", Type: "relation", Required: true, System: true},
+			},
+		},
+		{
+			Name:   "_superusers", // Should be skipped
+			System: true,
+		},
+	}
+
+	pkgName := "testpkg"
+	tplData := BuildTemplateData(schemas, pkgName)
+
+	if tplData.PackageName != pkgName {
+		t.Errorf("Expected package name %q, got %q", pkgName, tplData.PackageName)
+	}
+
+	if len(tplData.Collections) != 1 {
+		t.Fatalf("Expected 1 collection, got %d", len(tplData.Collections))
+	}
+
+	postsCollection := tplData.Collections[0]
+	if postsCollection.CollectionName != "posts" {
+		t.Errorf("Expected collection name 'posts', got %q", postsCollection.CollectionName)
+	}
+	if postsCollection.StructName != "Posts" {
+		t.Errorf("Expected struct name 'Posts', got %q", postsCollection.StructName)
+	}
+
+	if len(postsCollection.Fields) != 2 {
+		t.Fatalf("Expected 2 fields, got %d", len(postsCollection.Fields))
+	}
+
+	titleField := postsCollection.Fields[0]
+	if titleField.JsonName != "title" {
+		t.Errorf("Expected field json name 'title', got %q", titleField.JsonName)
+	}
+	if titleField.GoName != "Title" {
+		t.Errorf("Expected field go name 'Title', got %q", titleField.GoName)
+	}
+	if titleField.GoType != "string" {
+		t.Errorf("Expected field go type 'string', got %q", titleField.GoType)
+	}
+	if titleField.OmitEmpty {
+		t.Error("Expected OmitEmpty to be false for required field")
+	}
+}
+
+func TestCollectionSchema_UnmarshalJSON(t *testing.T) {
+	tests := []struct {
+		name    string
+		jsonData string
+		wantErr bool
+		wantFields int
+	}{
+		{
+			name: "with schema field",
+			jsonData: `{"name": "test", "schema": [{"name": "field1"}]}`,
+			wantErr: false,
+			wantFields: 1,
+		},
+		{
+			name: "with fields field",
+			jsonData: `{"name": "test", "fields": [{"name": "field1"}, {"name": "field2"}]}`,
+			wantErr: false,
+			wantFields: 2,
+		},
+		{
+			name: "with both fields, schema takes precedence",
+			jsonData: `{"name": "test", "schema": [{"name": "field1"}], "fields": [{"name": "field2"}]}`,
+			wantErr: false,
+			wantFields: 1,
+		},
+		{
+			name: "with no fields",
+			jsonData: `{"name": "test"}`,
+			wantErr: false,
+			wantFields: 0,
+		},
+		{
+			name: "with null fields",
+			jsonData: `{"name": "test", "schema": null, "fields": null}`,
+			wantErr: false,
+			wantFields: 0,
+		},
+		{
+			name: "invalid json",
+			jsonData: `{"name": "test", "schema": [{"name": "field1"}]`,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var cs CollectionSchema
+			err := cs.UnmarshalJSON([]byte(tt.jsonData))
+			if (err != nil) != tt.wantErr {
+				t.Errorf("UnmarshalJSON() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !tt.wantErr && len(cs.Fields) != tt.wantFields {
+				t.Errorf("UnmarshalJSON() got %d fields, want %d", len(cs.Fields), tt.wantFields)
+			}
+		})
+	}
+}
