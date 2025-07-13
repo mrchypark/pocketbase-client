@@ -2,72 +2,165 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/mrchypark/pocketbase-client"
+	"github.com/pocketbase/pocketbase/tools/types"
 )
 
 func main() {
-	// 클라이언트를 초기화합니다.
-	// client := pocketbase.NewClient(os.Getenv("POCKETBASE_URL"))
-	client := pocketbase.NewClient("http://127.0.0.1:8090")
+	client := pocketbase.NewClient("http://127.0.0.1:8090") // PocketBase 서버 URL
 
 	ctx := context.Background()
 
-	// 관리자 계정으로 인증합니다. (실제 환경에 맞게 수정해주세요)
+	// 1. 관리자 계정으로 인증합니다.
+	// 실제 환경에서는 환경 변수 등을 사용하여 안전하게 관리해야 합니다.
 	if _, err := client.WithAdminPassword(ctx, "admin@example.com", "1q2w3e4r5t"); err != nil {
 		log.Fatalf("Failed to authenticate: %v", err)
 	}
-	fmt.Println("Admin authenticated successfully.")
+	fmt.Println("--- Admin authenticated successfully. ---")
 
-	// --- 타입-세이프(Type-Safe) 모델을 사용한 레코드 생성 ---
-	fmt.Println("\n--- Creating a new record using generated types ---")
-
-	// 1. pbc-gen으로 생성된 NewPosts() 함수를 사용해 새로운 Post 인스턴스를 생성합니다.
-	// 이 인스턴스는 pocketbase.Record를 내장하고 있어, 레코드의 모든 필드에 접근할 수 있습니다.
-	newPost := NewPosts() // 빈 레코드로 초기화
-
-	// 2. 생성된 타입-세이프 Setters를 사용해 데이터를 설정합니다.
-	// 이렇게 하면 필드 이름에 오타가 발생하는 것을 방지하고, 타입 안정성을 보장합니다.
-	title := "My Type-Safe Post"
-	newPost.SetTitle(&title) // 포인터 타입의 Setter 사용
-
-	// 3. Records.Create 메서드에 생성된 인스턴스를 전달합니다.
-	// newPost는 Mappable 인터페이스를 구현하고 있으므로, 자동으로 map[string]any 형태로 변환됩니다.
-	createdRecord, err := client.Records.Create(ctx, "posts", newPost)
+	// --- RelatedCollection 레코드 생성 (AllTypes의 Relation Single/Multi 테스트를 위함) ---
+	fmt.Println("\n--- Creating a RelatedCollection record for testing relations ---")
+	newRelated := NewRelatedCollection()
+	newRelated.SetName("Example Related Item")
+	createdRelated, err := client.Records.Create(ctx, "related_collection", newRelated)
 	if err != nil {
-		log.Fatalf("Failed to create type-safe record: %v", err)
+		log.Fatalf("Failed to create related record: %v", err)
+	}
+	fmt.Printf("Created RelatedCollection with ID: %s, Name: '%s'\n", createdRelated.ID, newRelated.Name())
+
+	// --- 타입-세이프(Type-Safe) 모델을 사용한 AllTypes 레코드 생성 ---
+	fmt.Println("\n--- Creating a new AllTypes record using generated types ---")
+
+	newAllTypes := NewAllTypes() // 새로운 AllTypes 인스턴스 생성
+
+	// Required 필드 설정
+	newAllTypes.SetTextRequired("This is a required text.")
+	newAllTypes.SetNumberRequired(123.45)
+	newAllTypes.SetBoolRequired(true)
+	newAllTypes.SetEmailRequired("test@example.com")
+	newAllTypes.SetURLRequired("https://example.com")
+	newAllTypes.SetDateRequired(types.NowDateTime())
+
+	// 필수 select 필드에 스키마에 정의된 유효한 값 할당
+	newAllTypes.SetSelectSingleRequired([]string{"a"})     // "a", "b", "c" 중 하나
+	newAllTypes.SetSelectMultiRequired([]string{"a", "b"}) // "a", "b", "c" 중 하나 이상
+
+	jsonContent := json.RawMessage(`{"key": "value", "number": 123}`)
+	newAllTypes.SetJSONRequired(jsonContent)
+
+	// Optional 필드 설정 (포인터 값을 사용)
+	optionalText := "This is an optional text."
+	newAllTypes.SetTextOptional(&optionalText)
+	optionalNumber := 987.65
+	newAllTypes.SetNumberOptional(&optionalNumber)
+	optionalBool := false
+	newAllTypes.SetBoolOptional(&optionalBool)
+	optionalEmail := "optional@example.com"
+	newAllTypes.SetEmailOptional(&optionalEmail)
+	optionalURL := "https://optional.dev"
+	newAllTypes.SetURLOptional(&optionalURL)
+	optionalDate := types.NowDateTime().Add(24 * time.Hour)
+	newAllTypes.SetDateOptional(&optionalDate)
+	newAllTypes.SetSelectSingleOptional([]string{"x"}) // "x", "y", "z" 중 하나
+	newAllTypes.SetSelectMultiOptional([]string{"y"})  // "x", "y", "z" 중 하나 이상
+	optionalJSONContent := json.RawMessage(`{"another_key": "another_value"}`)
+	newAllTypes.SetJSONOptional(optionalJSONContent)
+
+	// File 및 Relation 필드 (예제에서는 실제 파일 업로드/ID 참조는 생략하고 빈 슬라이스 또는 생성된 ID 사용)
+	// 실제 환경에서는 pocketbase-client의 File 관련 메서드를 사용해야 합니다.
+	newAllTypes.SetRelationSingle([]string{createdRelated.ID}) // 위에서 생성한 RelatedCollection ID 참조
+	newAllTypes.SetRelationMulti([]string{})                   // 여러 RelatedCollection ID들을 여기에 추가
+
+	// 레코드 생성
+	createdAllTypeRecord, err := client.Records.Create(ctx, "all_types", newAllTypes)
+	if err != nil {
+		log.Fatalf("Failed to create type-safe AllTypes record: %v", err)
 	}
 
-	// 4. 생성된 레코드의 필드에 접근할 때는 타입-세이프 Getters를 사용합니다.
-	createdPost := ToPosts(createdRecord)
-	fmt.Printf("Created record with ID: %s, Title: '%s'\n", createdPost.ID, *createdPost.Title())
+	// 생성된 레코드 확인 (타입-세이프 Getters 사용)
+	createdAllTypes := ToAllTypes(createdAllTypeRecord)
+	fmt.Printf("Created AllTypes record with ID: %s\n", createdAllTypes.ID)
+	fmt.Printf("  TextRequired: '%s'\n", createdAllTypes.TextRequired())
+	if txt := createdAllTypes.TextOptional(); txt != nil {
+		fmt.Printf("  TextOptional: '%s'\n", *txt)
+	}
+	fmt.Printf("  NumberRequired: %f\n", createdAllTypes.NumberRequired())
+	if num := createdAllTypes.NumberOptional(); num != nil {
+		fmt.Printf("  NumberOptional: %f\n", *num)
+	}
+	fmt.Printf("  BoolRequired: %t\n", createdAllTypes.BoolRequired())
+	if b := createdAllTypes.BoolOptional(); b != nil {
+		fmt.Printf("  BoolOptional: %t\n", *b)
+	}
+	fmt.Printf("  EmailRequired: '%s'\n", createdAllTypes.EmailRequired())
+	if email := createdAllTypes.EmailOptional(); email != nil {
+		fmt.Printf("  EmailOptional: '%s'\n", *email)
+	}
+	fmt.Printf("  URLRequired: '%s'\n", createdAllTypes.URLRequired())
+	if url := createdAllTypes.URLOptional(); url != nil {
+		fmt.Printf("  URLOptional: '%s'\n", *url)
+	}
+	fmt.Printf("  DateRequired: '%s'\n", createdAllTypes.DateRequired().String())
+	if dt := createdAllTypes.DateOptional(); dt != nil {
+		fmt.Printf("  DateOptional: '%s'\n", dt.String())
+	}
+	fmt.Printf("  SelectSingleRequired: %v\n", createdAllTypes.SelectSingleRequired())
+	fmt.Printf("  SelectSingleOptional: %v\n", createdAllTypes.SelectSingleOptional())
+	fmt.Printf("  SelectMultiRequired: %v\n", createdAllTypes.SelectMultiRequired())
+	fmt.Printf("  SelectMultiOptional: %v\n", createdAllTypes.SelectMultiOptional())
+	fmt.Printf("  JSONRequired: %s\n", string(createdAllTypes.JSONRequired()))
+	fmt.Printf("  JSONOptional: %s\n", string(createdAllTypes.JSONOptional()))
+	fmt.Printf("  FileSingle (IDs): %v\n", createdAllTypes.FileSingle())
+	fmt.Printf("  FileMulti (IDs): %v\n", createdAllTypes.FileMulti())
+	fmt.Printf("  RelationSingle (IDs): %v\n", createdAllTypes.RelationSingle())
+	fmt.Printf("  RelationMulti (IDs): %v\n", createdAllTypes.RelationMulti())
 
-	// --- 타입-세이프(Type-Safe) 헬퍼를 사용한 목록 조회 ---
-	fmt.Println("\n--- Listing records using generated helper ---")
+	// --- 타입-세이프(Type-Safe) 헬퍼를 사용한 AllTypes 목록 조회 ---
+	fmt.Println("\n--- Listing AllTypes records using generated helper ---")
 
-	// 5. pbc-gen으로 생성된 GetPostsList 헬퍼 함수를 사용해 레코드 목록을 가져옵니다.
-	// 이 함수는 내부적으로 client.Records.GetList를 호출하고, 결과를 []*Posts 타입으로 변환해줍니다.
-	postsCollection, err := GetPostsList(client.Records, &pocketbase.ListOptions{
+	allTypesCollection, err := GetAllTypesList(client.Records, &pocketbase.ListOptions{
 		Page:    1,
 		PerPage: 10,
+		Sort:    "-created", // 최신 생성된 레코드부터 정렬
 	})
 	if err != nil {
-		log.Fatalf("Failed to list posts: %v", err)
+		log.Fatalf("Failed to list AllTypes: %v", err)
 	}
 
-	fmt.Printf("Found %d posts. (Page %d/%d)\n", postsCollection.TotalItems, postsCollection.Page, postsCollection.TotalPages)
-	for _, post := range postsCollection.Items {
-		// 6. 반복문 내에서도 타입-세이프 Getters를 사용해 안전하게 필드에 접근합니다.
-		fmt.Printf("  - ID: %s, Title: '%s'\n", post.ID, *post.Title())
+	fmt.Printf("Found %d AllTypes records. (Page %d/%d)\n", allTypesCollection.TotalItems, allTypesCollection.Page, allTypesCollection.TotalPages)
+	for i, item := range allTypesCollection.Items {
+		// 반복문 내에서도 타입-세이프 Getters를 사용해 안전하게 필드에 접근합니다.
+		fmt.Printf("  [%d] ID: %s, TextRequired: '%s'\n", i+1, item.ID, item.TextRequired())
+		// 더 많은 필드를 출력하려면 여기에 추가
 	}
 
-	// --- 생성된 레코드 삭제 ---
-	fmt.Printf("\n--- Cleaning up created record (ID: %s) ---\n", createdRecord.ID)
-	if err := client.Records.Delete(ctx, "posts", createdRecord.ID); err != nil {
-		log.Printf("Failed to delete record %s during cleanup: %v", createdRecord.ID, err)
+	// --- 단일 AllTypes 레코드 조회 ---
+	fmt.Println("\n--- Fetching a single AllTypes record by ID ---")
+	fetchedAllTypes, err := GetAllTypes(client.Records, createdAllTypeRecord.ID, nil)
+	if err != nil {
+		log.Fatalf("Failed to fetch single AllTypes record: %v", err)
+	}
+	fmt.Printf("Fetched AllTypes record (ID: %s) TextRequired: '%s'\n", fetchedAllTypes.ID, fetchedAllTypes.TextRequired())
+
+	// --- 생성된 레코드 삭제 (클린업) ---
+	fmt.Printf("\n--- Cleaning up created AllTypes record (ID: %s) ---\n", createdAllTypeRecord.ID)
+	if err := client.Records.Delete(ctx, "all_types", createdAllTypeRecord.ID); err != nil {
+		log.Printf("Failed to delete AllTypes record %s during cleanup: %v", createdAllTypeRecord.ID, err)
 	} else {
-		fmt.Println("Cleanup complete.")
+		fmt.Println("AllTypes record cleanup complete.")
 	}
+
+	fmt.Printf("\n--- Cleaning up created RelatedCollection record (ID: %s) ---\n", createdRelated.ID)
+	if err := client.Records.Delete(ctx, "related_collection", createdRelated.ID); err != nil {
+		log.Printf("Failed to delete RelatedCollection record %s during cleanup: %v", createdRelated.ID, err)
+	} else {
+		fmt.Println("RelatedCollection record cleanup complete.")
+	}
+
+	fmt.Println("\n--- Example execution finished. ---")
 }

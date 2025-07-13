@@ -5,6 +5,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/mrchypark/pocketbase-client"
 	"github.com/pocketbase/pocketbase/tools/types"
@@ -14,294 +15,424 @@ import (
 //  Collection Types
 // ==============
 
-// Superusers represents a record from the '_superusers' collection.
-type Superusers struct {
+// AllTypes represents a record from the 'all_types' collection.
+type AllTypes struct {
 	pocketbase.Record
 }
 
-// SuperusersCollection is a collection of Superusers records.
-type SuperusersCollection struct {
+// AllTypesCollection is a collection of AllTypes records.
+type AllTypesCollection struct {
 	*pocketbase.ListResult
-	Items []*Superusers `json:"items"`
+	Items []*AllTypes `json:"items"`
 }
 
-// NewSuperusers creates a new instance of Superusers.
-func NewSuperusers() *Superusers {
-	return &Superusers{Record: pocketbase.Record{}}
+// NewAllTypes creates a new instance of AllTypes.
+func NewAllTypes() *AllTypes {
+	return &AllTypes{Record: pocketbase.Record{}}
 }
 
-// ToSuperusers creates a new instance of Superusers with the provided record.
-func ToSuperusers(r *pocketbase.Record) *Superusers {
-	return &Superusers{Record: *r}
+// ToAllTypes creates a new instance of AllTypes with the provided record.
+func ToAllTypes(r *pocketbase.Record) *AllTypes {
+	return &AllTypes{Record: *r}
 }
 
 // ToMap converts the struct to a map[string]any for creating/updating records.
 // It omits empty or zero-value fields to support PATCH operations.
-func (m *Superusers) ToMap() map[string]any {
+func (m *AllTypes) ToMap() map[string]any {
 	data := make(map[string]interface{})
 
 	// non-zero, non-empty, and non-nil values will be added to the map.
+	data["text_required"] = m.TextRequired()
+	if val := m.TextOptional(); val != nil {
+		data["text_optional"] = *val // Dereference pointer
+	}
+	data["number_required"] = m.NumberRequired()
+	if val := m.NumberOptional(); val != nil {
+		data["number_optional"] = *val // Dereference pointer
+	}
+	data["bool_required"] = m.BoolRequired()
+	if val := m.BoolOptional(); val != nil {
+		data["bool_optional"] = *val // Dereference pointer
+	}
+	data["email_required"] = m.EmailRequired()
+	if val := m.EmailOptional(); val != nil {
+		data["email_optional"] = *val // Dereference pointer
+	}
+	data["url_required"] = m.URLRequired()
+	if val := m.URLOptional(); val != nil {
+		data["url_optional"] = *val // Dereference pointer
+	}
+	data["date_required"] = m.DateRequired()
+	if val := m.DateOptional(); val != nil {
+		data["date_optional"] = *val // Dereference pointer
+	}
+	data["select_single_required"] = m.SelectSingleRequired()
+	if val := m.SelectSingleOptional(); len(val) > 0 {
+		data["select_single_optional"] = val
+	}
+	data["select_multi_required"] = m.SelectMultiRequired()
+	if val := m.SelectMultiOptional(); len(val) > 0 {
+		data["select_multi_optional"] = val
+	}
+	data["json_required"] = m.JSONRequired()
+	if val := m.JSONOptional(); len(val) > 0 && string(val) != "null" {
+		data["json_optional"] = val
+	}
+	if val := m.FileSingle(); len(val) > 0 {
+		data["file_single"] = val
+	}
+	if val := m.FileMulti(); len(val) > 0 {
+		data["file_multi"] = val
+	}
+	if val := m.RelationSingle(); len(val) > 0 {
+		data["relation_single"] = val
+	}
+	if val := m.RelationMulti(); len(val) > 0 {
+		data["relation_multi"] = val
+	}
 
 	return data
 }
 
-// Users represents a record from the 'users' collection.
-type Users struct {
+// TextRequired returns the value of the 'text_required' field.
+func (m *AllTypes) TextRequired() string {
+	return m.GetString("text_required")
+}
+
+// SetTextRequired sets the value of the 'text_required' field.
+func (m *AllTypes) SetTextRequired(value string) {
+	m.Set("text_required", value)
+}
+
+// TextOptional returns the value of the 'text_optional' field.
+func (m *AllTypes) TextOptional() *string {
+	return m.GetStringPointer("text_optional")
+}
+
+// SetTextOptional sets the value of the 'text_optional' field.
+func (m *AllTypes) SetTextOptional(value *string) {
+	if value != nil {
+		m.Set("text_optional", *value) // ✨ 수정: 포인터를 역참조하여 실제 값을 저장
+	} else {
+		m.Set("text_optional", nil)
+	}
+}
+
+// NumberRequired returns the value of the 'number_required' field.
+func (m *AllTypes) NumberRequired() float64 {
+	return m.GetFloat("number_required")
+}
+
+// SetNumberRequired sets the value of the 'number_required' field.
+func (m *AllTypes) SetNumberRequired(value float64) {
+	m.Set("number_required", value)
+}
+
+// NumberOptional returns the value of the 'number_optional' field.
+func (m *AllTypes) NumberOptional() *float64 {
+	return m.GetFloatPointer("number_optional")
+}
+
+// SetNumberOptional sets the value of the 'number_optional' field.
+func (m *AllTypes) SetNumberOptional(value *float64) {
+	if value != nil {
+		m.Set("number_optional", *value) // ✨ 수정: 포인터를 역참조하여 실제 값을 저장
+	} else {
+		m.Set("number_optional", nil)
+	}
+}
+
+// BoolRequired returns the value of the 'bool_required' field.
+func (m *AllTypes) BoolRequired() bool {
+	return m.GetBool("bool_required")
+}
+
+// SetBoolRequired sets the value of the 'bool_required' field.
+func (m *AllTypes) SetBoolRequired(value bool) {
+	m.Set("bool_required", value)
+}
+
+// BoolOptional returns the value of the 'bool_optional' field.
+func (m *AllTypes) BoolOptional() *bool {
+	return m.GetBoolPointer("bool_optional")
+}
+
+// SetBoolOptional sets the value of the 'bool_optional' field.
+func (m *AllTypes) SetBoolOptional(value *bool) {
+	if value != nil {
+		m.Set("bool_optional", *value) // ✨ 수정: 포인터를 역참조하여 실제 값을 저장
+	} else {
+		m.Set("bool_optional", nil)
+	}
+}
+
+// EmailRequired returns the value of the 'email_required' field.
+func (m *AllTypes) EmailRequired() string {
+	return m.GetString("email_required")
+}
+
+// SetEmailRequired sets the value of the 'email_required' field.
+func (m *AllTypes) SetEmailRequired(value string) {
+	m.Set("email_required", value)
+}
+
+// EmailOptional returns the value of the 'email_optional' field.
+func (m *AllTypes) EmailOptional() *string {
+	return m.GetStringPointer("email_optional")
+}
+
+// SetEmailOptional sets the value of the 'email_optional' field.
+func (m *AllTypes) SetEmailOptional(value *string) {
+	if value != nil {
+		m.Set("email_optional", *value) // ✨ 수정: 포인터를 역참조하여 실제 값을 저장
+	} else {
+		m.Set("email_optional", nil)
+	}
+}
+
+// URLRequired returns the value of the 'url_required' field.
+func (m *AllTypes) URLRequired() string {
+	return m.GetString("url_required")
+}
+
+// SetURLRequired sets the value of the 'url_required' field.
+func (m *AllTypes) SetURLRequired(value string) {
+	m.Set("url_required", value)
+}
+
+// URLOptional returns the value of the 'url_optional' field.
+func (m *AllTypes) URLOptional() *string {
+	return m.GetStringPointer("url_optional")
+}
+
+// SetURLOptional sets the value of the 'url_optional' field.
+func (m *AllTypes) SetURLOptional(value *string) {
+	if value != nil {
+		m.Set("url_optional", *value) // ✨ 수정: 포인터를 역참조하여 실제 값을 저장
+	} else {
+		m.Set("url_optional", nil)
+	}
+}
+
+// DateRequired returns the value of the 'date_required' field.
+func (m *AllTypes) DateRequired() types.DateTime {
+	return m.GetDateTime("date_required")
+}
+
+// SetDateRequired sets the value of the 'date_required' field.
+func (m *AllTypes) SetDateRequired(value types.DateTime) {
+	m.Set("date_required", value)
+}
+
+// DateOptional returns the value of the 'date_optional' field.
+func (m *AllTypes) DateOptional() *types.DateTime {
+	return m.GetDateTimePointer("date_optional")
+}
+
+// SetDateOptional sets the value of the 'date_optional' field.
+func (m *AllTypes) SetDateOptional(value *types.DateTime) {
+	if value != nil {
+		m.Set("date_optional", *value) // ✨ 수정: 포인터를 역참조하여 실제 값을 저장
+	} else {
+		m.Set("date_optional", nil)
+	}
+}
+
+// SelectSingleRequired returns the value of the 'select_single_required' field.
+func (m *AllTypes) SelectSingleRequired() []string {
+	return m.GetStringSlice("select_single_required")
+}
+
+// SetSelectSingleRequired sets the value of the 'select_single_required' field.
+func (m *AllTypes) SetSelectSingleRequired(value []string) {
+	m.Set("select_single_required", value)
+}
+
+// SelectSingleOptional returns the value of the 'select_single_optional' field.
+func (m *AllTypes) SelectSingleOptional() []string {
+	return m.GetStringSlice("select_single_optional")
+}
+
+// SetSelectSingleOptional sets the value of the 'select_single_optional' field.
+func (m *AllTypes) SetSelectSingleOptional(value []string) {
+	m.Set("select_single_optional", value)
+}
+
+// SelectMultiRequired returns the value of the 'select_multi_required' field.
+func (m *AllTypes) SelectMultiRequired() []string {
+	return m.GetStringSlice("select_multi_required")
+}
+
+// SetSelectMultiRequired sets the value of the 'select_multi_required' field.
+func (m *AllTypes) SetSelectMultiRequired(value []string) {
+	m.Set("select_multi_required", value)
+}
+
+// SelectMultiOptional returns the value of the 'select_multi_optional' field.
+func (m *AllTypes) SelectMultiOptional() []string {
+	return m.GetStringSlice("select_multi_optional")
+}
+
+// SetSelectMultiOptional sets the value of the 'select_multi_optional' field.
+func (m *AllTypes) SetSelectMultiOptional(value []string) {
+	m.Set("select_multi_optional", value)
+}
+
+// JSONRequired returns the value of the 'json_required' field.
+func (m *AllTypes) JSONRequired() json.RawMessage {
+	return m.GetRawMessage("json_required")
+}
+
+// SetJSONRequired sets the value of the 'json_required' field.
+func (m *AllTypes) SetJSONRequired(value json.RawMessage) {
+	m.Set("json_required", value)
+}
+
+// JSONOptional returns the value of the 'json_optional' field.
+func (m *AllTypes) JSONOptional() json.RawMessage {
+	return m.GetRawMessage("json_optional")
+}
+
+// SetJSONOptional sets the value of the 'json_optional' field.
+func (m *AllTypes) SetJSONOptional(value json.RawMessage) {
+	m.Set("json_optional", value)
+}
+
+// FileSingle returns the value of the 'file_single' field.
+func (m *AllTypes) FileSingle() []string {
+	return m.GetStringSlice("file_single")
+}
+
+// SetFileSingle sets the value of the 'file_single' field.
+func (m *AllTypes) SetFileSingle(value []string) {
+	m.Set("file_single", value)
+}
+
+// FileMulti returns the value of the 'file_multi' field.
+func (m *AllTypes) FileMulti() []string {
+	return m.GetStringSlice("file_multi")
+}
+
+// SetFileMulti sets the value of the 'file_multi' field.
+func (m *AllTypes) SetFileMulti(value []string) {
+	m.Set("file_multi", value)
+}
+
+// RelationSingle returns the value of the 'relation_single' field.
+func (m *AllTypes) RelationSingle() []string {
+	return m.GetStringSlice("relation_single")
+}
+
+// SetRelationSingle sets the value of the 'relation_single' field.
+func (m *AllTypes) SetRelationSingle(value []string) {
+	m.Set("relation_single", value)
+}
+
+// RelationMulti returns the value of the 'relation_multi' field.
+func (m *AllTypes) RelationMulti() []string {
+	return m.GetStringSlice("relation_multi")
+}
+
+// SetRelationMulti sets the value of the 'relation_multi' field.
+func (m *AllTypes) SetRelationMulti(value []string) {
+	m.Set("relation_multi", value)
+}
+
+// RelatedCollection represents a record from the 'related_collection' collection.
+type RelatedCollection struct {
 	pocketbase.Record
 }
 
-// UsersCollection is a collection of Users records.
-type UsersCollection struct {
+// RelatedCollectionCollection is a collection of RelatedCollection records.
+type RelatedCollectionCollection struct {
 	*pocketbase.ListResult
-	Items []*Users `json:"items"`
+	Items []*RelatedCollection `json:"items"`
 }
 
-// NewUsers creates a new instance of Users.
-func NewUsers() *Users {
-	return &Users{Record: pocketbase.Record{}}
+// NewRelatedCollection creates a new instance of RelatedCollection.
+func NewRelatedCollection() *RelatedCollection {
+	return &RelatedCollection{Record: pocketbase.Record{}}
 }
 
-// ToUsers creates a new instance of Users with the provided record.
-func ToUsers(r *pocketbase.Record) *Users {
-	return &Users{Record: *r}
+// ToRelatedCollection creates a new instance of RelatedCollection with the provided record.
+func ToRelatedCollection(r *pocketbase.Record) *RelatedCollection {
+	return &RelatedCollection{Record: *r}
 }
 
 // ToMap converts the struct to a map[string]any for creating/updating records.
 // It omits empty or zero-value fields to support PATCH operations.
-func (m *Users) ToMap() map[string]any {
+func (m *RelatedCollection) ToMap() map[string]any {
 	data := make(map[string]interface{})
 
 	// non-zero, non-empty, and non-nil values will be added to the map.
-	if val := m.Name(); val != nil {
-		data["name"] = *val // Dereference pointer
-	}
-	if val := m.Avatar(); len(val) > 0 {
-		data["avatar"] = val
-	}
-	if val := m.Created(); val != nil {
-		data["created"] = *val // Dereference pointer
-	}
-	if val := m.Updated(); val != nil {
-		data["updated"] = *val // Dereference pointer
-	}
+	data["name"] = m.Name()
 
 	return data
 }
 
 // Name returns the value of the 'name' field.
-func (m *Users) Name() *string {
-	return m.GetStringPointer("name")
+func (m *RelatedCollection) Name() string {
+	return m.GetString("name")
 }
 
 // SetName sets the value of the 'name' field.
-func (m *Users) SetName(value *string) {
-	if value != nil {
-		m.Set("name", *value) // ✨ 수정: 포인터를 역참조하여 실제 값을 저장
-	} else {
-		m.Set("name", nil)
-	}
-}
-
-// Avatar returns the value of the 'avatar' field.
-func (m *Users) Avatar() []string {
-	return m.GetStringSlice("avatar")
-}
-
-// SetAvatar sets the value of the 'avatar' field.
-func (m *Users) SetAvatar(value []string) {
-	m.Set("avatar", value)
-}
-
-// Created returns the value of the 'created' field.
-func (m *Users) Created() *types.DateTime {
-	return m.GetDateTimePointer("created")
-}
-
-// SetCreated sets the value of the 'created' field.
-func (m *Users) SetCreated(value *types.DateTime) {
-	if value != nil {
-		m.Set("created", *value) // ✨ 수정: 포인터를 역참조하여 실제 값을 저장
-	} else {
-		m.Set("created", nil)
-	}
-}
-
-// Updated returns the value of the 'updated' field.
-func (m *Users) Updated() *types.DateTime {
-	return m.GetDateTimePointer("updated")
-}
-
-// SetUpdated sets the value of the 'updated' field.
-func (m *Users) SetUpdated(value *types.DateTime) {
-	if value != nil {
-		m.Set("updated", *value) // ✨ 수정: 포인터를 역참조하여 실제 값을 저장
-	} else {
-		m.Set("updated", nil)
-	}
-}
-
-// Posts represents a record from the 'posts' collection.
-type Posts struct {
-	pocketbase.Record
-}
-
-// PostsCollection is a collection of Posts records.
-type PostsCollection struct {
-	*pocketbase.ListResult
-	Items []*Posts `json:"items"`
-}
-
-// NewPosts creates a new instance of Posts.
-func NewPosts() *Posts {
-	return &Posts{Record: pocketbase.Record{}}
-}
-
-// ToPosts creates a new instance of Posts with the provided record.
-func ToPosts(r *pocketbase.Record) *Posts {
-	return &Posts{Record: *r}
-}
-
-// ToMap converts the struct to a map[string]any for creating/updating records.
-// It omits empty or zero-value fields to support PATCH operations.
-func (m *Posts) ToMap() map[string]any {
-	data := make(map[string]interface{})
-
-	// non-zero, non-empty, and non-nil values will be added to the map.
-	if val := m.Title(); val != nil {
-		data["title"] = *val // Dereference pointer
-	}
-	if val := m.Created(); val != nil {
-		data["created"] = *val // Dereference pointer
-	}
-	if val := m.Updated(); val != nil {
-		data["updated"] = *val // Dereference pointer
-	}
-
-	return data
-}
-
-// Title returns the value of the 'title' field.
-func (m *Posts) Title() *string {
-	return m.GetStringPointer("title")
-}
-
-// SetTitle sets the value of the 'title' field.
-func (m *Posts) SetTitle(value *string) {
-	if value != nil {
-		m.Set("title", *value) // ✨ 수정: 포인터를 역참조하여 실제 값을 저장
-	} else {
-		m.Set("title", nil)
-	}
-}
-
-// Created returns the value of the 'created' field.
-func (m *Posts) Created() *types.DateTime {
-	return m.GetDateTimePointer("created")
-}
-
-// SetCreated sets the value of the 'created' field.
-func (m *Posts) SetCreated(value *types.DateTime) {
-	if value != nil {
-		m.Set("created", *value) // ✨ 수정: 포인터를 역참조하여 실제 값을 저장
-	} else {
-		m.Set("created", nil)
-	}
-}
-
-// Updated returns the value of the 'updated' field.
-func (m *Posts) Updated() *types.DateTime {
-	return m.GetDateTimePointer("updated")
-}
-
-// SetUpdated sets the value of the 'updated' field.
-func (m *Posts) SetUpdated(value *types.DateTime) {
-	if value != nil {
-		m.Set("updated", *value) // ✨ 수정: 포인터를 역참조하여 실제 값을 저장
-	} else {
-		m.Set("updated", nil)
-	}
+func (m *RelatedCollection) SetName(value string) {
+	m.Set("name", value)
 }
 
 // ==============
 //  Typed Helpers
 // ==============
 
-// GetSuperusers fetches a single Superusers record by its ID.
-func GetSuperusers(client pocketbase.RecordServiceAPI, id string, opts *pocketbase.GetOneOptions) (*Superusers, error) {
-	r, err := client.GetOne(context.Background(), "_superusers", id, opts)
+// GetAllTypes fetches a single AllTypes record by its ID.
+func GetAllTypes(client pocketbase.RecordServiceAPI, id string, opts *pocketbase.GetOneOptions) (*AllTypes, error) {
+	r, err := client.GetOne(context.Background(), "all_types", id, opts)
 	if err != nil {
 		return nil, err
 	}
-	return ToSuperusers(r), nil
+	return ToAllTypes(r), nil
 }
 
-// GetSuperusersList fetches a list of Superusers records.
-func GetSuperusersList(client pocketbase.RecordServiceAPI, opts *pocketbase.ListOptions) (*SuperusersCollection, error) {
-	listResult, err := client.GetList(context.Background(), "_superusers", opts)
+// GetAllTypesList fetches a list of AllTypes records.
+func GetAllTypesList(client pocketbase.RecordServiceAPI, opts *pocketbase.ListOptions) (*AllTypesCollection, error) {
+	listResult, err := client.GetList(context.Background(), "all_types", opts)
 	if err != nil {
 		return nil, err
 	}
 
-	typedItems := make([]*Superusers, len(listResult.Items))
+	typedItems := make([]*AllTypes, len(listResult.Items))
 	for i, r := range listResult.Items {
-		typedItems[i] = ToSuperusers(r)
+		typedItems[i] = ToAllTypes(r)
 	}
 
-	return &SuperusersCollection{
+	return &AllTypesCollection{
 		ListResult: listResult,
 		Items:      typedItems,
 	}, nil
 }
 
-// GetUsers fetches a single Users record by its ID.
-func GetUsers(client pocketbase.RecordServiceAPI, id string, opts *pocketbase.GetOneOptions) (*Users, error) {
-	r, err := client.GetOne(context.Background(), "users", id, opts)
+// GetRelatedCollection fetches a single RelatedCollection record by its ID.
+func GetRelatedCollection(client pocketbase.RecordServiceAPI, id string, opts *pocketbase.GetOneOptions) (*RelatedCollection, error) {
+	r, err := client.GetOne(context.Background(), "related_collection", id, opts)
 	if err != nil {
 		return nil, err
 	}
-	return ToUsers(r), nil
+	return ToRelatedCollection(r), nil
 }
 
-// GetUsersList fetches a list of Users records.
-func GetUsersList(client pocketbase.RecordServiceAPI, opts *pocketbase.ListOptions) (*UsersCollection, error) {
-	listResult, err := client.GetList(context.Background(), "users", opts)
+// GetRelatedCollectionList fetches a list of RelatedCollection records.
+func GetRelatedCollectionList(client pocketbase.RecordServiceAPI, opts *pocketbase.ListOptions) (*RelatedCollectionCollection, error) {
+	listResult, err := client.GetList(context.Background(), "related_collection", opts)
 	if err != nil {
 		return nil, err
 	}
 
-	typedItems := make([]*Users, len(listResult.Items))
+	typedItems := make([]*RelatedCollection, len(listResult.Items))
 	for i, r := range listResult.Items {
-		typedItems[i] = ToUsers(r)
+		typedItems[i] = ToRelatedCollection(r)
 	}
 
-	return &UsersCollection{
-		ListResult: listResult,
-		Items:      typedItems,
-	}, nil
-}
-
-// GetPosts fetches a single Posts record by its ID.
-func GetPosts(client pocketbase.RecordServiceAPI, id string, opts *pocketbase.GetOneOptions) (*Posts, error) {
-	r, err := client.GetOne(context.Background(), "posts", id, opts)
-	if err != nil {
-		return nil, err
-	}
-	return ToPosts(r), nil
-}
-
-// GetPostsList fetches a list of Posts records.
-func GetPostsList(client pocketbase.RecordServiceAPI, opts *pocketbase.ListOptions) (*PostsCollection, error) {
-	listResult, err := client.GetList(context.Background(), "posts", opts)
-	if err != nil {
-		return nil, err
-	}
-
-	typedItems := make([]*Posts, len(listResult.Items))
-	for i, r := range listResult.Items {
-		typedItems[i] = ToPosts(r)
-	}
-
-	return &PostsCollection{
+	return &RelatedCollectionCollection{
 		ListResult: listResult,
 		Items:      typedItems,
 	}, nil

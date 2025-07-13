@@ -221,6 +221,9 @@ func (r *Record) GetDateTime(key string) types.DateTime {
 // GetStringSlice returns a slice of strings for a given key.
 func (r *Record) GetStringSlice(key string) []string {
 	val := r.Get(key)
+	if slice, ok := val.([]string); ok {
+		return slice
+	}
 	if slice, ok := val.([]interface{}); ok {
 		result := make([]string, len(slice))
 		for i, v := range slice {
@@ -230,6 +233,7 @@ func (r *Record) GetStringSlice(key string) []string {
 		}
 		return result
 	}
+
 	return []string{}
 }
 
