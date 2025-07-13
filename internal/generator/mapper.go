@@ -1,6 +1,8 @@
 package generator
 
 import (
+	// encoding/json 패키지 임포트 유지
+	"fmt"
 	"strings"
 )
 
@@ -8,19 +10,26 @@ import (
 func MapPbTypeToGoType(field FieldSchema, omitEmpty bool) (string, string, string) {
 	var goType, comment, getterMethod string
 
+	// MaxSelect 옵션을 기반으로 다중 선택 필드 여부를 미리 판단
+	isMulti := false
+
+	// field.Options.MaxSelect가 *int로 올바르게 파싱될 것을 기대합니다.
+	if field.Options != nil && field.Options.MaxSelect != nil {
+		if *field.Options.MaxSelect != 1 {
+			isMulti = true
+		}
+	} else if field.Type == "relation" || field.Type == "file" || field.Type == "select" {
+		// MaxSelect가 nil인 경우 (스키마에 maxSelect가 없거나 null인 경우),
+		// relation/file/select 타입은 기본적으로 다중으로 간주합니다.
+		isMulti = true
+	}
+
 	switch field.Type {
-	case "text", "email", "url", "editor", "select": // "select" 타입을 여기에 추가
-		if field.Type == "select" && field.Options != nil && field.Options.MaxSelect != nil && *field.Options.MaxSelect != 1 {
-			// multi-select인 경우 []string
-			goType = "[]string"
-			getterMethod = "GetStringSlice"
-		} else {
-			// single-select이거나 다른 텍스트 기반 타입인 경우 string 또는 *string
-			goType = "string"
-			getterMethod = "GetString"
-			if omitEmpty {
-				getterMethod = "GetStringPointer"
-			}
+	case "text", "email", "url", "editor":
+		goType = "string"
+		getterMethod = "GetString"
+		if omitEmpty {
+			getterMethod = "GetStringPointer"
 		}
 	case "number":
 		goType = "float64"
@@ -42,25 +51,31 @@ func MapPbTypeToGoType(field FieldSchema, omitEmpty bool) (string, string, strin
 		}
 	case "json":
 		goType = "json.RawMessage"
-		getterMethod = "GetRawMessage" // 범용 Get 사용 후 사용자가 직접 Unmarshal
-	case "relation", "file":
-		if field.Options != nil && field.Options.MaxSelect != nil && *field.Options.MaxSelect == 1 {
+		getterMethod = "GetRawMessage"
+	case "relation", "file", "select":
+		if isMulti {
+			goType = "[]string"
+			getterMethod = "GetStringSlice"
+		} else { // 단일 선택/파일/관계
 			goType = "string"
 			getterMethod = "GetString"
 			if omitEmpty {
 				getterMethod = "GetStringPointer"
 			}
-		} else {
-			goType = "[]string"
-			getterMethod = "GetStringSlice"
 		}
 	default:
 		goType = "interface{}"
 		getterMethod = "Get"
 	}
 
-	// 포인터 타입 처리를 통합하여 중복 로직을 제거
-	// 단, []string, json.RawMessage, interface{}는 포인터가 될 수 없습니다.
+	// 디버깅 출력을 위해 MaxSelect 값을 안전하게 포맷
+	var maxSelectDebugVal interface{} = "nil"
+	if field.Options != nil && field.Options.MaxSelect != nil {
+		maxSelectDebugVal = *field.Options.MaxSelect // 이제 *int로 올바르게 파싱되기를 기대합니다.
+	}
+	fmt.Printf("DEBUG: Field %s (Type: %s, MaxSelect: %v, omitEmpty: %t) -> goType: %s, getter: %s\n", field.Name, field.Type, maxSelectDebugVal, omitEmpty, goType, getterMethod)
+
+	// 최종적으로 포인터 타입을 적용할지 결정 (이미 포인터이거나 슬라이스, json.RawMessage, interface{}인 경우는 제외)
 	if omitEmpty && !strings.HasPrefix(goType, "[]") && goType != "json.RawMessage" && goType != "interface{}" && !strings.HasPrefix(goType, "*") {
 		goType = "*" + goType
 	}

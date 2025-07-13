@@ -47,11 +47,9 @@ func main() {
 	newAllTypes.SetDateRequired(types.NowDateTime())
 
 	// 필수 select 필드에 스키마에 정의된 유효한 값 할당
-	newAllTypes.SetSelectSingleRequired([]string{"a"})     // "a", "b", "c" 중 하나
+	newAllTypes.SetSelectSingleRequired("a")               // "a", "b", "c" 중 하나
 	newAllTypes.SetSelectMultiRequired([]string{"a", "b"}) // "a", "b", "c" 중 하나 이상
-
-	jsonContent := json.RawMessage(`{"key": "value", "number": 123}`)
-	newAllTypes.SetJSONRequired(jsonContent)
+	newAllTypes.SetJSONRequired(json.RawMessage(`{"key": "value", "number": 123}`))
 
 	// Optional 필드 설정 (포인터 값을 사용)
 	optionalText := "This is an optional text."
@@ -66,16 +64,17 @@ func main() {
 	newAllTypes.SetURLOptional(&optionalURL)
 	optionalDate := types.NowDateTime().Add(24 * time.Hour)
 	newAllTypes.SetDateOptional(&optionalDate)
-	newAllTypes.SetSelectSingleOptional([]string{"x"}) // "x", "y", "z" 중 하나
-	smo := []string{"y"}
-	newAllTypes.SetSelectMultiOptional(&smo) // "x", "y", "z" 중 하나 이상
+	so := "x"
+	newAllTypes.SetSelectSingleOptional(&so)          // "x", "y", "z" 중 하나
+	newAllTypes.SetSelectMultiOptional([]string{"y"}) // "x", "y", "z" 중 하나 이상
 	optionalJSONContent := json.RawMessage(`{"another_key": "another_value"}`)
 	newAllTypes.SetJSONOptional(optionalJSONContent)
 
 	// File 및 Relation 필드 (예제에서는 실제 파일 업로드/ID 참조는 생략하고 빈 슬라이스 또는 생성된 ID 사용)
 	// 실제 환경에서는 pocketbase-client의 File 관련 메서드를 사용해야 합니다.
-	newAllTypes.SetRelationSingle([]string{createdRelated.ID}) // 위에서 생성한 RelatedCollection ID 참조
-	newAllTypes.SetRelationMulti([]string{})                   // 여러 RelatedCollection ID들을 여기에 추가
+	id := createdRelated.ID
+	newAllTypes.SetRelationSingle(&id)       // 위에서 생성한 RelatedCollection ID 참조
+	newAllTypes.SetRelationMulti([]string{}) // 여러 RelatedCollection ID들을 여기에 추가
 
 	// 레코드 생성
 	createdAllTypeRecord, err := client.Records.Create(ctx, "all_types", newAllTypes)
@@ -88,37 +87,68 @@ func main() {
 	fmt.Printf("Created AllTypes record with ID: %s\n", createdAllTypes.ID)
 	fmt.Printf("  TextRequired: '%s'\n", createdAllTypes.TextRequired())
 	if txt := createdAllTypes.TextOptional(); txt != nil {
-		fmt.Printf("  TextOptional: '%s'\n", *txt)
+		fmt.Printf("  TextOptional: '%s'\n", *txt) // 포인터 역참조
+	} else {
+		fmt.Printf("  TextOptional: <nil>\n") // nil인 경우
 	}
 	fmt.Printf("  NumberRequired: %f\n", createdAllTypes.NumberRequired())
 	if num := createdAllTypes.NumberOptional(); num != nil {
-		fmt.Printf("  NumberOptional: %f\n", *num)
+		fmt.Printf("  NumberOptional: %f\n", *num) // 포인터 역참조
+	} else {
+		fmt.Printf("  NumberOptional: <nil>\n")
 	}
 	fmt.Printf("  BoolRequired: %t\n", createdAllTypes.BoolRequired())
 	if b := createdAllTypes.BoolOptional(); b != nil {
-		fmt.Printf("  BoolOptional: %t\n", *b)
+		fmt.Printf("  BoolOptional: %t\n", *b) // 포인터 역참조
+	} else {
+		fmt.Printf("  BoolOptional: <nil>\n")
 	}
 	fmt.Printf("  EmailRequired: '%s'\n", createdAllTypes.EmailRequired())
 	if email := createdAllTypes.EmailOptional(); email != nil {
-		fmt.Printf("  EmailOptional: '%s'\n", *email)
+		fmt.Printf("  EmailOptional: '%s'\n", *email) // 포인터 역참조
+	} else {
+		fmt.Printf("  EmailOptional: <nil>\n")
 	}
 	fmt.Printf("  URLRequired: '%s'\n", createdAllTypes.URLRequired())
 	if url := createdAllTypes.URLOptional(); url != nil {
-		fmt.Printf("  URLOptional: '%s'\n", *url)
+		fmt.Printf("  URLOptional: '%s'\n", *url) // 포인터 역참조
+	} else {
+		fmt.Printf("  URLOptional: <nil>\n")
 	}
 	fmt.Printf("  DateRequired: '%s'\n", createdAllTypes.DateRequired().String())
 	if dt := createdAllTypes.DateOptional(); dt != nil {
-		fmt.Printf("  DateOptional: '%s'\n", dt.String())
+		fmt.Printf("  DateOptional: '%s'\n", dt.String()) // 포인터 역참조 (String() 메서드가 값을 반환)
+	} else {
+		fmt.Printf("  DateOptional: <nil>\n")
 	}
-	fmt.Printf("  SelectSingleRequired: %v\n", createdAllTypes.SelectSingleRequired())
-	fmt.Printf("  SelectSingleOptional: %v\n", createdAllTypes.SelectSingleOptional())
+
+	// SelectSingleRequired는 string, SelectSingleOptional는 *string이므로 분기 처리
+	fmt.Printf("  SelectSingleRequired: %s\n", createdAllTypes.SelectSingleRequired())
+	if sso := createdAllTypes.SelectSingleOptional(); sso != nil {
+		fmt.Printf("  SelectSingleOptional: '%s'\n", *sso) // *string 역참조
+	} else {
+		fmt.Printf("  SelectSingleOptional: <nil>\n")
+	}
+
 	fmt.Printf("  SelectMultiRequired: %v\n", createdAllTypes.SelectMultiRequired())
 	fmt.Printf("  SelectMultiOptional: %v\n", createdAllTypes.SelectMultiOptional())
 	fmt.Printf("  JSONRequired: %s\n", string(createdAllTypes.JSONRequired()))
 	fmt.Printf("  JSONOptional: %s\n", string(createdAllTypes.JSONOptional()))
-	fmt.Printf("  FileSingle (IDs): %v\n", createdAllTypes.FileSingle())
+
+	// FileSingle은 *string, FileMulti는 []string이므로 분기 처리
+	if fs := createdAllTypes.FileSingle(); fs != nil {
+		fmt.Printf("  FileSingle (IDs): '%s'\n", *fs) // *string 역참조
+	} else {
+		fmt.Printf("  FileSingle (IDs): <nil>\n")
+	}
 	fmt.Printf("  FileMulti (IDs): %v\n", createdAllTypes.FileMulti())
-	fmt.Printf("  RelationSingle (IDs): %v\n", createdAllTypes.RelationSingle())
+
+	// RelationSingle은 *string, RelationMulti는 []string이므로 분기 처리
+	if rs := createdAllTypes.RelationSingle(); rs != nil {
+		fmt.Printf("  RelationSingle (IDs): '%s'\n", *rs) // *string 역참조
+	} else {
+		fmt.Printf("  RelationSingle (IDs): <nil>\n")
+	}
 	fmt.Printf("  RelationMulti (IDs): %v\n", createdAllTypes.RelationMulti())
 
 	// --- 타입-세이프(Type-Safe) 헬퍼를 사용한 AllTypes 목록 조회 ---

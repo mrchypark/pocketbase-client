@@ -1,8 +1,9 @@
 package generator
 
 import (
-	"encoding/json"
 	"os"
+
+	"github.com/goccy/go-json"
 )
 
 // LoadSchema reads a JSON file from the given path and unmarshals it into a slice of CollectionSchema.

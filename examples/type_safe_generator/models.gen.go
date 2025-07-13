@@ -253,22 +253,22 @@ func (m *AllTypes) SetSelectSingleOptional(value *string) {
 }
 
 // SelectMultiRequired returns the value of the 'select_multi_required' field.
-func (m *AllTypes) SelectMultiRequired() string {
-	return m.GetString("select_multi_required")
+func (m *AllTypes) SelectMultiRequired() []string {
+	return m.GetStringSlice("select_multi_required")
 }
 
 // SetSelectMultiRequired sets the value of the 'select_multi_required' field.
-func (m *AllTypes) SetSelectMultiRequired(value string) {
+func (m *AllTypes) SetSelectMultiRequired(value []string) {
 	m.Set("select_multi_required", value)
 }
 
 // SelectMultiOptional returns the value of the 'select_multi_optional' field.
-func (m *AllTypes) SelectMultiOptional() *string {
-	return m.GetStringPointer("select_multi_optional")
+func (m *AllTypes) SelectMultiOptional() []string {
+	return m.GetStringSlice("select_multi_optional")
 }
 
 // SetSelectMultiOptional sets the value of the 'select_multi_optional' field.
-func (m *AllTypes) SetSelectMultiOptional(value *string) {
+func (m *AllTypes) SetSelectMultiOptional(value []string) {
 	m.Set("select_multi_optional", value)
 }
 
@@ -293,12 +293,12 @@ func (m *AllTypes) SetJSONOptional(value json.RawMessage) {
 }
 
 // FileSingle returns the value of the 'file_single' field.
-func (m *AllTypes) FileSingle() []string {
-	return m.GetStringSlice("file_single")
+func (m *AllTypes) FileSingle() *string {
+	return m.GetStringPointer("file_single")
 }
 
 // SetFileSingle sets the value of the 'file_single' field.
-func (m *AllTypes) SetFileSingle(value []string) {
+func (m *AllTypes) SetFileSingle(value *string) {
 	m.Set("file_single", value)
 }
 
@@ -313,12 +313,12 @@ func (m *AllTypes) SetFileMulti(value []string) {
 }
 
 // RelationSingle returns the value of the 'relation_single' field.
-func (m *AllTypes) RelationSingle() []string {
-	return m.GetStringSlice("relation_single")
+func (m *AllTypes) RelationSingle() *string {
+	return m.GetStringPointer("relation_single")
 }
 
 // SetRelationSingle sets the value of the 'relation_single' field.
-func (m *AllTypes) SetRelationSingle(value []string) {
+func (m *AllTypes) SetRelationSingle(value *string) {
 	m.Set("relation_single", value)
 }
 

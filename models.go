@@ -128,11 +128,6 @@ func (r *Record) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// ✅ 제거: parseData와 once 필드는 더 이상 필요 없습니다.
-/*
-func (r *Record) parseData() { ... }
-*/
-
 // Get returns a raw interface{} value for a given key.
 func (r *Record) Get(key string) interface{} {
 	if r.deserializedData == nil {
@@ -258,6 +253,12 @@ func (r *Record) GetRawMessage(key string) json.RawMessage {
 // Returns nil if the key is not present or the value is not a string.
 func (r *Record) GetStringPointer(key string) *string {
 	val := r.Get(key)
+	if val == nil {
+		return nil
+	}
+	if ptr, ok := val.(*string); ok {
+		return ptr
+	}
 	if str, ok := val.(string); ok {
 		return &str
 	}
@@ -268,6 +269,12 @@ func (r *Record) GetStringPointer(key string) *string {
 // Returns nil if the key is not present or the value is not a bool.
 func (r *Record) GetBoolPointer(key string) *bool {
 	val := r.Get(key)
+	if val == nil {
+		return nil
+	}
+	if ptr, ok := val.(*bool); ok {
+		return ptr
+	}
 	if b, ok := val.(bool); ok {
 		return &b
 	}
@@ -281,6 +288,9 @@ func (r *Record) GetFloatPointer(key string) *float64 {
 	if val == nil {
 		return nil
 	}
+	if ptr, ok := val.(*float64); ok {
+		return ptr
+	}
 
 	var f float64
 	var ok bool
@@ -292,10 +302,10 @@ func (r *Record) GetFloatPointer(key string) *float64 {
 		}
 	} else if f, ok = val.(float64); ok {
 		return &f
-	} else if i, ok := val.(int); ok { // int 타입 처리 추가
+	} else if i, ok := val.(int); ok {
 		f = float64(i)
 		return &f
-	} else if i64, ok := val.(int64); ok { // int64 타입 처리 추가
+	} else if i64, ok := val.(int64); ok {
 		f = float64(i64)
 		return &f
 	}
@@ -307,6 +317,15 @@ func (r *Record) GetFloatPointer(key string) *float64 {
 // Returns nil if the key is not present or the value cannot be parsed as a DateTime.
 func (r *Record) GetDateTimePointer(key string) *types.DateTime {
 	val := r.Get(key)
+	if val == nil {
+		return nil
+	}
+	if ptr, ok := val.(*types.DateTime); ok {
+		return ptr
+	}
+	if dt, ok := val.(types.DateTime); ok {
+		return &dt
+	}
 	if str, ok := val.(string); ok {
 		dt, err := types.ParseDateTime(str)
 		if err == nil {
