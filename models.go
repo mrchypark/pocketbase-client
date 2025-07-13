@@ -274,6 +274,10 @@ func (r *Record) GetBoolPointer(key string) *bool {
 // Returns nil if the key is not present or the value is not a number.
 func (r *Record) GetFloatPointer(key string) *float64 {
 	val := r.Get(key)
+	if val == nil {
+		return nil
+	}
+
 	var f float64
 	var ok bool
 
@@ -284,7 +288,14 @@ func (r *Record) GetFloatPointer(key string) *float64 {
 		}
 	} else if f, ok = val.(float64); ok {
 		return &f
+	} else if i, ok := val.(int); ok { // int 타입 처리 추가
+		f = float64(i)
+		return &f
+	} else if i64, ok := val.(int64); ok { // int64 타입 처리 추가
+		f = float64(i64)
+		return &f
 	}
+
 	return nil
 }
 
