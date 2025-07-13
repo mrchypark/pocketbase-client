@@ -108,6 +108,12 @@ func (m *AllTypes) ToMap() map[string]any {
 	if val := m.RelationMulti(); val != nil {
 		data["relation_multi"] = val
 	}
+	if val := m.Created(); val != nil {
+		data["created"] = val
+	}
+	if val := m.Updated(); val != nil {
+		data["updated"] = val
+	}
 
 	return data
 }
@@ -330,6 +336,26 @@ func (m *AllTypes) RelationMulti() []string {
 // SetRelationMulti sets the value of the 'relation_multi' field.
 func (m *AllTypes) SetRelationMulti(value []string) {
 	m.Set("relation_multi", value)
+}
+
+// Created returns the value of the 'created' field.
+func (m *AllTypes) Created() *types.DateTime {
+	return m.GetDateTimePointer("created")
+}
+
+// SetCreated sets the value of the 'created' field.
+func (m *AllTypes) SetCreated(value *types.DateTime) {
+	m.Set("created", value)
+}
+
+// Updated returns the value of the 'updated' field.
+func (m *AllTypes) Updated() *types.DateTime {
+	return m.GetDateTimePointer("updated")
+}
+
+// SetUpdated sets the value of the 'updated' field.
+func (m *AllTypes) SetUpdated(value *types.DateTime) {
+	m.Set("updated", value)
 }
 
 // RelatedCollection represents a record from the 'related_collection' collection.
