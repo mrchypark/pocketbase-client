@@ -1,8 +1,6 @@
 package generator
 
 import (
-	// encoding/json 패키지 임포트 유지
-	"fmt"
 	"strings"
 )
 
@@ -67,13 +65,6 @@ func MapPbTypeToGoType(field FieldSchema, omitEmpty bool) (string, string, strin
 		goType = "interface{}"
 		getterMethod = "Get"
 	}
-
-	// 디버깅 출력을 위해 MaxSelect 값을 안전하게 포맷
-	var maxSelectDebugVal interface{} = "nil"
-	if field.Options != nil && field.Options.MaxSelect != nil {
-		maxSelectDebugVal = *field.Options.MaxSelect // 이제 *int로 올바르게 파싱되기를 기대합니다.
-	}
-	fmt.Printf("DEBUG: Field %s (Type: %s, MaxSelect: %v, omitEmpty: %t) -> goType: %s, getter: %s\n", field.Name, field.Type, maxSelectDebugVal, omitEmpty, goType, getterMethod)
 
 	// 최종적으로 포인터 타입을 적용할지 결정 (이미 포인터이거나 슬라이스, json.RawMessage, interface{}인 경우는 제외)
 	if omitEmpty && !strings.HasPrefix(goType, "[]") && goType != "json.RawMessage" && goType != "interface{}" && !strings.HasPrefix(goType, "*") {
