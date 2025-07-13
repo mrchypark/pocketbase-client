@@ -9,11 +9,18 @@ func MapPbTypeToGoType(field FieldSchema, omitEmpty bool) (string, string, strin
 	var goType, comment, getterMethod string
 
 	switch field.Type {
-	case "text", "email", "url", "editor":
-		goType = "string"
-		getterMethod = "GetString"
-		if omitEmpty {
-			getterMethod = "GetStringPointer"
+	case "text", "email", "url", "editor", "select": // "select" 타입을 여기에 추가
+		if field.Type == "select" && field.Options != nil && field.Options.MaxSelect != nil && *field.Options.MaxSelect != 1 {
+			// multi-select인 경우 []string
+			goType = "[]string"
+			getterMethod = "GetStringSlice"
+		} else {
+			// single-select이거나 다른 텍스트 기반 타입인 경우 string 또는 *string
+			goType = "string"
+			getterMethod = "GetString"
+			if omitEmpty {
+				getterMethod = "GetStringPointer"
+			}
 		}
 	case "number":
 		goType = "float64"
@@ -47,30 +54,20 @@ func MapPbTypeToGoType(field FieldSchema, omitEmpty bool) (string, string, strin
 			goType = "[]string"
 			getterMethod = "GetStringSlice"
 		}
-	case "select":
-		if field.Options != nil && field.Options.MaxSelect != nil && *field.Options.MaxSelect == 1 {
-			goType = "string"
-			getterMethod = "GetString"
-			if omitEmpty {
-				getterMethod = "GetStringPointer"
-			}
-		} else {
-			goType = "[]string"
-			getterMethod = "GetStringSlice"
-		}
 	default:
 		goType = "interface{}"
 		getterMethod = "Get"
 	}
 
-	if omitEmpty && !strings.HasPrefix(goType, "[]") && goType != "json.RawMessage" && goType != "interface{}" {
+	// 포인터 타입 처리를 통합하여 중복 로직을 제거
+	// 단, []string, json.RawMessage, interface{}는 포인터가 될 수 없습니다.
+	if omitEmpty && !strings.HasPrefix(goType, "[]") && goType != "json.RawMessage" && goType != "interface{}" && !strings.HasPrefix(goType, "*") {
 		goType = "*" + goType
 	}
 
 	return goType, comment, getterMethod
 }
 
-// ... ToPascalCase 함수는 동일 ...
 func ToPascalCase(s string) string {
 	if s == "" {
 		return ""

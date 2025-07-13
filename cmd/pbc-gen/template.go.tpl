@@ -33,34 +33,29 @@ func New{{$collection.StructName}}() *{{$collection.StructName}} {
 	return &{{$collection.StructName}}{Record: pocketbase.Record{}}
 }
 
-// To{{$collection.StructName}} creates a new instance of {{$collection.StructName}} with the provided record.
+// To{{$collection.StructName}} creates a To instance of {{$collection.StructName}} with the provided record.
 func To{{$collection.StructName}}(r *pocketbase.Record) *{{$collection.StructName}} {
 	return &{{$collection.StructName}}{Record: *r}
 }
+
 
 // ToMap converts the struct to a map[string]any for creating/updating records.
 // It omits empty or zero-value fields to support PATCH operations.
 func (m *{{$collection.StructName}}) ToMap() map[string]any {
 	data := make(map[string]interface{})
-
+    
 	// non-zero, non-empty, and non-nil values will be added to the map.
 	{{- range .Fields}}
-	{{- if and .OmitEmpty (ne .GoType "[]string") (ne .GoType "json.RawMessage") (ne .GoType "interface{}") }}
+	{{- if .OmitEmpty}}
 	if val := m.{{.GoName}}(); val != nil {
-		data["{{.JsonName}}"] = *val // Dereference pointer
-	}
-	{{- else if and .OmitEmpty (eq .GoType "[]string") }}
-	if val := m.{{.GoName}}(); len(val) > 0 {
 		data["{{.JsonName}}"] = val
 	}
-	{{- else if and .OmitEmpty (eq .GoType "json.RawMessage") }}
-	if val := m.{{.GoName}}(); len(val) > 0 && string(val) != "null" {
-		data["{{.JsonName}}"] = val
-	}
-	{{- else if not .OmitEmpty }}
+	{{- else}}
+	// For required fields, we always include them.
+	// You can add more complex logic here if needed, e.g., checking for zero values.
 	data["{{.JsonName}}"] = m.{{.GoName}}()
 	{{- end}}
-	{{- end}}
+    {{- end}}
 
 	return data
 }
@@ -73,15 +68,7 @@ func (m *{{$collection.StructName}}) {{.GoName}}() {{.GoType}} {
 
 // Set{{.GoName}} sets the value of the '{{.JsonName}}' field.
 func (m *{{$collection.StructName}}) Set{{.GoName}}(value {{.GoType}}) {
-	{{- if and .OmitEmpty (ne .GoType "[]string") (ne .GoType "json.RawMessage") (ne .GoType "interface{}") }}
-	if value != nil {
-		m.Set("{{.JsonName}}", *value) // ✨ 수정: 포인터를 역참조하여 실제 값을 저장
-	} else {
-		m.Set("{{.JsonName}}", nil)
-	}
-	{{- else}}
 	m.Set("{{.JsonName}}", value)
-	{{- end}}
 }
 {{end}}
 {{end}}

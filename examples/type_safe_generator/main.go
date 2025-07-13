@@ -67,7 +67,8 @@ func main() {
 	optionalDate := types.NowDateTime().Add(24 * time.Hour)
 	newAllTypes.SetDateOptional(&optionalDate)
 	newAllTypes.SetSelectSingleOptional([]string{"x"}) // "x", "y", "z" 중 하나
-	newAllTypes.SetSelectMultiOptional([]string{"y"})  // "x", "y", "z" 중 하나 이상
+	smo := []string{"y"}
+	newAllTypes.SetSelectMultiOptional(&smo) // "x", "y", "z" 중 하나 이상
 	optionalJSONContent := json.RawMessage(`{"another_key": "another_value"}`)
 	newAllTypes.SetJSONOptional(optionalJSONContent)
 

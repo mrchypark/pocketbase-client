@@ -31,7 +31,7 @@ func NewAllTypes() *AllTypes {
 	return &AllTypes{Record: pocketbase.Record{}}
 }
 
-// ToAllTypes creates a new instance of AllTypes with the provided record.
+// ToAllTypes creates a To instance of AllTypes with the provided record.
 func ToAllTypes(r *pocketbase.Record) *AllTypes {
 	return &AllTypes{Record: *r}
 }
@@ -42,52 +42,70 @@ func (m *AllTypes) ToMap() map[string]any {
 	data := make(map[string]interface{})
 
 	// non-zero, non-empty, and non-nil values will be added to the map.
+	// For required fields, we always include them.
+	// You can add more complex logic here if needed, e.g., checking for zero values.
 	data["text_required"] = m.TextRequired()
 	if val := m.TextOptional(); val != nil {
-		data["text_optional"] = *val // Dereference pointer
+		data["text_optional"] = val
 	}
+	// For required fields, we always include them.
+	// You can add more complex logic here if needed, e.g., checking for zero values.
 	data["number_required"] = m.NumberRequired()
 	if val := m.NumberOptional(); val != nil {
-		data["number_optional"] = *val // Dereference pointer
+		data["number_optional"] = val
 	}
+	// For required fields, we always include them.
+	// You can add more complex logic here if needed, e.g., checking for zero values.
 	data["bool_required"] = m.BoolRequired()
 	if val := m.BoolOptional(); val != nil {
-		data["bool_optional"] = *val // Dereference pointer
+		data["bool_optional"] = val
 	}
+	// For required fields, we always include them.
+	// You can add more complex logic here if needed, e.g., checking for zero values.
 	data["email_required"] = m.EmailRequired()
 	if val := m.EmailOptional(); val != nil {
-		data["email_optional"] = *val // Dereference pointer
+		data["email_optional"] = val
 	}
+	// For required fields, we always include them.
+	// You can add more complex logic here if needed, e.g., checking for zero values.
 	data["url_required"] = m.URLRequired()
 	if val := m.URLOptional(); val != nil {
-		data["url_optional"] = *val // Dereference pointer
+		data["url_optional"] = val
 	}
+	// For required fields, we always include them.
+	// You can add more complex logic here if needed, e.g., checking for zero values.
 	data["date_required"] = m.DateRequired()
 	if val := m.DateOptional(); val != nil {
-		data["date_optional"] = *val // Dereference pointer
+		data["date_optional"] = val
 	}
+	// For required fields, we always include them.
+	// You can add more complex logic here if needed, e.g., checking for zero values.
 	data["select_single_required"] = m.SelectSingleRequired()
-	if val := m.SelectSingleOptional(); len(val) > 0 {
+	if val := m.SelectSingleOptional(); val != nil {
 		data["select_single_optional"] = val
 	}
+	// For required fields, we always include them.
+	// You can add more complex logic here if needed, e.g., checking for zero values.
 	data["select_multi_required"] = m.SelectMultiRequired()
-	if val := m.SelectMultiOptional(); len(val) > 0 {
+	if val := m.SelectMultiOptional(); val != nil {
 		data["select_multi_optional"] = val
 	}
+	// For required fields, we always include them.
+	// You can add more complex logic here if needed, e.g., checking for zero values.
 	data["json_required"] = m.JSONRequired()
-	if val := m.JSONOptional(); len(val) > 0 && string(val) != "null" {
+	if val := m.JSONOptional(); val != nil {
 		data["json_optional"] = val
 	}
-	if val := m.FileSingle(); len(val) > 0 {
+	if val := m.FileSingle(); val != nil {
 		data["file_single"] = val
 	}
-	if val := m.FileMulti(); len(val) > 0 {
+	if val := m.FileMulti(); val != nil {
 		data["file_multi"] = val
 	}
-	if val := m.RelationSingle(); len(val) > 0 {
+	if val := m.RelationSingle(); val != nil {
 		data["relation_single"] = val
 	}
-	if val := m.RelationMulti(); len(val) > 0 {
+	if val := m.RelationMulti(); val != nil {
 		data["relation_multi"] = val
 	}
 
@@ -111,11 +129,7 @@ func (m *AllTypes) TextOptional() *string {
 
 // SetTextOptional sets the value of the 'text_optional' field.
 func (m *AllTypes) SetTextOptional(value *string) {
-	if value != nil {
-		m.Set("text_optional", *value) // ✨ 수정: 포인터를 역참조하여 실제 값을 저장
-	} else {
-		m.Set("text_optional", nil)
-	}
+	m.Set("text_optional", value)
 }
 
 // NumberRequired returns the value of the 'number_required' field.
@@ -135,11 +149,7 @@ func (m *AllTypes) NumberOptional() *float64 {
 
 // SetNumberOptional sets the value of the 'number_optional' field.
 func (m *AllTypes) SetNumberOptional(value *float64) {
-	if value != nil {
-		m.Set("number_optional", *value) // ✨ 수정: 포인터를 역참조하여 실제 값을 저장
-	} else {
-		m.Set("number_optional", nil)
-	}
+	m.Set("number_optional", value)
 }
 
 // BoolRequired returns the value of the 'bool_required' field.
@@ -159,11 +169,7 @@ func (m *AllTypes) BoolOptional() *bool {
 
 // SetBoolOptional sets the value of the 'bool_optional' field.
 func (m *AllTypes) SetBoolOptional(value *bool) {
-	if value != nil {
-		m.Set("bool_optional", *value) // ✨ 수정: 포인터를 역참조하여 실제 값을 저장
-	} else {
-		m.Set("bool_optional", nil)
-	}
+	m.Set("bool_optional", value)
 }
 
 // EmailRequired returns the value of the 'email_required' field.
@@ -183,11 +189,7 @@ func (m *AllTypes) EmailOptional() *string {
 
 // SetEmailOptional sets the value of the 'email_optional' field.
 func (m *AllTypes) SetEmailOptional(value *string) {
-	if value != nil {
-		m.Set("email_optional", *value) // ✨ 수정: 포인터를 역참조하여 실제 값을 저장
-	} else {
-		m.Set("email_optional", nil)
-	}
+	m.Set("email_optional", value)
 }
 
 // URLRequired returns the value of the 'url_required' field.
@@ -207,11 +209,7 @@ func (m *AllTypes) URLOptional() *string {
 
 // SetURLOptional sets the value of the 'url_optional' field.
 func (m *AllTypes) SetURLOptional(value *string) {
-	if value != nil {
-		m.Set("url_optional", *value) // ✨ 수정: 포인터를 역참조하여 실제 값을 저장
-	} else {
-		m.Set("url_optional", nil)
-	}
+	m.Set("url_optional", value)
 }
 
 // DateRequired returns the value of the 'date_required' field.
@@ -231,50 +229,46 @@ func (m *AllTypes) DateOptional() *types.DateTime {
 
 // SetDateOptional sets the value of the 'date_optional' field.
 func (m *AllTypes) SetDateOptional(value *types.DateTime) {
-	if value != nil {
-		m.Set("date_optional", *value) // ✨ 수정: 포인터를 역참조하여 실제 값을 저장
-	} else {
-		m.Set("date_optional", nil)
-	}
+	m.Set("date_optional", value)
 }
 
 // SelectSingleRequired returns the value of the 'select_single_required' field.
-func (m *AllTypes) SelectSingleRequired() []string {
-	return m.GetStringSlice("select_single_required")
+func (m *AllTypes) SelectSingleRequired() string {
+	return m.GetString("select_single_required")
 }
 
 // SetSelectSingleRequired sets the value of the 'select_single_required' field.
-func (m *AllTypes) SetSelectSingleRequired(value []string) {
+func (m *AllTypes) SetSelectSingleRequired(value string) {
 	m.Set("select_single_required", value)
 }
 
 // SelectSingleOptional returns the value of the 'select_single_optional' field.
-func (m *AllTypes) SelectSingleOptional() []string {
-	return m.GetStringSlice("select_single_optional")
+func (m *AllTypes) SelectSingleOptional() *string {
+	return m.GetStringPointer("select_single_optional")
 }
 
 // SetSelectSingleOptional sets the value of the 'select_single_optional' field.
-func (m *AllTypes) SetSelectSingleOptional(value []string) {
+func (m *AllTypes) SetSelectSingleOptional(value *string) {
 	m.Set("select_single_optional", value)
 }
 
 // SelectMultiRequired returns the value of the 'select_multi_required' field.
-func (m *AllTypes) SelectMultiRequired() []string {
-	return m.GetStringSlice("select_multi_required")
+func (m *AllTypes) SelectMultiRequired() string {
+	return m.GetString("select_multi_required")
 }
 
 // SetSelectMultiRequired sets the value of the 'select_multi_required' field.
-func (m *AllTypes) SetSelectMultiRequired(value []string) {
+func (m *AllTypes) SetSelectMultiRequired(value string) {
 	m.Set("select_multi_required", value)
 }
 
 // SelectMultiOptional returns the value of the 'select_multi_optional' field.
-func (m *AllTypes) SelectMultiOptional() []string {
-	return m.GetStringSlice("select_multi_optional")
+func (m *AllTypes) SelectMultiOptional() *string {
+	return m.GetStringPointer("select_multi_optional")
 }
 
 // SetSelectMultiOptional sets the value of the 'select_multi_optional' field.
-func (m *AllTypes) SetSelectMultiOptional(value []string) {
+func (m *AllTypes) SetSelectMultiOptional(value *string) {
 	m.Set("select_multi_optional", value)
 }
 
@@ -354,7 +348,7 @@ func NewRelatedCollection() *RelatedCollection {
 	return &RelatedCollection{Record: pocketbase.Record{}}
 }
 
-// ToRelatedCollection creates a new instance of RelatedCollection with the provided record.
+// ToRelatedCollection creates a To instance of RelatedCollection with the provided record.
 func ToRelatedCollection(r *pocketbase.Record) *RelatedCollection {
 	return &RelatedCollection{Record: *r}
 }
@@ -365,6 +359,8 @@ func (m *RelatedCollection) ToMap() map[string]any {
 	data := make(map[string]interface{})
 
 	// non-zero, non-empty, and non-nil values will be added to the map.
+	// For required fields, we always include them.
+	// You can add more complex logic here if needed, e.g., checking for zero values.
 	data["name"] = m.Name()
 
 	return data
