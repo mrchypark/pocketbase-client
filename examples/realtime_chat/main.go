@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	pocketbase "github.com/cypark/pocketbase-client"
+	pocketbase "github.com/mrchypark/pocketbase-client"
 )
 
 func main() {

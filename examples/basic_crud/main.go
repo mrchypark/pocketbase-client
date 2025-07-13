@@ -6,8 +6,7 @@ import (
 	"log"
 	"os"
 
-	pocketbase "github.com/cypark/pocketbase-client"
-	"github.com/cypark/pocketbase-client/tools/list"
+	pocketbase "github.com/mrchypark/pocketbase-client"
 )
 
 // Define a struct that matches your collection's schema.
@@ -22,7 +21,7 @@ func main() {
 	client := pocketbase.NewClient(os.Getenv("POCKETBASE_URL"))
 
 	// Authenticate as an admin (or user) to have permission to modify data
-	if _, err := client.AuthWithAdminPassword(context.Background(), "admin@example.com", "password123"); err != nil {
+	if _, err := client.WithAdminPassword(context.Background(), "admin@example.com", "password123"); err != nil {
 		log.Fatalf("Failed to authenticate: %v", err)
 	}
 
@@ -40,9 +39,7 @@ func main() {
 
 	// --- 2. Get a list of records ---
 	fmt.Println("--- Listing records ---")
-	// Use list.NewOptions() for default pagination, or customize it.
-	// Example: list.NewOptions(list.WithPage(1), list.WithPerPage(10), list.WithSort("-created"))
-	records, err := client.Records.GetList(context.Background(), "posts", list.NewOptions())
+	records, err := client.Records.GetList(context.Background(), "posts", &pocketbase.ListOptions{})
 	if err != nil {
 		log.Fatalf("Failed to list records: %v", err)
 	}

@@ -6,8 +6,7 @@ import (
 	"log"
 	"os"
 
-	pocketbase "github.com/cypark/pocketbase-client"
-	"github.com/cypark/pocketbase-client/tools/list"
+	pocketbase "github.com/mrchypark/pocketbase-client"
 )
 
 func main() {
@@ -15,7 +14,7 @@ func main() {
 	client := pocketbase.NewClient(os.Getenv("POCKETBASE_URL"))
 
 	// Authenticate as an admin to ensure we have access
-	if _, err := client.AuthWithAdminPassword(context.Background(), "admin@example.com", "password123"); err != nil {
+	if _, err := client.WithAdminPassword(context.Background(), "admin@example.com", "password123"); err != nil {
 		log.Fatalf("Failed to authenticate: %v", err)
 	}
 
@@ -24,8 +23,8 @@ func main() {
 	sampleTitles := []string{"Apple", "Banana", "Cherry", "Date", "Elderberry"}
 	for _, title := range sampleTitles {
 		_, err := client.Records.Create(context.Background(), "posts", map[string]interface{}{
-			"title":   title,
-			"content": "Some content here.",
+			"title":        title,
+			"content":      "Some content here.",
 			"is_published": true,
 		})
 		if err != nil {
@@ -37,10 +36,10 @@ func main() {
 	// --- Example 1: Basic Pagination ---
 	fmt.Println("--- Example 1: Basic Pagination (Page 2, 2 items per page) ---")
 	paginatedResult, err := client.Records.GetList(context.Background(), "posts",
-		list.NewOptions(
-			list.WithPage(2),
-			list.WithPerPage(2),
-		),
+		&pocketbase.ListOptions{
+			Page:    2,
+			PerPage: 2,
+		},
 	)
 	if err != nil {
 		log.Fatalf("Failed to get paginated list: %v", err)
@@ -55,9 +54,9 @@ func main() {
 	// --- Example 2: Sorting ---
 	fmt.Println("--- Example 2: Sorting by title in descending order ---")
 	sortedResult, err := client.Records.GetList(context.Background(), "posts",
-		list.NewOptions(
-			list.WithSort("-title"), // Prefix with '-' for descending
-		),
+		&pocketbase.ListOptions{
+			Sort: "-title",
+		},
 	)
 	if err != nil {
 		log.Fatalf("Failed to get sorted list: %v", err)
@@ -71,10 +70,9 @@ func main() {
 	// Filter syntax is the same as in the PocketBase API documentation.
 	fmt.Println("--- Example 3: Filtering for titles starting with 'B' or 'C' ---")
 	filteredResult, err := client.Records.GetList(context.Background(), "posts",
-		list.NewOptions(
-			list.WithFilter("title ~ 'B%' || title ~ 'C%'"),
-			list.WithSort("title"),
-		),
+		&pocketbase.ListOptions{
+			Filter: "title ~ 'B%' || title ~ 'C%'",
+		},
 	)
 	if err != nil {
 		log.Fatalf("Failed to get filtered list: %v", err)
@@ -88,11 +86,11 @@ func main() {
 	fmt.Println("--- Example 4: Selecting only the 'title' and 'created' fields ---")
 	// Note: The base fields (id, created, updated, collectionId, collectionName) are always returned.
 	selectedFieldsResult, err := client.Records.GetList(context.Background(), "posts",
-		list.NewOptions(
-			list.WithFields("title,created"),
-			list.WithSort("created"),
-			list.WithPerPage(2),
-		),
+		&pocketbase.ListOptions{
+			Fields:  "title,created",
+			Sort:    "-title",
+			PerPage: 2,
+		},
 	)
 	if err != nil {
 		log.Fatalf("Failed to get list with selected fields: %v", err)
@@ -106,7 +104,7 @@ func main() {
 
 	// --- Cleanup: Delete all records from the 'posts' collection ---
 	fmt.Println("--- Cleaning up all created records ---")
-	allRecords, _ := client.Records.GetList(context.Background(), "posts", list.NewOptions(list.WithPerPage(100)))
+	allRecords, _ := client.Records.GetList(context.Background(), "posts", &pocketbase.ListOptions{PerPage: 100})
 	for _, record := range allRecords.Items {
 		if err := client.Records.Delete(context.Background(), "posts", record.ID); err != nil {
 			log.Printf("Failed to delete record %s during cleanup: %v", record.ID, err)

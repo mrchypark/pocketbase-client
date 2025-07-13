@@ -22,6 +22,10 @@ type RecordServiceAPI interface {
 	NewUpsertRequest(collection string, body map[string]any) (*BatchRequest, error)
 }
 
+type Mappable interface {
+	ToMap() map[string]any
+}
+
 // RecordService handles record-related API operations.
 type RecordService struct {
 	Client *Client
@@ -83,8 +87,14 @@ func (s *RecordService) CreateWithOptions(ctx context.Context, collection string
 	if qs := q.Encode(); qs != "" {
 		path += "?" + qs
 	}
+	requestBody := body
+	if mappable, ok := body.(Mappable); ok {
+		// 구현한다면 ToMap()을 호출해 map으로 변환
+		requestBody = mappable.ToMap()
+	}
+
 	var rec Record
-	if err := s.Client.send(ctx, http.MethodPost, path, body, &rec); err != nil {
+	if err := s.Client.send(ctx, http.MethodPost, path, requestBody, &rec); err != nil {
 		return nil, fmt.Errorf("pocketbase: create record: %w", err)
 	}
 	return &rec, nil
@@ -108,8 +118,14 @@ func (s *RecordService) UpdateWithOptions(ctx context.Context, collection, recor
 	if qs := q.Encode(); qs != "" {
 		path += "?" + qs
 	}
+	requestBody := body
+	if mappable, ok := body.(Mappable); ok {
+		// 구현한다면 ToMap()을 호출해 map으로 변환
+		requestBody = mappable.ToMap()
+	}
+
 	var rec Record
-	if err := s.Client.send(ctx, http.MethodPatch, path, body, &rec); err != nil {
+	if err := s.Client.send(ctx, http.MethodPatch, path, requestBody, &rec); err != nil {
 		return nil, fmt.Errorf("pocketbase: update record: %w", err)
 	}
 	return &rec, nil

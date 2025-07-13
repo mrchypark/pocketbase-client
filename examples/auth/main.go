@@ -6,7 +6,7 @@ import (
 	"log"
 	"os"
 
-	pocketbase "github.com/cypark/pocketbase-client"
+	pocketbase "github.com/mrchypark/pocketbase-client"
 )
 
 func main() {
@@ -14,7 +14,7 @@ func main() {
 	client := pocketbase.NewClient(os.Getenv("POCKETBASE_URL"))
 
 	// Example 1: Authenticate as an admin
-	adminAuth, err := client.AuthWithAdminPassword(context.Background(), "admin@example.com", "password123")
+	adminAuth, err := client.WithAdminPassword(context.Background(), "admin@example.com", "password123")
 	if err != nil {
 		log.Fatalf("Failed to authenticate admin: %v", err)
 	}
@@ -32,18 +32,18 @@ func main() {
 	client.ClearAuthStore()
 
 	// Example 2: Authenticate as a regular user
-	userAuth, err := client.AuthWithPassword(context.Background(), "users", "testuser", "1234567890")
+	userAuth, err := client.WithPassword(context.Background(), "users", "testuser", "1234567890")
 	if err != nil {
 		log.Fatalf("Failed to authenticate user: %v", err)
 	}
-	fmt.Printf("Authenticated as user: %s (ID: %s)\n", userAuth.Record.Username, userAuth.Record.ID)
+	fmt.Printf("Authenticated as user: %s (ID: %s)\n", userAuth.Record.ID, userAuth.Record.ID)
 
 	// Verify authentication by fetching the user's own record
 	userRecord, err := client.Records.GetOne(context.Background(), "users", userAuth.Record.ID, nil)
 	if err != nil {
 		log.Fatalf("Failed to get user record: %v", err)
 	}
-	fmt.Printf("Successfully fetched user record. Username: %s\n\n", userRecord.Username)
+	fmt.Printf("Successfully fetched user record. Username: %s\n\n", userRecord.ID)
 
 	// Example 3: Using a pre-existing auth token
 	fmt.Println("Demonstrating authentication with a static token...")
@@ -58,5 +58,5 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to get user record with static token: %v", err)
 	}
-	fmt.Printf("Successfully fetched user record using a static token. Username: %s\n", userRecord.Username)
+	fmt.Printf("Successfully fetched user record using a static token. Username: %s\n", userRecord.ID)
 }
