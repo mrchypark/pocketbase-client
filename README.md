@@ -36,6 +36,10 @@ go get github.com/mrchypark/pocketbase-client
 curl -sL https://raw.githubusercontent.com/mrchypark/pocketbase-client/main/install.sh | sh
 ```
 
+```sh
+curl -sL https://raw.githubusercontent.com/mrchypark/pocketbase-client/main/install.sh | sh -s -- v0.2.0
+```
+
 ### Usage
 
 1.  **Export your PocketBase schema**: First, export your PocketBase schema to a `pb_schema.json` file. You can typically do this from the PocketBase Admin UI or via its CLI.
