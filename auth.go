@@ -8,15 +8,15 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5" // JWT 파싱을 위한 라이브러리 추가
+	"github.com/golang-jwt/jwt/v5" // Library for JWT parsing
 	"golang.org/x/sync/singleflight"
 )
 
-// AuthStrategy는 다양한 인증 전략을 위한 인터페이스입니다.
+// AuthStrategy is an interface for various authentication strategies.
 type AuthStrategy interface {
-	// Token은 현재 유효한 토큰을 반환합니다. 필요한 경우 내부적으로 토큰 갱신을 수행합니다.
+	// Token returns the currently valid token. Performs token refresh internally if needed.
 	Token(client *Client) (string, error)
-	// Clear는 인증 상태를 초기화합니다.
+	// Clear initializes the authentication state.
 	Clear()
 }
 
@@ -69,12 +69,12 @@ func NewPasswordAuth(client *Client, collection, identity, password string) *Pas
 func (a *PasswordAuth) Token(client *Client) (string, error) {
 	currentAuth := a.auth.Load()
 
-	// 토큰이 유효하면 즉시 반환 (잠금 없음)
+	// Return immediately if token is valid (no lock)
 	if currentAuth != nil && time.Now().Before(currentAuth.tokenExp) {
 		return currentAuth.token, nil
 	}
 
-	// 토큰이 없거나 만료된 경우, singleflight로 한 번만 갱신 실행
+	// If token is missing or expired, execute refresh only once with singleflight
 	_, err, _ := a.refreshSingle.Do("refresh", func() (interface{}, error) {
 		return nil, a.refreshToken(client)
 	})
@@ -82,7 +82,7 @@ func (a *PasswordAuth) Token(client *Client) (string, error) {
 		return "", err
 	}
 
-	// 갱신된 정보로 다시 로드
+	// Reload with refreshed information
 	refreshedAuth := a.auth.Load()
 	if refreshedAuth == nil {
 		return "", fmt.Errorf("authentication failed: token not available after refresh")
@@ -100,29 +100,29 @@ func (a *PasswordAuth) refreshToken(client *Client) error {
 		return err
 	}
 
-	// --- ✨ 수정된 부분: JWT 파싱 로직 ---
+	// --- ✨ Modified part: JWT parsing logic ---
 	var expiry time.Time
-	// 등록된 클레임(RegisteredClaims)을 포함하는 MapClaims를 사용하여 토큰을 파싱합니다.
-	// 여기서는 서명 검증은 하지 않고 만료 시간 정보만 추출합니다.
+	// Parse token using MapClaims that includes registered claims (RegisteredClaims).
+	// Here we don't verify signature, only extract expiration time information.
 	token, _, err := new(jwt.Parser).ParseUnverified(authResponse.Token, jwt.MapClaims{})
 	if err == nil {
-		// 'exp' 클레임을 가져옵니다.
+		// Get the 'exp' claim.
 		exp, err := token.Claims.GetExpirationTime()
 		if err == nil && exp != nil {
 			expiry = exp.Time
 		}
 	}
 
-	// 파싱에 실패하거나 만료 시간이 없는 경우, 안전을 위해 짧은 만료 시간을 설정합니다.
+	// If parsing fails or there's no expiration time, set a short expiration time for safety.
 	if expiry.IsZero() {
-		// 예: 1분 후 만료로 처리하여 다음 요청 시 다시 갱신하도록 유도
+		// Example: Set to expire after 1 minute to trigger refresh on next request
 		expiry = time.Now().Add(1 * time.Minute)
 	}
-	// --- ✨ 수정 끝 ---
+	// --- ✨ End of modification ---
 
 	newAuth := &authToken{
 		token:    authResponse.Token,
-		tokenExp: expiry, // 파싱된 만료 시간으로 설정
+		tokenExp: expiry, // Set to parsed expiration time
 	}
 	if authResponse.Admin != nil {
 		newAuth.model = authResponse.Admin

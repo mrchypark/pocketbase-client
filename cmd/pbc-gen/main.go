@@ -1,7 +1,7 @@
 package main
 
 import (
-	// 1. embed 패키지를 추가합니다.
+	// 1. Add embed package.
 	_ "embed"
 	"flag"
 	"log"
@@ -12,8 +12,8 @@ import (
 	"golang.org/x/tools/imports"
 )
 
-// 2. go:embed 지시어를 사용해 템플릿 파일의 내용을 변수에 저장합니다.
-// 이 코드는 main.go 파일 기준으로 템플릿 파일의 상대 경로를 지정해야 합니다.
+// 2. Use go:embed directive to store template file content in a variable.
+// This code must specify the relative path of the template file based on the main.go file.
 //
 //go:embed template.go.tpl
 var templateFile string
@@ -54,22 +54,22 @@ func main() {
 			if field.System {
 				continue
 			}
-			// --- ✨ 수정된 부분 ---
-			// goType, _, getter 로 3개의 반환 값을 모두 받습니다.
-			// 주석(comment)은 현재 사용하지 않으므로 '_'로 무시합니다.
+			// --- ✨ Modified part ---
+			// Receive all 3 return values as goType, _, getter.
+			// Comment is currently not used, so ignore with '_'.
 			goType, _, getter := generator.MapPbTypeToGoType(field, !field.Required)
 			collectionData.Fields = append(collectionData.Fields, generator.FieldData{
 				JsonName:     field.Name,
 				GoName:       generator.ToPascalCase(field.Name),
 				GoType:       goType,
 				OmitEmpty:    !field.Required,
-				GetterMethod: getter, // 새로 추가된 GetterMethod 필드에 값을 할당합니다.
+				GetterMethod: getter, // Assign value to the newly added GetterMethod field.
 			})
 		}
 		tplData.Collections = append(tplData.Collections, collectionData)
 	}
 
-	// 3. 파일 시스템에서 읽는 대신, embed로 주입된 변수(templateFile)를 파싱합니다.
+	// 3. Parse the embed-injected variable (templateFile) instead of reading from file system.
 	tpl, err := template.New("models").Parse(templateFile)
 	if err != nil {
 		log.Fatalf("Error parsing template: %v", err)

@@ -22,20 +22,20 @@ func LoadSchema(filePath string) ([]CollectionSchema, error) {
 	return schemas, nil
 }
 
-// BuildTemplateData는 파싱된 스키마로부터 템플릿 데이터를 생성합니다.
+// BuildTemplateData generates template data from parsed schemas.
 func BuildTemplateData(schemas []CollectionSchema, packageName string) TemplateData {
 	var collections []CollectionData
 
 	for _, s := range schemas {
-		// 시스템 컬렉션은 건너뛸 수 있습니다. (예: _superusers)
+		// System collections can be skipped. (e.g., _superusers)
 		if s.System && s.Name == "_superusers" {
 			continue
 		}
 
 		var fields []FieldData
-		// cs.Fields는 UnmarshalJSON 커스텀 로직 덕분에 항상 채워져 있습니다.
+		// cs.Fields is always populated thanks to custom UnmarshalJSON logic.
 		for _, f := range s.Fields {
-			// 시스템 필드나 숨겨진 필드는 필요에 따라 건너뛸 수 있습니다.
+			// System fields or hidden fields can be skipped as needed.
 			if f.System || f.Hidden {
 				continue
 			}
@@ -45,7 +45,7 @@ func BuildTemplateData(schemas []CollectionSchema, packageName string) TemplateD
 				JsonName:  f.Name,
 				GoName:    ToPascalCase(f.Name),
 				GoType:    goType,
-				OmitEmpty: !f.Required, // 'required' 필드를 직접 사용
+				OmitEmpty: !f.Required, // Use 'required' field directly
 			})
 		}
 

@@ -27,7 +27,7 @@ builds:
       - arm64
     # ldflags to apply during build
     # -s: remove symbol table, -w: remove DWARF debugging info to optimize binary size
-    # -X: 빌드 시점에 버전 및 커밋 정보를 주입
+    # -X: inject version and commit information at build time
     ldflags:
       - -s -w
       - -X main.version={{.Version}}
@@ -35,62 +35,62 @@ builds:
       - -X main.date={{.Date}}
 
 archives:
-  - # 생성된 바이너리를 압축하는 아카이브 설정
+  - # Archive settings for compressing generated binaries
     id: "pbc-gen-archive"
-    # builds 설정의 `id`와 매핑
+    # Maps to the `id` in builds configuration
     builds:
       - "pbc-gen"
-    # 아카이브 파일 이름 형식 지정
+    # Specify archive file name format
     name_template: >-
       {{ .ProjectName }}_
       {{- .Version }}_
       {{- .Os }}_
       {{- .Arch }}
-    # 생성할 아카이브 포맷 (tar.gz 및 zip)
+    # Archive format to generate (tar.gz and zip)
     format: binary
-    # 릴리스에 포함될 추가 파일
+    # Additional files to include in release
     files:
       - README.md
       - LICENSE
 
 checksum:
-  # 릴리스된 아카이브의 무결성을 검증하기 위한 체크섬 파일 생성
+  # Generate checksum file to verify integrity of released archives
   name_template: "checksums.txt"
-  # 체크섬 알고리즘
+  # Checksum algorithm
   algorithm: sha256
 
 release:
-  # GitHub 릴리스 생성 설정
-  # draft: true로 설정하면, 릴리스가 초안 상태로 생성되어 수동으로 게시할 수 있습니다.
+  # GitHub release creation settings
+  # Setting draft: true creates the release in draft state for manual publishing
   draft: false
-  # prerelease: 'auto'는 버전 태그에 하이픈(-)이 포함된 경우(e.g., v1.0.0-beta) 시험판 릴리스로 표시합니다.
+  # prerelease: 'auto' marks as prerelease if version tag contains hyphen (e.g., v1.0.0-beta)
   prerelease: auto
-  # 릴리스 노트 제목 커스터마이징
+  # Customize release notes title
   name_template: "Release {{.Version}}"
-  # 릴리스 노트 생성 설정
+  # Release notes generation settings
   footer: |
     ---
     **Full Changelog**: https://github.com/mrchypark/pocketbase-client/compare/{{ .PreviousTag }}...{{ .Tag }}
 
 changelog:
-  # 변경사항(Changelog) 생성 방식 설정
-  # 커밋 메시지 제목을 기준으로 그룹화
+  # Changelog generation method settings
+  # Group by commit message title
   groups:
     - title: "🚀 Features"
-      # 커밋 메시지 프리픽스가 'feat', 'feature'인 경우
+      # When commit message prefix is 'feat' or 'feature'
       regexp: '^.*?feat(\(.*\))?:'
       order: 0
     - title: "🐛 Bug Fixes"
-      # 커밋 메시지 프리픽스가 'fix', 'bugfix'인 경우
+      # When commit message prefix is 'fix' or 'bugfix'
       regexp: '^.*?fix(\(.*\))?:'
       order: 1
     - title: "🔧 Maintenance"
-      # 커밋 메시지 프리픽스가 'chore', 'refactor', 'style', 'test', 'docs', 'build', 'ci'인 경우
+      # When commit message prefix is 'chore', 'refactor', 'style', 'test', 'docs', 'build', 'ci'
       regexp: '^.*?(chore|refactor|style|test|docs|build|ci)(\(.*\))?:'
       order: 2
-  # 특정 커밋을 변경사항에서 제외
+  # Exclude specific commits from changelog
   filters:
-    # 'Signed-off-by' 라인이 포함된 커밋 제외 (일반적으로 merge 커밋)
+    # Exclude commits containing 'Signed-off-by' line (typically merge commits)
     exclude:
       - '(?i)signed-off-by'
       - '^test:'

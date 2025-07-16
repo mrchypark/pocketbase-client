@@ -23,8 +23,8 @@ var sampleRecordJSON = []byte(`{
     "tags": ["go", "pocketbase", "benchmark"]
 }`)
 
-// --- Lazy Parsing (기존 방식) ---
-// 비교를 위해 기존의 지연 파싱 구현을 별도 구조체로 정의합니다.
+// --- Lazy Parsing (existing approach) ---
+// Define the existing lazy parsing implementation as a separate struct for comparison.
 
 type RecordLazy struct {
 	BaseModel
@@ -84,10 +84,10 @@ func (r *RecordLazy) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// ✅ BenchmarkUnmarshalLazy (기존 방식)
-// 재인코딩 과정이 포함된 이전의 지연 파싱 방식의 성능을 측정합니다.
+// ✅ BenchmarkUnmarshalLazy (existing approach)
+// Measure performance of the previous lazy parsing approach that includes re-encoding process.
 func BenchmarkUnmarshalLazy(b *testing.B) {
-	b.ReportAllocs() // 메모리 할당량 보고
+	b.ReportAllocs() // Report memory allocations
 	for i := 0; i < b.N; i++ {
 		var r RecordLazy
 		if err := json.Unmarshal(sampleRecordJSON, &r); err != nil {
@@ -96,19 +96,19 @@ func BenchmarkUnmarshalLazy(b *testing.B) {
 	}
 }
 
-// ✅ BenchmarkUnmarshalEager (새로운 방식)
-// 제안된 새로운 방식(즉시 파싱)의 성능을 측정합니다.
+// ✅ BenchmarkUnmarshalEager (new approach)
+// Measure performance of the proposed new approach (eager parsing).
 func BenchmarkUnmarshalEager(b *testing.B) {
-	b.ReportAllocs() // 메모리 할당량 보고
+	b.ReportAllocs() // Report memory allocations
 	for i := 0; i < b.N; i++ {
-		var r Record // 수정된 Record 구조체를 사용
+		var r Record // Use modified Record struct
 		if err := json.Unmarshal(sampleRecordJSON, &r); err != nil {
 			b.Fatal(err)
 		}
 	}
 }
 
-// TestRecordUnmarshalInvalidExpand는 이전과 동일하게 유지합니다.
+// TestRecordUnmarshalInvalidExpand is kept the same as before.
 func TestRecordUnmarshalInvalidExpand(t *testing.T) {
 	data := []byte(`{"id":"1","collectionId":"col","collectionName":"names","expand":"bad","foo":"bar"}`)
 	var r Record

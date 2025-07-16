@@ -11,8 +11,8 @@ set -e
 
 # --- Helper Functions ---
 get_latest_release() {
-    # GitHub API를 사용해 최신 릴리스의 태그 이름을 가져옵니다.
-    # jq가 설치되어 있으면 더 안정적으로 파싱할 수 있지만, 호환성을 위해 grep/sed를 사용합니다.
+    # Get the latest release tag name using GitHub API.
+    # While jq would provide more stable parsing, we use grep/sed for compatibility.
     curl --silent "https://api.github.com/repos/mrchypark/pocketbase-client/releases/latest" |
         grep '"tag_name":' |
         sed -E 's/.*"([^"]+)".*/\1/'
@@ -20,7 +20,7 @@ get_latest_release() {
 
 # --- Main Logic ---
 
-# 첫 번째 인자를 버전으로 사용합니다. 비어있으면 최신 릴리스를 조회합니다.
+# Use the first argument as version. If empty, query the latest release.
 VERSION=${1:-$(get_latest_release)}
 
 if [ -z "$VERSION" ]; then
@@ -31,7 +31,7 @@ fi
 
 echo "Installing version: ${VERSION}"
 
-# OS 및 아키텍처 자동 탐지
+# Auto-detect OS and architecture
 OS=$(uname -s | tr '[:upper:]' '[:lower:]')
 ARCH=$(uname -m)
 case $ARCH in
@@ -43,14 +43,14 @@ case $ARCH in
         ;;
 esac
 
-# GoReleaser 이름 형식에 맞춰 다운로드 URL 구성
-# `LATEST_RELEASE#v` -> 버전 태그에서 'v' 접두사를 제거합니다 (e.g., v0.1.3-rc -> 0.1.3-rc).
+# Construct download URL according to GoReleaser naming format
+# `LATEST_RELEASE#v` -> Remove 'v' prefix from version tag (e.g., v0.1.3-rc -> 0.1.3-rc).
 FILENAME="pocketbase-client_${VERSION#v}_${OS}_${ARCH}"
 DOWNLOAD_URL="https://github.com/mrchypark/pocketbase-client/releases/download/${VERSION}/${FILENAME}"
 
 echo "Downloading pbc-gen from ${DOWNLOAD_URL}..."
 
-# curl로 바이너리 다운로드 및 실행 권한 부여
+# Download binary with curl and grant execution permission
 curl -L -o "pbc-gen" "$DOWNLOAD_URL"
 chmod +x "pbc-gen"
 

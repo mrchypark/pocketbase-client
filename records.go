@@ -89,7 +89,7 @@ func (s *RecordService) CreateWithOptions(ctx context.Context, collection string
 	}
 	requestBody := body
 	if mappable, ok := body.(Mappable); ok {
-		// 구현한다면 ToMap()을 호출해 map으로 변환
+		// If implemented, call ToMap() to convert to map
 		requestBody = mappable.ToMap()
 	}
 
@@ -120,7 +120,7 @@ func (s *RecordService) UpdateWithOptions(ctx context.Context, collection, recor
 	}
 	requestBody := body
 	if mappable, ok := body.(Mappable); ok {
-		// 구현한다면 ToMap()을 호출해 map으로 변환
+		// If implemented, call ToMap() to convert to map
 		requestBody = mappable.ToMap()
 	}
 

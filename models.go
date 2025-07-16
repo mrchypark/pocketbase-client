@@ -1,7 +1,7 @@
 package pocketbase
 
 import (
-	"github.com/goccy/go-json" // gocc/go-json을 직접 사용하도록 수정
+	"github.com/goccy/go-json" // Modified to use goccy/go-json directly
 	"github.com/pocketbase/pocketbase/tools/types"
 )
 
@@ -20,14 +20,14 @@ type Admin struct {
 }
 
 // Record represents a PocketBase record.
-// ✅ 수정: Data 필드를 제거하고 deserializedData를 직접 사용합니다.
+// ✅ Modified: Remove Data field and use deserializedData directly.
 type Record struct {
 	BaseModel
 	CollectionID   string               `json:"collectionId"`
 	CollectionName string               `json:"collectionName"`
 	Expand         map[string][]*Record `json:"expand,omitempty"`
 
-	// 데이터를 저장할 맵. 이제부터 이 필드가 유일한 데이터 소스입니다.
+	// Map to store data. From now on, this field is the only data source.
 	deserializedData map[string]interface{}
 }
 
@@ -40,7 +40,7 @@ type ListResult struct {
 	Items      []*Record `json:"items"`
 }
 
-// ... (ListOptions, GetOneOptions 등 나머지 옵션 구조체는 동일)
+// ... (Other option structs like ListOptions, GetOneOptions remain the same)
 type ListOptions struct {
 	Page        int
 	PerPage     int
@@ -80,15 +80,15 @@ type RealtimeEvent struct {
 	Record *Record `json:"record"`
 }
 
-// ✅ 수정: UnmarshalJSON을 훨씬 단순하고 효율적으로 변경합니다.
+// ✅ Modified: Change UnmarshalJSON to be much simpler and more efficient.
 func (r *Record) UnmarshalJSON(data []byte) error {
-	// 임시 map에 모든 JSON 데이터를 한 번에 디코딩합니다.
+	// Decode all JSON data into temporary map at once.
 	var allData map[string]interface{}
 	if err := json.Unmarshal(data, &allData); err != nil {
 		return err
 	}
 
-	// 공통 필드를 Record 구조체에 직접 할당합니다.
+	// Assign common fields directly to Record struct.
 	if id, ok := allData["id"].(string); ok {
 		r.ID = id
 	}
@@ -104,17 +104,17 @@ func (r *Record) UnmarshalJSON(data []byte) error {
 	if colName, ok := allData["collectionName"].(string); ok {
 		r.CollectionName = colName
 	}
-	// Expand 필드도 처리합니다.
+	// Also handle Expand field.
 	if expandData, ok := allData["expand"]; ok {
-		// expand 데이터를 다시 JSON으로 직렬화한 후 Record의 Expand 필드로 디코딩합니다.
-		// 이는 expand가 복잡한 중첩 구조를 가질 수 있기 때문에 가장 안전한 방법입니다.
+		// Re-serialize expand data to JSON then decode to Record's Expand field.
+		// This is the safest method because expand can have complex nested structures.
 		expandBytes, err := json.Marshal(expandData)
 		if err == nil {
 			json.Unmarshal(expandBytes, &r.Expand)
 		}
 	}
 
-	// 공통 필드와 expand를 map에서 제거합니다.
+	// Remove common fields and expand from map.
 	delete(allData, "id")
 	delete(allData, "created")
 	delete(allData, "updated")
@@ -122,7 +122,7 @@ func (r *Record) UnmarshalJSON(data []byte) error {
 	delete(allData, "collectionName")
 	delete(allData, "expand")
 
-	// 나머지 데이터는 deserializedData에 저장합니다.
+	// Store remaining data in deserializedData.
 	r.deserializedData = allData
 
 	return nil
@@ -144,7 +144,7 @@ func (r *Record) Set(key string, value interface{}) {
 	r.deserializedData[key] = value
 }
 
-// ✅ 수정: MarshalJSON도 deserializedData를 직접 사용하도록 변경합니다.
+// ✅ Modified: Change MarshalJSON to also use deserializedData directly.
 func (r *Record) MarshalJSON() ([]byte, error) {
 	combinedData := make(map[string]interface{}, len(r.deserializedData)+6)
 	for k, v := range r.deserializedData {

@@ -12,18 +12,18 @@ import (
 )
 
 func main() {
-	client := pocketbase.NewClient("http://127.0.0.1:8090") // PocketBase 서버 URL
+	client := pocketbase.NewClient("http://127.0.0.1:8090") // PocketBase server URL
 
 	ctx := context.Background()
 
-	// 1. 관리자 계정으로 인증합니다.
-	// 실제 환경에서는 환경 변수 등을 사용하여 안전하게 관리해야 합니다.
+	// 1. Authenticate with admin account.
+	// In production environments, use environment variables for secure management.
 	if _, err := client.WithAdminPassword(ctx, "admin@example.com", "1q2w3e4r5t"); err != nil {
 		log.Fatalf("Failed to authenticate: %v", err)
 	}
 	fmt.Println("--- Admin authenticated successfully. ---")
 
-	// --- RelatedCollection 레코드 생성 (AllTypes의 Relation Single/Multi 테스트를 위함) ---
+	// --- Create RelatedCollection record (for testing AllTypes Relation Single/Multi) ---
 	fmt.Println("\n--- Creating a RelatedCollection record for testing relations ---")
 	newRelated := NewRelatedCollection()
 	newRelated.SetName("Example Related Item")
@@ -33,12 +33,12 @@ func main() {
 	}
 	fmt.Printf("Created RelatedCollection with ID: %s, Name: '%s'\n", createdRelated.ID, newRelated.Name())
 
-	// --- 타입-세이프(Type-Safe) 모델을 사용한 AllTypes 레코드 생성 ---
+	// --- Create AllTypes record using Type-Safe models ---
 	fmt.Println("\n--- Creating a new AllTypes record using generated types ---")
 
-	newAllTypes := NewAllTypes() // 새로운 AllTypes 인스턴스 생성
+	newAllTypes := NewAllTypes() // Create new AllTypes instance
 
-	// Required 필드 설정
+	// Set required fields
 	newAllTypes.SetTextRequired("This is a required text.")
 	newAllTypes.SetNumberRequired(123.45)
 	newAllTypes.SetBoolRequired(true)
@@ -46,12 +46,12 @@ func main() {
 	newAllTypes.SetURLRequired("https://example.com")
 	newAllTypes.SetDateRequired(types.NowDateTime())
 
-	// 필수 select 필드에 스키마에 정의된 유효한 값 할당
-	newAllTypes.SetSelectSingleRequired("a")               // "a", "b", "c" 중 하나
-	newAllTypes.SetSelectMultiRequired([]string{"a", "b"}) // "a", "b", "c" 중 하나 이상
+	// Assign valid values defined in schema to required select fields
+	newAllTypes.SetSelectSingleRequired("a")               // One of "a", "b", "c"
+	newAllTypes.SetSelectMultiRequired([]string{"a", "b"}) // One or more of "a", "b", "c"
 	newAllTypes.SetJSONRequired(json.RawMessage(`{"key": "value", "number": 123}`))
 
-	// Optional 필드 설정 (포인터 값을 사용)
+	// Set optional fields (using pointer values)
 	optionalText := "This is an optional text."
 	newAllTypes.SetTextOptional(&optionalText)
 	optionalNumber := 987.65
@@ -65,67 +65,67 @@ func main() {
 	optionalDate := types.NowDateTime().Add(24 * time.Hour)
 	newAllTypes.SetDateOptional(&optionalDate)
 	so := "x"
-	newAllTypes.SetSelectSingleOptional(&so)          // "x", "y", "z" 중 하나
-	newAllTypes.SetSelectMultiOptional([]string{"y"}) // "x", "y", "z" 중 하나 이상
+	newAllTypes.SetSelectSingleOptional(&so)          // One of "x", "y", "z"
+	newAllTypes.SetSelectMultiOptional([]string{"y"}) // One or more of "x", "y", "z"
 	optionalJSONContent := json.RawMessage(`{"another_key": "another_value"}`)
 	newAllTypes.SetJSONOptional(optionalJSONContent)
 
-	// File 및 Relation 필드 (예제에서는 실제 파일 업로드/ID 참조는 생략하고 빈 슬라이스 또는 생성된 ID 사용)
-	// 실제 환경에서는 pocketbase-client의 File 관련 메서드를 사용해야 합니다.
+	// File and Relation fields (in this example, actual file upload/ID references are omitted, using empty slices or generated IDs)
+	// In production environments, use pocketbase-client's File-related methods.
 	id := createdRelated.ID
-	newAllTypes.SetRelationSingle(&id)       // 위에서 생성한 RelatedCollection ID 참조
-	newAllTypes.SetRelationMulti([]string{}) // 여러 RelatedCollection ID들을 여기에 추가
+	newAllTypes.SetRelationSingle(&id)       // Reference to RelatedCollection ID created above
+	newAllTypes.SetRelationMulti([]string{}) // Add multiple RelatedCollection IDs here
 
-	// 레코드 생성
+	// Create record
 	createdAllTypeRecord, err := client.Records.Create(ctx, "all_types", newAllTypes)
 	if err != nil {
 		log.Fatalf("Failed to create type-safe AllTypes record: %v", err)
 	}
 
-	// 생성된 레코드 확인 (타입-세이프 Getters 사용)
+	// Verify created record (using type-safe Getters)
 	createdAllTypes := ToAllTypes(createdAllTypeRecord)
 	fmt.Printf("Created AllTypes record with ID: %s\n", createdAllTypes.ID)
 	fmt.Printf("  TextRequired: '%s'\n", createdAllTypes.TextRequired())
 	if txt := createdAllTypes.TextOptional(); txt != nil {
-		fmt.Printf("  TextOptional: '%s'\n", *txt) // 포인터 역참조
+		fmt.Printf("  TextOptional: '%s'\n", *txt) // Pointer dereference
 	} else {
-		fmt.Printf("  TextOptional: <nil>\n") // nil인 경우
+		fmt.Printf("  TextOptional: <nil>\n") // When nil
 	}
 	fmt.Printf("  NumberRequired: %f\n", createdAllTypes.NumberRequired())
 	if num := createdAllTypes.NumberOptional(); num != nil {
-		fmt.Printf("  NumberOptional: %f\n", *num) // 포인터 역참조
+		fmt.Printf("  NumberOptional: %f\n", *num) // Pointer dereference
 	} else {
 		fmt.Printf("  NumberOptional: <nil>\n")
 	}
 	fmt.Printf("  BoolRequired: %t\n", createdAllTypes.BoolRequired())
 	if b := createdAllTypes.BoolOptional(); b != nil {
-		fmt.Printf("  BoolOptional: %t\n", *b) // 포인터 역참조
+		fmt.Printf("  BoolOptional: %t\n", *b) // Pointer dereference
 	} else {
 		fmt.Printf("  BoolOptional: <nil>\n")
 	}
 	fmt.Printf("  EmailRequired: '%s'\n", createdAllTypes.EmailRequired())
 	if email := createdAllTypes.EmailOptional(); email != nil {
-		fmt.Printf("  EmailOptional: '%s'\n", *email) // 포인터 역참조
+		fmt.Printf("  EmailOptional: '%s'\n", *email) // Pointer dereference
 	} else {
 		fmt.Printf("  EmailOptional: <nil>\n")
 	}
 	fmt.Printf("  URLRequired: '%s'\n", createdAllTypes.URLRequired())
 	if url := createdAllTypes.URLOptional(); url != nil {
-		fmt.Printf("  URLOptional: '%s'\n", *url) // 포인터 역참조
+		fmt.Printf("  URLOptional: '%s'\n", *url) // Pointer dereference
 	} else {
 		fmt.Printf("  URLOptional: <nil>\n")
 	}
 	fmt.Printf("  DateRequired: '%s'\n", createdAllTypes.DateRequired().String())
 	if dt := createdAllTypes.DateOptional(); dt != nil {
-		fmt.Printf("  DateOptional: '%s'\n", dt.String()) // 포인터 역참조 (String() 메서드가 값을 반환)
+		fmt.Printf("  DateOptional: '%s'\n", dt.String()) // Pointer dereference (String() method returns value)
 	} else {
 		fmt.Printf("  DateOptional: <nil>\n")
 	}
 
-	// SelectSingleRequired는 string, SelectSingleOptional는 *string이므로 분기 처리
+	// SelectSingleRequired is string, SelectSingleOptional is *string, so handle branching
 	fmt.Printf("  SelectSingleRequired: %s\n", createdAllTypes.SelectSingleRequired())
 	if sso := createdAllTypes.SelectSingleOptional(); sso != nil {
-		fmt.Printf("  SelectSingleOptional: '%s'\n", *sso) // *string 역참조
+		fmt.Printf("  SelectSingleOptional: '%s'\n", *sso) // *string dereference
 	} else {
 		fmt.Printf("  SelectSingleOptional: <nil>\n")
 	}
@@ -135,29 +135,29 @@ func main() {
 	fmt.Printf("  JSONRequired: %s\n", string(createdAllTypes.JSONRequired()))
 	fmt.Printf("  JSONOptional: %s\n", string(createdAllTypes.JSONOptional()))
 
-	// FileSingle은 *string, FileMulti는 []string이므로 분기 처리
+	// FileSingle is *string, FileMulti is []string, so handle branching
 	if fs := createdAllTypes.FileSingle(); fs != nil {
-		fmt.Printf("  FileSingle (IDs): '%s'\n", *fs) // *string 역참조
+		fmt.Printf("  FileSingle (IDs): '%s'\n", *fs) // *string dereference
 	} else {
 		fmt.Printf("  FileSingle (IDs): <nil>\n")
 	}
 	fmt.Printf("  FileMulti (IDs): %v\n", createdAllTypes.FileMulti())
 
-	// RelationSingle은 *string, RelationMulti는 []string이므로 분기 처리
+	// RelationSingle is *string, RelationMulti is []string, so handle branching
 	if rs := createdAllTypes.RelationSingle(); rs != nil {
-		fmt.Printf("  RelationSingle (IDs): '%s'\n", *rs) // *string 역참조
+		fmt.Printf("  RelationSingle (IDs): '%s'\n", *rs) // *string dereference
 	} else {
 		fmt.Printf("  RelationSingle (IDs): <nil>\n")
 	}
 	fmt.Printf("  RelationMulti (IDs): %v\n", createdAllTypes.RelationMulti())
 
-	// --- 타입-세이프(Type-Safe) 헬퍼를 사용한 AllTypes 목록 조회 ---
+	// --- List AllTypes records using Type-Safe helpers ---
 	fmt.Println("\n--- Listing AllTypes records using generated helper ---")
 
 	allTypesCollection, err := GetAllTypesList(client.Records, &pocketbase.ListOptions{
 		Page:    1,
 		PerPage: 10,
-		Sort:    "-created", // 최신 생성된 레코드부터 정렬
+		Sort:    "-created", // Sort by newest created records first
 	})
 	if err != nil {
 		log.Fatalf("Failed to list AllTypes: %v", err)
@@ -165,12 +165,12 @@ func main() {
 
 	fmt.Printf("Found %d AllTypes records. (Page %d/%d)\n", allTypesCollection.TotalItems, allTypesCollection.Page, allTypesCollection.TotalPages)
 	for i, item := range allTypesCollection.Items {
-		// 반복문 내에서도 타입-세이프 Getters를 사용해 안전하게 필드에 접근합니다.
+		// Use type-safe Getters to safely access fields even within loops.
 		fmt.Printf("  [%d] ID: %s, TextRequired: '%s'\n", i+1, item.ID, item.TextRequired())
-		// 더 많은 필드를 출력하려면 여기에 추가
+		// Add more fields here if you want to output more
 	}
 
-	// --- 단일 AllTypes 레코드 조회 ---
+	// --- Fetch single AllTypes record ---
 	fmt.Println("\n--- Fetching a single AllTypes record by ID ---")
 	fetchedAllTypes, err := GetAllTypes(client.Records, createdAllTypeRecord.ID, nil)
 	if err != nil {
@@ -178,7 +178,7 @@ func main() {
 	}
 	fmt.Printf("Fetched AllTypes record (ID: %s) TextRequired: '%s'\n", fetchedAllTypes.ID, fetchedAllTypes.TextRequired())
 
-	// --- 생성된 레코드 삭제 (클린업) ---
+	// --- Delete created records (cleanup) ---
 	fmt.Printf("\n--- Cleaning up created AllTypes record (ID: %s) ---\n", createdAllTypeRecord.ID)
 	if err := client.Records.Delete(ctx, "all_types", createdAllTypeRecord.ID); err != nil {
 		log.Printf("Failed to delete AllTypes record %s during cleanup: %v", createdAllTypeRecord.ID, err)

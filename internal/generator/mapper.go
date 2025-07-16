@@ -8,17 +8,17 @@ import (
 func MapPbTypeToGoType(field FieldSchema, omitEmpty bool) (string, string, string) {
 	var goType, comment, getterMethod string
 
-	// MaxSelect 옵션을 기반으로 다중 선택 필드 여부를 미리 판단
+	// Pre-determine whether it's a multi-select field based on MaxSelect option
 	isMulti := false
 
-	// field.Options.MaxSelect가 *int로 올바르게 파싱될 것을 기대합니다.
+	// Expect field.Options.MaxSelect to be correctly parsed as *int.
 	if field.Options != nil && field.Options.MaxSelect != nil {
 		if *field.Options.MaxSelect != 1 {
 			isMulti = true
 		}
 	} else if field.Type == "relation" || field.Type == "file" || field.Type == "select" {
-		// MaxSelect가 nil인 경우 (스키마에 maxSelect가 없거나 null인 경우),
-		// relation/file/select 타입은 기본적으로 다중으로 간주합니다.
+		// When MaxSelect is nil (when maxSelect is missing or null in schema),
+		// relation/file/select types are considered multi by default.
 		isMulti = true
 	}
 
@@ -54,7 +54,7 @@ func MapPbTypeToGoType(field FieldSchema, omitEmpty bool) (string, string, strin
 		if isMulti {
 			goType = "[]string"
 			getterMethod = "GetStringSlice"
-		} else { // 단일 선택/파일/관계
+		} else { // Single selection/file/relation
 			goType = "string"
 			getterMethod = "GetString"
 			if omitEmpty {
@@ -66,7 +66,7 @@ func MapPbTypeToGoType(field FieldSchema, omitEmpty bool) (string, string, strin
 		getterMethod = "Get"
 	}
 
-	// 최종적으로 포인터 타입을 적용할지 결정 (이미 포인터이거나 슬라이스, json.RawMessage, interface{}인 경우는 제외)
+	// Finally decide whether to apply pointer type (exclude if already pointer, slice, json.RawMessage, or interface{})
 	if omitEmpty && !strings.HasPrefix(goType, "[]") && goType != "json.RawMessage" && goType != "interface{}" && !strings.HasPrefix(goType, "*") {
 		goType = "*" + goType
 	}

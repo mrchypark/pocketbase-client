@@ -4,13 +4,13 @@ UNAME_S := $(shell uname -s)
 
 
 ifeq ($(ARCH), x86_64)
-    # x86_64 아키텍처의 경우
+    # For x86_64 architecture
     ARCH=amd64
 else ifeq ($(ARCH), aarch64)
-    # ARM 아키텍처의 경우
+    # For ARM architecture
     ARCH=arm64
 else ifeq ($(ARCH), arm64)
-    # ARM 아키텍처의 경우
+    # For ARM architecture
     ARCH=arm64
 else
     $(error Unsupported architecture: $(ARCH))

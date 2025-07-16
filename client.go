@@ -100,7 +100,7 @@ func NewClient(baseURL string, opts ...ClientOption) *Client {
 func (c *Client) ClearAuthStore() {
 	if c.AuthStore != nil {
 		c.AuthStore.Clear()
-		// 다시 NilAuth로 교체하여 인증되지 않은 상태로 만듭니다.
+		// Replace with NilAuth again to make it unauthenticated state.
 		c.AuthStore = &NilAuth{}
 	}
 }
@@ -236,24 +236,24 @@ func (c *Client) do(ctx context.Context, method, path string, body io.Reader, co
 	return nil
 }
 
-// WithPassword는 PasswordAuth 전략을 생성하고 클라이언트에 설정합니다.
+// WithPassword creates a PasswordAuth strategy and sets it to the client.
 func (c *Client) WithPassword(ctx context.Context, collection, identity, password string) (*AuthResponse, error) {
-	// 새로운 PasswordAuth 전략 설정
+	// Set new PasswordAuth strategy
 	authStrategy := NewPasswordAuth(c, collection, identity, password)
 	c.AuthStore = authStrategy
 
-	// 첫 인증 토큰을 즉시 가져옵니다.
+	// Get the first authentication token immediately.
 	token, err := authStrategy.Token(c)
 	if err != nil {
-		c.ClearAuthStore() // 실패 시 인증 정보 초기화
+		c.ClearAuthStore() // Clear auth info on failure
 		return nil, err
 	}
 
-	// ✅ 수정된 부분: authStrategy에서 직접 model을 가져오는 대신,
-	// 내부의 authToken 포인터를 로드하여 model 정보를 가져옵니다.
+	// ✅ Modified part: Instead of getting model directly from authStrategy,
+	// load the internal authToken pointer to get model information.
 	currentAuth := authStrategy.auth.Load()
 	if currentAuth == nil {
-		// 토큰은 가져왔지만 인증 정보가 없는 비정상적인 상황
+		// Abnormal situation where token was obtained but no auth data is available
 		return nil, fmt.Errorf("authentication succeeded but no auth data is available")
 	}
 
@@ -268,25 +268,25 @@ func (c *Client) WithPassword(ctx context.Context, collection, identity, passwor
 	return res, nil
 }
 
-// WithAdminPassword는 WithPassword의 편의 메소드입니다.
+// WithAdminPassword is a convenience method for WithPassword.
 func (c *Client) WithAdminPassword(ctx context.Context, identity, password string) (*AuthResponse, error) {
 	return c.WithPassword(ctx, "_superusers", identity, password)
 }
 
-// WithToken은 TokenAuth 전략을 클라이언트에 설정합니다.
+// WithToken sets a TokenAuth strategy to the client.
 func (c *Client) WithToken(token string) {
 	c.AuthStore = NewTokenAuth(token)
 }
 
-// UseAuthResponse는 AuthResponse를 받아 클라이언트 인증 상태를 설정합니다.
-// OAuth2나 토큰 갱신 등, 이미 토큰을 발급받은 경우 이 메서드를 사용해 클라이언트를 설정합니다.
+// UseAuthResponse receives an AuthResponse and sets the client authentication state.
+// Use this method to configure the client when you already have a token from OAuth2 or token refresh.
 func (c *Client) UseAuthResponse(res *AuthResponse) *Client {
 	if res == nil || res.Token == "" {
 		c.ClearAuthStore()
 		return c
 	}
 
-	// 받은 토큰은 정적이므로 TokenAuth 전략을 사용합니다.
+	// Use TokenAuth strategy since the received token is static.
 	c.AuthStore = NewTokenAuth(res.Token)
 
 	return c

@@ -17,5 +17,5 @@ type FieldData struct {
 	GoName       string // 'IsPublished'
 	GoType       string // 'bool'
 	OmitEmpty    bool   //
-	GetterMethod string // Getter 메서드 이름 (예: GetString, GetBool)
+	GetterMethod string // Getter method name (e.g., GetString, GetBool)
 }
