@@ -14,95 +14,95 @@ import (
 )
 
 func main() {
-	// PocketBase 클라이언트 생성
+	// Create PocketBase client
 	client := pocketbase.NewClient("http://127.0.0.1:8090")
 	ctx := context.Background()
 
-	// 관리자 인증 (실제 환경에서는 환경변수 사용 권장)
+	// Admin authentication (using environment variables is recommended in production)
 	_, err := client.WithAdminPassword(ctx, "admin@example.com", "password123")
 	if err != nil {
-		log.Fatalf("관리자 인증 실패: %v", err)
+		log.Fatalf("Admin authentication failed: %v", err)
 	}
 
-	fmt.Println("=== 파일 관리 예제 ===")
+	fmt.Println("=== File Management Example ===")
 
-	// 1. 파일 업로드 예제
-	fmt.Println("\n1. 파일 업로드")
+	// 1. File upload example
+	fmt.Println("\n1. File Upload")
 	err = uploadFileExample(ctx, client)
 	if err != nil {
-		log.Printf("파일 업로드 실패: %v", err)
+		log.Printf("File upload failed: %v", err)
 	}
 
-	// 2. 파일 다운로드 예제
-	fmt.Println("\n2. 파일 다운로드")
+	// 2. File download example
+	fmt.Println("\n2. File Download")
 	err = downloadFileExample(ctx, client)
 	if err != nil {
-		log.Printf("파일 다운로드 실패: %v", err)
+		log.Printf("File download failed: %v", err)
 	}
 
-	// 3. 파일 URL 생성 예제
-	fmt.Println("\n3. 파일 URL 생성")
+	// 3. File URL generation example
+	fmt.Println("\n3. File URL Generation")
 	fileURLExample(client)
 
-	// 4. 파일 삭제 예제
-	fmt.Println("\n4. 파일 삭제")
+	// 4. File deletion example
+	fmt.Println("\n4. File Deletion")
 	err = deleteFileExample(ctx, client)
 	if err != nil {
-		log.Printf("파일 삭제 실패: %v", err)
+		log.Printf("File deletion failed: %v", err)
 	}
 }
 
 func uploadFileExample(ctx context.Context, client *pocketbase.Client) error {
-	// 테스트용 파일 내용 생성
-	fileContent := strings.NewReader("이것은 테스트 파일 내용입니다.")
+	// Create test file content
+	fileContent := strings.NewReader("This is test file content.")
 
-	// 먼저 레코드를 생성합니다 (posts 컬렉션이 있다고 가정)
+	// First create a record (assuming posts collection exists)
 	recordData := map[string]interface{}{
-		"title":   "파일 업로드 테스트",
-		"content": "파일이 첨부된 게시물입니다.",
+		"title":   "File Upload Test",
+		"content": "This is a post with an attached file.",
 	}
 
 	record, err := client.Records.Create(ctx, "posts", recordData)
 	if err != nil {
-		return fmt.Errorf("레코드 생성 실패: %w", err)
+		return fmt.Errorf("failed to create record: %w", err)
 	}
 
-	fmt.Printf("레코드 생성됨: ID = %s\n", record.ID)
+	fmt.Printf("Record created: ID = %s\n", record.ID)
 
-	// 파일을 레코드의 'image' 필드에 업로드
+	// Upload file to the record's 'image' field
 	updatedRecord, err := client.Files.Upload(ctx, "posts", record.ID, "image", "test.txt", fileContent)
 	if err != nil {
-		return fmt.Errorf("파일 업로드 실패: %w", err)
+		return fmt.Errorf("failed to upload file: %w", err)
 	}
 
-	fmt.Printf("파일 업로드 성공: %s\n", updatedRecord.ID)
+	fmt.Printf("File upload successful: %s\n", updatedRecord.ID)
 	if imageField := updatedRecord.Get("image"); imageField != nil {
-		fmt.Printf("업로드된 파일: %v\n", imageField)
+		fmt.Printf("Uploaded file: %v\n", imageField)
 	}
 
 	return nil
 }
 
 func downloadFileExample(ctx context.Context, client *pocketbase.Client) error {
-	// 먼저 파일이 있는 레코드를 찾습니다
+	// First find a record with a file
 	records, err := client.Records.GetList(ctx, "posts", &pocketbase.ListOptions{
 		Page:    1,
 		PerPage: 1,
-		Filter:  "image != ''", // 이미지 필드가 비어있지 않은 레코드
+		Filter:  "image != ''", // Records with non-empty image field
 	})
 	if err != nil {
-		return fmt.Errorf("레코드 조회 실패: %w", err)
+		return fmt.Errorf("failed to get records: %w", err)
 	}
 
 	if len(records.Items) == 0 {
-		fmt.Println("다운로드할 파일이 있는 레코드가 없습니다.")
+		fmt.Println("No records with files to download found.")
 		return nil
 	}
 
 	record := records.Items[0]
 	imageField := record.Get("image")
 	if imageField == nil {
-		fmt.Println("이미지 필드가 없습니다.")
+		fmt.Println("No image field found.")
 		return nil
 	}
 
@@ -119,81 +119,81 @@ func downloadFileExample(ctx context.Context, client *pocketbase.Client) error {
 	}
 
 	if filename == "" {
-		fmt.Println("파일명을 찾을 수 없습니다.")
+		fmt.Println("Filename not found.")
 		return nil
 	}
 
-	fmt.Printf("파일 다운로드 시작: %s\n", filename)
+	fmt.Printf("Starting file download: %s\n", filename)
 
-	// 파일 다운로드
+	// Download file
 	reader, err := client.Files.Download(ctx, "posts", record.ID, filename, nil)
 	if err != nil {
-		return fmt.Errorf("파일 다운로드 실패: %w", err)
+		return fmt.Errorf("failed to download file: %w", err)
 	}
 	defer reader.Close()
 
-	// 파일 내용 읽기
+	// Read file content
 	content, err := io.ReadAll(reader)
 	if err != nil {
-		return fmt.Errorf("파일 내용 읽기 실패: %w", err)
+		return fmt.Errorf("failed to read file content: %w", err)
 	}
 
-	fmt.Printf("다운로드된 파일 크기: %d bytes\n", len(content))
-	fmt.Printf("파일 내용 (처음 100자): %s\n", string(content[:min(100, len(content))]))
+	fmt.Printf("Downloaded file size: %d bytes\n", len(content))
+	fmt.Printf("File content (first 100 chars): %s\n", string(content[:min(100, len(content))]))
 
 	return nil
 }
 
 func fileURLExample(client *pocketbase.Client) {
-	// 예제 파일 URL 생성
+	// Generate example file URLs
 	collection := "posts"
 	recordID := "example_record_id"
 	filename := "example.jpg"
 
-	// 기본 파일 URL
+	// Basic file URL
 	basicURL := client.Files.GetFileURL(collection, recordID, filename, nil)
-	fmt.Printf("기본 파일 URL: %s\n", basicURL)
+	fmt.Printf("Basic file URL: %s\n", basicURL)
 
-	// 썸네일 URL
+	// Thumbnail URL
 	thumbURL := client.Files.GetFileURL(collection, recordID, filename, &pocketbase.FileDownloadOptions{
 		Thumb: "100x100",
 	})
-	fmt.Printf("썸네일 URL: %s\n", thumbURL)
+	fmt.Printf("Thumbnail URL: %s\n", thumbURL)
 
-	// 다운로드 강제 URL
+	// Force download URL
 	downloadURL := client.Files.GetFileURL(collection, recordID, filename, &pocketbase.FileDownloadOptions{
 		Download: true,
 	})
-	fmt.Printf("다운로드 URL: %s\n", downloadURL)
+	fmt.Printf("Download URL: %s\n", downloadURL)
 
-	// 썸네일 + 다운로드 URL
+	// Thumbnail + download URL
 	combinedURL := client.Files.GetFileURL(collection, recordID, filename, &pocketbase.FileDownloadOptions{
 		Thumb:    "200x200",
 		Download: true,
 	})
-	fmt.Printf("썸네일 + 다운로드 URL: %s\n", combinedURL)
+	fmt.Printf("Thumbnail + download URL: %s\n", combinedURL)
 }
 
 func deleteFileExample(ctx context.Context, client *pocketbase.Client) error {
-	// 파일이 있는 레코드를 찾습니다
+	// Find a record with a file
 	records, err := client.Records.GetList(ctx, "posts", &pocketbase.ListOptions{
 		Page:    1,
 		PerPage: 1,
-		Filter:  "image != ''", // 이미지 필드가 비어있지 않은 레코드
+		Filter:  "image != ''", // Records with non-empty image field
 	})
 	if err != nil {
-		return fmt.Errorf("레코드 조회 실패: %w", err)
+		return fmt.Errorf("failed to get records: %w", err)
 	}
 
 	if len(records.Items) == 0 {
-		fmt.Println("삭제할 파일이 있는 레코드가 없습니다.")
+		fmt.Println("No records with files to delete found.")
 		return nil
 	}
 
 	record := records.Items[0]
 	imageField := record.Get("image")
 	if imageField == nil {
-		fmt.Println("이미지 필드가 없습니다.")
+		fmt.Println("No image field found.")
 		return nil
 	}
 
@@ -210,21 +210,21 @@ func deleteFileExample(ctx context.Context, client *pocketbase.Client) error {
 	}
 
 	if filename == "" {
-		fmt.Println("삭제할 파일명을 찾을 수 없습니다.")
+		fmt.Println("No filename to delete found.")
 		return nil
 	}
 
-	fmt.Printf("파일 삭제 시작: %s\n", filename)
+	fmt.Printf("Starting file deletion: %s\n", filename)
 
-	// 파일 삭제
+	// Delete file
 	updatedRecord, err := client.Files.Delete(ctx, "posts", record.ID, "image", filename)
 	if err != nil {
-		return fmt.Errorf("파일 삭제 실패: %w", err)
+		return fmt.Errorf("failed to delete file: %w", err)
 	}
 
-	fmt.Printf("파일 삭제 완료. 업데이트된 레코드 ID: %s\n", updatedRecord.ID)
+	fmt.Printf("File deletion completed. Updated record ID: %s\n", updatedRecord.ID)
 	if imageField := updatedRecord.Get("image"); imageField != nil {
-		fmt.Printf("삭제 후 이미지 필드: %v\n", imageField)
+		fmt.Printf("Image field after deletion: %v\n", imageField)
 	}
 
 	return nil

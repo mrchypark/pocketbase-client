@@ -11,7 +11,7 @@ import (
 	"github.com/goccy/go-json"
 )
 
-// 벤치마크를 위한 ListResult 정의 (Lazy 버전)
+// ListResult definition for benchmarks (Lazy version)
 type ListResultLazy struct {
 	Page       int           `json:"page"`
 	PerPage    int           `json:"perPage"`
@@ -20,9 +20,9 @@ type ListResultLazy struct {
 	Items      []*RecordLazy `json:"items"`
 }
 
-// --- 벤치마크 헬퍼 ---
+// --- Benchmark helpers ---
 
-// 벤치마크 테스트에 사용할 대량의 레코드 목록 JSON을 생성합니다.
+// generateBenchListResponse generates large record list JSON for benchmark tests.
 func generateBenchListResponse(numRecords int) []byte {
 	items := make([]map[string]interface{}, numRecords)
 	for i := 0; i < numRecords; i++ {
@@ -48,11 +48,11 @@ func generateBenchListResponse(numRecords int) []byte {
 	return data
 }
 
-// --- 통합 벤치마크 테스트 ---
+// --- Integrated benchmark tests ---
 
-var benchResponse = generateBenchListResponse(100) // 100개의 레코드로 테스트
+var benchResponse = generateBenchListResponse(100) // Test with 100 records
 
-// ✅ BenchmarkGetListLazy: 기존 방식(지연 파싱)의 목록 조회 성능 측정
+// ✅ BenchmarkGetListLazy: Measure performance of existing approach (lazy parsing) for list retrieval
 func BenchmarkGetListLazy(b *testing.B) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -65,16 +65,16 @@ func BenchmarkGetListLazy(b *testing.B) {
 	b.ReportAllocs()
 
 	for i := 0; i < b.N; i++ {
-		// GetList와 유사한 로직이지만, ListResultLazy를 사용하도록 수정
+		// Similar logic to GetList but modified to use ListResultLazy
 		path := fmt.Sprintf("/api/collections/%s/records", "posts")
-		var result ListResultLazy // Lazy 버전을 사용
+		var result ListResultLazy // Use lazy version
 		if err := c.send(context.Background(), http.MethodGet, path, nil, &result); err != nil {
 			b.Fatalf("unexpected error: %v", err)
 		}
 	}
 }
 
-// ✅ BenchmarkGetListEager: 새로운 방식(즉시 파싱)의 목록 조회 성능 측정
+// ✅ BenchmarkGetListEager: Measure performance of new approach (eager parsing) for list retrieval
 func BenchmarkGetListEager(b *testing.B) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -87,7 +87,7 @@ func BenchmarkGetListEager(b *testing.B) {
 	b.ReportAllocs()
 
 	for i := 0; i < b.N; i++ {
-		// 실제 Records.GetList 메서드 사용
+		// Use actual Records.GetList method
 		_, err := c.Records.GetList(context.Background(), "posts", &ListOptions{})
 		if err != nil {
 			b.Fatalf("unexpected error: %v", err)
@@ -95,8 +95,8 @@ func BenchmarkGetListEager(b *testing.B) {
 	}
 }
 
-// --- 기존 단위 테스트 (수정 없음) ---
-// (이하 기존의 모든 Test... 함수들은 그대로 유지됩니다)
+// --- Existing unit tests (no modifications) ---
+// (All existing Test... functions below are kept as-is)
 
 // TestRecordServiceGetList tests the GetList method of RecordService.
 func TestRecordServiceGetList(t *testing.T) {
@@ -283,17 +283,17 @@ func TestRecordServiceDelete(t *testing.T) {
 
 func TestRecordServiceAuthHeader(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// 헤더 검증
+		// Verify headers
 		if r.Header.Get("Authorization") != "tok" {
 			t.Fatalf("missing auth header: got %q, want 'tok'", r.Header.Get("Authorization"))
 		}
-		w.WriteHeader(http.StatusOK) // 성공 응답 명시
+		w.WriteHeader(http.StatusOK) // Explicit success response
 		_ = json.NewEncoder(w).Encode(ListResult{})
 	}))
 	defer srv.Close()
 
 	c := NewClient(srv.URL)
-	// ✨ 수정된 부분: WithToken으로 인증 토큰 설정
+	// ✨ Modified part: Set auth token with WithToken
 	c.WithToken("tok")
 
 	if _, err := c.Records.GetList(context.Background(), "posts", nil); err != nil {
@@ -319,8 +319,8 @@ func TestRecordServiceNotFound(t *testing.T) {
 	}
 }
 
-// --- 테스트를 위한 모델 정의 ---
-// 실제로는 "models" 패키지에 있을 구조체들입니다.
+// --- Model definitions for testing ---
+// These are structs that would actually be in the "models" package.
 
 type TestUser struct {
 	Name   string `json:"name"`

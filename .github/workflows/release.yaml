@@ -17,21 +17,21 @@ jobs:
       - name: "🛎️ Checkout"
         uses: actions/checkout@v4
         with:
-          # Git의 모든 히스토리를 가져와서 changelog를 정확하게 생성합니다.
+          # Fetch all Git history to generate accurate changelog.
           fetch-depth: 0
 
       - name: "🔧 Set up Go"
         uses: actions/setup-go@v5
         with:
-          go-version: "1.24" # 프로젝트에서 사용하는 Go 버전에 맞게 수정하세요.
+          go-version: "1.24" # Adjust to match the Go version used in your project.
 
       - name: "🏃 Run GoReleaser"
         uses: goreleaser/goreleaser-action@v5
         with:
-          # goreleaser 버전을 지정합니다. 'latest'를 사용하면 항상 최신 버전을 사용합니다.
+          # Specify goreleaser version. Using 'latest' will always use the most recent version.
           version: latest
-          # 워크플로우에 전달할 인수
+          # Arguments to pass to the workflow
           args: release --clean
         env:
-          # GitHub 릴리스 생성을 위해 필요한 토큰
+          # Token required for creating GitHub releases
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

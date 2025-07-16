@@ -1,23 +1,23 @@
 # .goreleaser.yml
 # -----------------------------------------------------------------------------
-# GoReleaser 설정 파일
-# 이 파일은 CLI 애플리케이션의 빌드, 아카이빙, 릴리스 과정을 정의합니다.
+# GoReleaser Configuration File
+# This file defines the build, archive, and release process for CLI applications.
 # -----------------------------------------------------------------------------
 before:
   hooks:
-    # Go 모듈 의존성을 정리하여 빌드 환경을 깨끗하게 유지합니다.
+    # Clean up Go module dependencies to maintain a clean build environment.
     - go mod tidy
 
 builds:
-  - # pbc-gen CLI 빌드 설정
+  - # pbc-gen CLI build configuration
     id: "pbc-gen"
-    # CLI 애플리케이션의 main 패키지 경로
+    # Main package path for CLI application
     dir: ./cmd/pbc-gen
-    # 생성될 바이너리 파일의 이름
+    # Name of the binary file to be generated
     binary: pbc-gen
-    # 애플리케이션의 진입점(main) 파일
+    # Application entry point (main) file
     main: .
-    # 빌드를 지원할 운영체제 및 아키텍처 목록
+    # List of supported operating systems and architectures for build
     goos:
       - linux
       - windows
@@ -25,8 +25,8 @@ builds:
     goarch:
       - amd64
       - arm64
-    # 빌드 시 적용할 ldflags
-    # -s: 심볼 테이블 제거, -w: DWARF 디버깅 정보 제거로 바이너리 크기 최적화
+    # ldflags to apply during build
+    # -s: remove symbol table, -w: remove DWARF debugging info to optimize binary size
     # -X: 빌드 시점에 버전 및 커밋 정보를 주입
     ldflags:
       - -s -w

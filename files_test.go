@@ -22,7 +22,7 @@ func TestFileService_Upload(t *testing.T) {
 		errMsg     string
 	}{
 		{
-			name:       "성공적인 파일 업로드",
+			name:       "successful file upload",
 			collection: "posts",
 			recordID:   "record123",
 			fieldName:  "image",
@@ -31,7 +31,7 @@ func TestFileService_Upload(t *testing.T) {
 			wantErr:    false,
 		},
 		{
-			name:       "빈 컬렉션 이름",
+			name:       "empty collection name",
 			collection: "",
 			recordID:   "record123",
 			fieldName:  "image",
@@ -41,7 +41,7 @@ func TestFileService_Upload(t *testing.T) {
 			errMsg:     "collection name is required",
 		},
 		{
-			name:       "빈 레코드 ID",
+			name:       "empty record ID",
 			collection: "posts",
 			recordID:   "",
 			fieldName:  "image",
@@ -51,7 +51,7 @@ func TestFileService_Upload(t *testing.T) {
 			errMsg:     "record ID is required",
 		},
 		{
-			name:       "빈 필드 이름",
+			name:       "empty field name",
 			collection: "posts",
 			recordID:   "record123",
 			fieldName:  "",
@@ -61,7 +61,7 @@ func TestFileService_Upload(t *testing.T) {
 			errMsg:     "field name is required",
 		},
 		{
-			name:       "빈 파일명",
+			name:       "empty filename",
 			collection: "posts",
 			recordID:   "record123",
 			fieldName:  "image",
@@ -71,7 +71,7 @@ func TestFileService_Upload(t *testing.T) {
 			errMsg:     "filename is required",
 		},
 		{
-			name:       "nil 파일",
+			name:       "nil file",
 			collection: "posts",
 			recordID:   "record123",
 			fieldName:  "image",
@@ -87,11 +87,11 @@ func TestFileService_Upload(t *testing.T) {
 			// Mock server setup
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if tt.wantErr && tt.errMsg != "" {
-					// 파라미터 검증 에러는 서버에 도달하기 전에 발생
+					// Parameter validation errors occur before reaching the server
 					return
 				}
 
-				// 성공적인 응답 시뮬레이션
+				// Simulate successful response
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusOK)
 				w.Write([]byte(`{
@@ -148,14 +148,14 @@ func TestFileService_Download(t *testing.T) {
 		errMsg     string
 	}{
 		{
-			name:       "성공적인 파일 다운로드",
+			name:       "successful file download",
 			collection: "posts",
 			recordID:   "record123",
 			filename:   "test.jpg",
 			wantErr:    false,
 		},
 		{
-			name:       "빈 컬렉션 이름",
+			name:       "empty collection name",
 			collection: "",
 			recordID:   "record123",
 			filename:   "test.jpg",
@@ -163,7 +163,7 @@ func TestFileService_Download(t *testing.T) {
 			errMsg:     "collection name is required",
 		},
 		{
-			name:       "빈 레코드 ID",
+			name:       "empty record ID",
 			collection: "posts",
 			recordID:   "",
 			filename:   "test.jpg",
@@ -171,7 +171,7 @@ func TestFileService_Download(t *testing.T) {
 			errMsg:     "record ID is required",
 		},
 		{
-			name:       "빈 파일명",
+			name:       "empty filename",
 			collection: "posts",
 			recordID:   "record123",
 			filename:   "",
@@ -185,11 +185,11 @@ func TestFileService_Download(t *testing.T) {
 			// Mock server setup
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if tt.wantErr && tt.errMsg != "" {
-					// 파라미터 검증 에러는 서버에 도달하기 전에 발생
+					// Parameter validation errors occur before reaching the server
 					return
 				}
 
-				// 성공적인 파일 응답 시뮬레이션
+				// Simulate successful file response
 				w.Header().Set("Content-Type", "image/jpeg")
 				w.WriteHeader(http.StatusOK)
 				w.Write([]byte("fake image data"))
@@ -224,7 +224,7 @@ func TestFileService_Download(t *testing.T) {
 
 			defer result.Close()
 
-			// 파일 내용 읽기 테스트
+			// Test reading file content
 			data, err := io.ReadAll(result)
 			if err != nil {
 				t.Errorf("Failed to read downloaded file: %v", err)
@@ -251,7 +251,7 @@ func TestFileService_GetFileURL(t *testing.T) {
 		expected   string
 	}{
 		{
-			name:       "기본 파일 URL",
+			name:       "basic file URL",
 			collection: "posts",
 			recordID:   "record123",
 			filename:   "test.jpg",
@@ -259,7 +259,7 @@ func TestFileService_GetFileURL(t *testing.T) {
 			expected:   "https://example.com/api/files/posts/record123/test.jpg",
 		},
 		{
-			name:       "썸네일 옵션 포함",
+			name:       "with thumbnail option",
 			collection: "posts",
 			recordID:   "record123",
 			filename:   "test.jpg",
@@ -267,7 +267,7 @@ func TestFileService_GetFileURL(t *testing.T) {
 			expected:   "https://example.com/api/files/posts/record123/test.jpg?thumb=100x100",
 		},
 		{
-			name:       "다운로드 옵션 포함",
+			name:       "with download option",
 			collection: "posts",
 			recordID:   "record123",
 			filename:   "test.jpg",
@@ -275,7 +275,7 @@ func TestFileService_GetFileURL(t *testing.T) {
 			expected:   "https://example.com/api/files/posts/record123/test.jpg?download=1",
 		},
 		{
-			name:       "모든 옵션 포함",
+			name:       "with all options",
 			collection: "posts",
 			recordID:   "record123",
 			filename:   "test.jpg",
@@ -305,7 +305,7 @@ func TestFileService_Delete(t *testing.T) {
 		errMsg     string
 	}{
 		{
-			name:       "빈 컬렉션 이름",
+			name:       "empty collection name",
 			collection: "",
 			recordID:   "record123",
 			fieldName:  "image",
@@ -314,7 +314,7 @@ func TestFileService_Delete(t *testing.T) {
 			errMsg:     "collection name is required",
 		},
 		{
-			name:       "빈 레코드 ID",
+			name:       "empty record ID",
 			collection: "posts",
 			recordID:   "",
 			fieldName:  "image",
@@ -323,7 +323,7 @@ func TestFileService_Delete(t *testing.T) {
 			errMsg:     "record ID is required",
 		},
 		{
-			name:       "빈 필드 이름",
+			name:       "empty field name",
 			collection: "posts",
 			recordID:   "record123",
 			fieldName:  "",
@@ -358,7 +358,7 @@ func TestFileService_Delete(t *testing.T) {
 	}
 }
 
-// 벤치마크 테스트
+// Benchmark test
 func BenchmarkFileService_Upload(b *testing.B) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -376,11 +376,11 @@ func BenchmarkFileService_Upload(b *testing.B) {
 
 	client := NewClient(server.URL)
 	ctx := context.Background()
-	fileData := bytes.NewReader(make([]byte, 1024)) // 1KB 테스트 파일
+	fileData := bytes.NewReader(make([]byte, 1024)) // 1KB test file
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		fileData.Seek(0, 0) // 파일 포인터 리셋
+		fileData.Seek(0, 0) // Reset file pointer
 		_, err := client.Files.Upload(ctx, "posts", "record123", "image", "test.jpg", fileData)
 		if err != nil {
 			b.Fatalf("Upload failed: %v", err)
