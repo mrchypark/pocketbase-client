@@ -43,6 +43,7 @@ type Client struct {
 	Settings    SettingServiceAPI    // Service for viewing and updating settings
 	Batch       BatchServiceAPI      // General batch service
 	Legacy      LegacyServiceAPI     // Legacy API service
+	Files       FileServiceAPI       // Service for file operations
 }
 
 type authInjector struct {
@@ -91,6 +92,7 @@ func NewClient(baseURL string, opts ...ClientOption) *Client {
 	c.Settings = &SettingService{Client: c}
 	c.Batch = &BatchService{client: c}
 	c.Legacy = &LegacyService{Client: c}
+	c.Files = &FileService{Client: c}
 	return c
 }
 
