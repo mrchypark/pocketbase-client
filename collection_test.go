@@ -49,7 +49,7 @@ func TestCollectionService_GetList(t *testing.T) {
 		t.Fatalf("expected 1 total item, got %d", res.TotalItems)
 	}
 	if len(res.Items) != 1 {
-				t.Fatalf("expected 1 item, got %d", len(res.Items))
+		t.Fatalf("expected 1 item, got %d", len(res.Items))
 	}
 	if res.Items[0].Name != "test_collection" {
 		t.Fatalf("expected collection name 'test_collection', got %s", res.Items[0].Name)

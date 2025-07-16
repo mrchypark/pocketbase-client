@@ -129,15 +129,15 @@ func TestRecordUnmarshalInvalidExpand(t *testing.T) {
 func TestRecordGetters(t *testing.T) {
 	r := &Record{}
 	r.deserializedData = map[string]interface{}{
-		"string_key":      "hello",
-		"bool_key":        true,
-		"float_key":       123.45,
-		"int_key":         123,
-		"json_num_key":    json.Number("123.45"),
-		"datetime_key":    "2025-07-03T10:00:00.000Z",
+		"string_key":       "hello",
+		"bool_key":         true,
+		"float_key":        123.45,
+		"int_key":          123,
+		"json_num_key":     json.Number("123.45"),
+		"datetime_key":     "2025-07-03T10:00:00.000Z",
 		"string_slice_key": []interface{}{"a", "b", "c"},
-		"raw_message_key": json.RawMessage(`{"a":1}`),
-		"nil_key":         nil,
+		"raw_message_key":  json.RawMessage(`{"a":1}`),
+		"nil_key":          nil,
 	}
 
 	t.Run("GetString", func(t *testing.T) {

@@ -214,45 +214,45 @@ func TestBuildTemplateData(t *testing.T) {
 
 func TestCollectionSchema_UnmarshalJSON(t *testing.T) {
 	tests := []struct {
-		name    string
-		jsonData string
-		wantErr bool
+		name       string
+		jsonData   string
+		wantErr    bool
 		wantFields int
 	}{
 		{
-			name: "with schema field",
-			jsonData: `{"name": "test", "schema": [{"name": "field1"}]}`,
-			wantErr: false,
+			name:       "with schema field",
+			jsonData:   `{"name": "test", "schema": [{"name": "field1"}]}`,
+			wantErr:    false,
 			wantFields: 1,
 		},
 		{
-			name: "with fields field",
-			jsonData: `{"name": "test", "fields": [{"name": "field1"}, {"name": "field2"}]}`,
-			wantErr: false,
+			name:       "with fields field",
+			jsonData:   `{"name": "test", "fields": [{"name": "field1"}, {"name": "field2"}]}`,
+			wantErr:    false,
 			wantFields: 2,
 		},
 		{
-			name: "with both fields, schema takes precedence",
-			jsonData: `{"name": "test", "schema": [{"name": "field1"}], "fields": [{"name": "field2"}]}`,
-			wantErr: false,
+			name:       "with both fields, schema takes precedence",
+			jsonData:   `{"name": "test", "schema": [{"name": "field1"}], "fields": [{"name": "field2"}]}`,
+			wantErr:    false,
 			wantFields: 1,
 		},
 		{
-			name: "with no fields",
-			jsonData: `{"name": "test"}`,
-			wantErr: false,
+			name:       "with no fields",
+			jsonData:   `{"name": "test"}`,
+			wantErr:    false,
 			wantFields: 0,
 		},
 		{
-			name: "with null fields",
-			jsonData: `{"name": "test", "schema": null, "fields": null}`,
-			wantErr: false,
+			name:       "with null fields",
+			jsonData:   `{"name": "test", "schema": null, "fields": null}`,
+			wantErr:    false,
 			wantFields: 0,
 		},
 		{
-			name: "invalid json",
+			name:     "invalid json",
 			jsonData: `{"name": "test", "schema": [{"name": "field1"}]`,
-			wantErr: true,
+			wantErr:  true,
 		},
 	}
 
