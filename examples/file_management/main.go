@@ -1,3 +1,6 @@
+// Package main demonstrates file management operations with PocketBase Go client.
+// This example shows how to upload, download, generate URLs, and delete files
+// associated with PocketBase records.
 package main
 
 import (
