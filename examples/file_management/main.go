@@ -59,7 +59,7 @@ func uploadFileExample(ctx context.Context, client *pocketbase.Client) error {
 		"content": "파일이 첨부된 게시물입니다.",
 	}
 
-	record, err := client.Records.Create(ctx, "posts", recordData, nil)
+	record, err := client.Records.Create(ctx, "posts", recordData)
 	if err != nil {
 		return fmt.Errorf("레코드 생성 실패: %w", err)
 	}
@@ -73,7 +73,7 @@ func uploadFileExample(ctx context.Context, client *pocketbase.Client) error {
 	}
 
 	fmt.Printf("파일 업로드 성공: %s\n", updatedRecord.ID)
-	if imageField, exists := updatedRecord.Data["image"]; exists {
+	if imageField := updatedRecord.Get("image"); imageField != nil {
 		fmt.Printf("업로드된 파일: %v\n", imageField)
 	}
 
@@ -97,8 +97,8 @@ func downloadFileExample(ctx context.Context, client *pocketbase.Client) error {
 	}
 
 	record := records.Items[0]
-	imageField, exists := record.Data["image"]
-	if !exists {
+	imageField := record.Get("image")
+	if imageField == nil {
 		fmt.Println("이미지 필드가 없습니다.")
 		return nil
 	}
@@ -188,8 +188,8 @@ func deleteFileExample(ctx context.Context, client *pocketbase.Client) error {
 	}
 
 	record := records.Items[0]
-	imageField, exists := record.Data["image"]
-	if !exists {
+	imageField := record.Get("image")
+	if imageField == nil {
 		fmt.Println("이미지 필드가 없습니다.")
 		return nil
 	}
@@ -220,7 +220,7 @@ func deleteFileExample(ctx context.Context, client *pocketbase.Client) error {
 	}
 
 	fmt.Printf("파일 삭제 완료. 업데이트된 레코드 ID: %s\n", updatedRecord.ID)
-	if imageField, exists := updatedRecord.Data["image"]; exists {
+	if imageField := updatedRecord.Get("image"); imageField != nil {
 		fmt.Printf("삭제 후 이미지 필드: %v\n", imageField)
 	}
 
