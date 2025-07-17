@@ -198,8 +198,8 @@ func TestBuildTemplateData(t *testing.T) {
 	}
 
 	titleField := postsCollection.Fields[0]
-	if titleField.JsonName != "title" {
-		t.Errorf("Expected field json name 'title', got %q", titleField.JsonName)
+	if titleField.JSONName != "title" {
+		t.Errorf("Expected field json name 'title', got %q", titleField.JSONName)
 	}
 	if titleField.GoName != "Title" {
 		t.Errorf("Expected field go name 'Title', got %q", titleField.GoName)

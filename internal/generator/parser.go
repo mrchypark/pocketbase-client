@@ -8,15 +8,52 @@ import (
 
 // LoadSchema reads a JSON file from the given path and unmarshals it into a slice of CollectionSchema.
 func LoadSchema(filePath string) ([]CollectionSchema, error) {
-	data, err := os.ReadFile(filePath)
-	if err != nil {
-		return nil, err
+	// Validate file path
+	if filePath == "" {
+		return nil, NewGenerationError(ErrorTypeInvalidPath,
+			"schema file path cannot be empty", nil)
 	}
 
+	// Check if file exists
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		return nil, NewGenerationError(ErrorTypeSchemaLoad,
+			"schema file does not exist", err).
+			WithDetail("file_path", filePath).
+			WithDetail("suggestion", "ensure the schema file exists and is accessible")
+	}
+
+	// Read file with better error context
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, NewGenerationError(ErrorTypeFileRead,
+			"failed to read schema file", err).
+			WithDetail("file_path", filePath)
+	}
+
+	// Validate file is not empty
+	if len(data) == 0 {
+		return nil, NewGenerationError(ErrorTypeSchemaValidate,
+			"schema file is empty", nil).
+			WithDetail("file_path", filePath).
+			WithDetail("suggestion", "ensure the schema file contains valid JSON data")
+	}
+
+	// Parse JSON with better error context
 	var schemas []CollectionSchema
 	err = json.Unmarshal(data, &schemas)
 	if err != nil {
-		return nil, err
+		return nil, NewGenerationError(ErrorTypeSchemaParse,
+			"failed to parse schema JSON", err).
+			WithDetail("file_path", filePath).
+			WithDetail("suggestion", "ensure the schema file contains valid JSON format")
+	}
+
+	// Validate parsed schemas
+	if len(schemas) == 0 {
+		return nil, NewGenerationError(ErrorTypeSchemaValidate,
+			"no collections found in schema", nil).
+			WithDetail("file_path", filePath).
+			WithDetail("suggestion", "ensure the schema contains at least one collection")
 	}
 
 	return schemas, nil
@@ -42,7 +79,7 @@ func BuildTemplateData(schemas []CollectionSchema, packageName string) TemplateD
 
 			goType, _, _ := MapPbTypeToGoType(f, !f.Required)
 			fields = append(fields, FieldData{
-				JsonName:  f.Name,
+				JSONName:  f.Name,
 				GoName:    ToPascalCase(f.Name),
 				GoType:    goType,
 				OmitEmpty: !f.Required, // Use 'required' field directly

@@ -270,7 +270,7 @@ func (g *RelationGenerator) ValidateRelationName(name string) string {
 }
 
 // generateRelationTypeDataOptimized 성능 최적화된 relation 타입 데이터 생성 함수
-func (g *RelationGenerator) generateRelationTypeDataOptimized(field FieldSchema, collectionName, targetCollection string) RelationTypeData {
+func (g *RelationGenerator) generateRelationTypeDataOptimized(field FieldSchema, _, targetCollection string) RelationTypeData {
 	// 성능 최적화: 미리 계산된 값들 사용
 	relationTypeName := ToPascalCase(targetCollection) + "Relation"
 	targetTypeName := ToPascalCase(targetCollection)

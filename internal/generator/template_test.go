@@ -33,28 +33,28 @@ func TestTemplateExecution(t *testing.T) {
 			data: EnhancedTemplateData{
 				TemplateData: TemplateData{
 					PackageName: "models",
-					JsonLibrary: "encoding/json",
+					JSONLibrary: "encoding/json",
 					Collections: []CollectionData{
 						{
 							CollectionName: "users",
 							StructName:     "User",
 							Fields: []FieldData{
 								{
-									JsonName:     "name",
+									JSONName:     "name",
 									GoName:       "Name",
 									GoType:       "string",
 									OmitEmpty:    false,
 									GetterMethod: "GetString",
 								},
 								{
-									JsonName:     "email",
+									JSONName:     "email",
 									GoName:       "Email",
 									GoType:       "*string",
 									OmitEmpty:    true,
 									GetterMethod: "GetStringPointer",
 								},
 								{
-									JsonName:     "age",
+									JSONName:     "age",
 									GoName:       "Age",
 									GoType:       "*int",
 									OmitEmpty:    true,
@@ -67,14 +67,14 @@ func TestTemplateExecution(t *testing.T) {
 							StructName:     "Post",
 							Fields: []FieldData{
 								{
-									JsonName:     "title",
+									JSONName:     "title",
 									GoName:       "Title",
 									GoType:       "string",
 									OmitEmpty:    false,
 									GetterMethod: "GetString",
 								},
 								{
-									JsonName:     "content",
+									JSONName:     "content",
 									GoName:       "Content",
 									GoType:       "*string",
 									OmitEmpty:    true,
@@ -127,14 +127,14 @@ func TestTemplateExecution(t *testing.T) {
 			data: EnhancedTemplateData{
 				TemplateData: TemplateData{
 					PackageName: "models",
-					JsonLibrary: "encoding/json",
+					JSONLibrary: "encoding/json",
 					Collections: []CollectionData{
 						{
 							CollectionName: "devices",
 							StructName:     "Device",
 							Fields: []FieldData{
 								{
-									JsonName:     "name",
+									JSONName:     "name",
 									GoName:       "Name",
 									GoType:       "string",
 									OmitEmpty:    false,
@@ -165,14 +165,14 @@ func TestTemplateExecution(t *testing.T) {
 			data: EnhancedTemplateData{
 				TemplateData: TemplateData{
 					PackageName: "models",
-					JsonLibrary: "encoding/json",
+					JSONLibrary: "encoding/json",
 					Collections: []CollectionData{
 						{
 							CollectionName: "posts",
 							StructName:     "Post",
 							Fields: []FieldData{
 								{
-									JsonName:     "title",
+									JSONName:     "title",
 									GoName:       "Title",
 									GoType:       "string",
 									OmitEmpty:    false,
@@ -200,14 +200,14 @@ func TestTemplateExecution(t *testing.T) {
 			data: EnhancedTemplateData{
 				TemplateData: TemplateData{
 					PackageName: "models",
-					JsonLibrary: "encoding/json",
+					JSONLibrary: "encoding/json",
 					Collections: []CollectionData{
 						{
 							CollectionName: "gallery",
 							StructName:     "Gallery",
 							Fields: []FieldData{
 								{
-									JsonName:     "name",
+									JSONName:     "name",
 									GoName:       "Name",
 									GoType:       "string",
 									OmitEmpty:    false,
@@ -235,14 +235,14 @@ func TestTemplateExecution(t *testing.T) {
 			data: EnhancedTemplateData{
 				TemplateData: TemplateData{
 					PackageName: "models",
-					JsonLibrary: "encoding/json",
+					JSONLibrary: "encoding/json",
 					Collections: []CollectionData{
 						{
 							CollectionName: "simple",
 							StructName:     "Simple",
 							Fields: []FieldData{
 								{
-									JsonName:     "id",
+									JSONName:     "id",
 									GoName:       "ID",
 									GoType:       "string",
 									OmitEmpty:    false,
@@ -279,7 +279,7 @@ func TestTemplateExecution(t *testing.T) {
 			expectedParts := []string{
 				"package " + tt.data.PackageName,
 				"import (",
-				tt.data.JsonLibrary,
+				tt.data.JSONLibrary,
 				"github.com/mrchypark/pocketbase-client",
 			}
 
@@ -432,21 +432,21 @@ func TestTemplateCompilation(t *testing.T) {
 	testData := EnhancedTemplateData{
 		TemplateData: TemplateData{
 			PackageName: "testmodels",
-			JsonLibrary: "encoding/json",
+			JSONLibrary: "encoding/json",
 			Collections: []CollectionData{
 				{
 					CollectionName: "users",
 					StructName:     "User",
 					Fields: []FieldData{
 						{
-							JsonName:     "name",
+							JSONName:     "name",
 							GoName:       "Name",
 							GoType:       "string",
 							OmitEmpty:    false,
 							GetterMethod: "GetString",
 						},
 						{
-							JsonName:     "email",
+							JSONName:     "email",
 							GoName:       "Email",
 							GoType:       "*string",
 							OmitEmpty:    true,
@@ -582,23 +582,23 @@ func TestTemplateWithDifferentSchemaPatterns(t *testing.T) {
 			data: EnhancedTemplateData{
 				TemplateData: TemplateData{
 					PackageName: "models",
-					JsonLibrary: "github.com/goccy/go-json",
+					JSONLibrary: "github.com/goccy/go-json",
 					Collections: []CollectionData{
 						{
 							CollectionName: "complex_records",
 							StructName:     "ComplexRecord",
 							Fields: []FieldData{
-								{JsonName: "text_field", GoName: "TextField", GoType: "string", OmitEmpty: false, GetterMethod: "GetString"},
-								{JsonName: "number_field", GoName: "NumberField", GoType: "*float64", OmitEmpty: true, GetterMethod: "GetFloatPointer"},
-								{JsonName: "bool_field", GoName: "BoolField", GoType: "*bool", OmitEmpty: true, GetterMethod: "GetBoolPointer"},
-								{JsonName: "date_field", GoName: "DateField", GoType: "*types.DateTime", OmitEmpty: true, GetterMethod: "GetDateTimePointer"},
-								{JsonName: "json_field", GoName: "JsonField", GoType: "json.RawMessage", OmitEmpty: false, GetterMethod: "GetRawMessage"},
-								{JsonName: "select_single", GoName: "SelectSingle", GoType: "*string", OmitEmpty: true, GetterMethod: "GetStringPointer"},
-								{JsonName: "select_multi", GoName: "SelectMulti", GoType: "[]string", OmitEmpty: false, GetterMethod: "GetStringSlice"},
-								{JsonName: "relation_single", GoName: "RelationSingle", GoType: "*string", OmitEmpty: true, GetterMethod: "GetStringPointer"},
-								{JsonName: "relation_multi", GoName: "RelationMulti", GoType: "[]string", OmitEmpty: false, GetterMethod: "GetStringSlice"},
-								{JsonName: "file_single", GoName: "FileSingle", GoType: "*string", OmitEmpty: true, GetterMethod: "GetStringPointer"},
-								{JsonName: "file_multi", GoName: "FileMulti", GoType: "[]string", OmitEmpty: false, GetterMethod: "GetStringSlice"},
+								{JSONName: "text_field", GoName: "TextField", GoType: "string", OmitEmpty: false, GetterMethod: "GetString"},
+								{JSONName: "number_field", GoName: "NumberField", GoType: "*float64", OmitEmpty: true, GetterMethod: "GetFloatPointer"},
+								{JSONName: "bool_field", GoName: "BoolField", GoType: "*bool", OmitEmpty: true, GetterMethod: "GetBoolPointer"},
+								{JSONName: "date_field", GoName: "DateField", GoType: "*types.DateTime", OmitEmpty: true, GetterMethod: "GetDateTimePointer"},
+								{JSONName: "json_field", GoName: "JsonField", GoType: "json.RawMessage", OmitEmpty: false, GetterMethod: "GetRawMessage"},
+								{JSONName: "select_single", GoName: "SelectSingle", GoType: "*string", OmitEmpty: true, GetterMethod: "GetStringPointer"},
+								{JSONName: "select_multi", GoName: "SelectMulti", GoType: "[]string", OmitEmpty: false, GetterMethod: "GetStringSlice"},
+								{JSONName: "relation_single", GoName: "RelationSingle", GoType: "*string", OmitEmpty: true, GetterMethod: "GetStringPointer"},
+								{JSONName: "relation_multi", GoName: "RelationMulti", GoType: "[]string", OmitEmpty: false, GetterMethod: "GetStringSlice"},
+								{JSONName: "file_single", GoName: "FileSingle", GoType: "*string", OmitEmpty: true, GetterMethod: "GetStringPointer"},
+								{JSONName: "file_multi", GoName: "FileMulti", GoType: "[]string", OmitEmpty: false, GetterMethod: "GetStringSlice"},
 							},
 						},
 					},
@@ -650,7 +650,7 @@ func TestTemplateWithDifferentSchemaPatterns(t *testing.T) {
 			data: EnhancedTemplateData{
 				TemplateData: TemplateData{
 					PackageName: "models",
-					JsonLibrary: "encoding/json",
+					JSONLibrary: "encoding/json",
 					Collections: []CollectionData{},
 				},
 				GenerateEnums:     false,
@@ -664,15 +664,15 @@ func TestTemplateWithDifferentSchemaPatterns(t *testing.T) {
 			data: EnhancedTemplateData{
 				TemplateData: TemplateData{
 					PackageName: "models",
-					JsonLibrary: "encoding/json",
+					JSONLibrary: "encoding/json",
 					Collections: []CollectionData{
 						{
 							CollectionName: "special_chars_test",
 							StructName:     "SpecialCharsTest",
 							Fields: []FieldData{
-								{JsonName: "field_with_underscores", GoName: "FieldWithUnderscores", GoType: "string", OmitEmpty: false, GetterMethod: "GetString"},
-								{JsonName: "field-with-hyphens", GoName: "FieldWithHyphens", GoType: "string", OmitEmpty: false, GetterMethod: "GetString"},
-								{JsonName: "fieldWithCamelCase", GoName: "FieldWithCamelCase", GoType: "string", OmitEmpty: false, GetterMethod: "GetString"},
+								{JSONName: "field_with_underscores", GoName: "FieldWithUnderscores", GoType: "string", OmitEmpty: false, GetterMethod: "GetString"},
+								{JSONName: "field-with-hyphens", GoName: "FieldWithHyphens", GoType: "string", OmitEmpty: false, GetterMethod: "GetString"},
+								{JSONName: "fieldWithCamelCase", GoName: "FieldWithCamelCase", GoType: "string", OmitEmpty: false, GetterMethod: "GetString"},
 							},
 						},
 					},

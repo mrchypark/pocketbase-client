@@ -241,13 +241,13 @@ func TestCLIErrorHandling(t *testing.T) {
 			name:        "읽기 전용 출력 디렉토리",
 			args:        []string{"-schema", createValidSchemaFile(t, tempDir), "-path", "/dev/null/readonly.go"},
 			expectError: true,
-			errorMsg:    "not a directory",
+			errorMsg:    "failed to create file",
 		},
 		{
 			name:        "잘못된 패키지명",
 			args:        []string{"-schema", createValidSchemaFile(t, tempDir), "-path", filepath.Join(tempDir, "out2.go"), "-pkgname", "123invalid"},
-			expectError: true, // 패키지명이 잘못되면 포맷팅에서 에러 발생
-			errorMsg:    "expected 'IDENT'",
+			expectError: true, // 패키지명이 잘못되면 검증에서 에러 발생
+			errorMsg:    "package name is not a valid Go identifier",
 		},
 	}
 

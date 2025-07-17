@@ -35,7 +35,7 @@ func BenchmarkLargeSchemaProcessing(b *testing.B) {
 		// 기본 TemplateData 생성
 		baseTplData := TemplateData{
 			PackageName: "models",
-			JsonLibrary: "encoding/json",
+			JSONLibrary: "encoding/json",
 			Collections: make([]CollectionData, 0, len(schemas)),
 		}
 
@@ -52,7 +52,7 @@ func BenchmarkLargeSchemaProcessing(b *testing.B) {
 				}
 				goType, _, getter := MapPbTypeToGoType(field, !field.Required)
 				collectionData.Fields = append(collectionData.Fields, FieldData{
-					JsonName:     field.Name,
+					JSONName:     field.Name,
 					GoName:       ToPascalCase(field.Name),
 					GoType:       goType,
 					OmitEmpty:    !field.Required,
@@ -173,7 +173,7 @@ func TestLargeSchemaGeneration(t *testing.T) {
 	// 기본 TemplateData 생성
 	baseTplData := TemplateData{
 		PackageName: "models",
-		JsonLibrary: "encoding/json",
+		JSONLibrary: "encoding/json",
 		Collections: make([]CollectionData, 0, len(schemas)),
 	}
 
@@ -190,7 +190,7 @@ func TestLargeSchemaGeneration(t *testing.T) {
 			}
 			goType, _, getter := MapPbTypeToGoType(field, !field.Required)
 			collectionData.Fields = append(collectionData.Fields, FieldData{
-				JsonName:     field.Name,
+				JSONName:     field.Name,
 				GoName:       ToPascalCase(field.Name),
 				GoType:       goType,
 				OmitEmpty:    !field.Required,
@@ -227,7 +227,7 @@ func TestLargeSchemaGeneration(t *testing.T) {
 
 {{range .Collections}}
 type {{.StructName}} struct {
-{{range .Fields}}    {{.GoName}} {{.GoType}} ` + "`json:\"{{.JsonName}}{{if .OmitEmpty}},omitempty{{end}}\"`" + `
+{{range .Fields}}    {{.GoName}} {{.GoType}} ` + "`json:\"{{.JSONName}}{{if .OmitEmpty}},omitempty{{end}}\"`" + `
 {{end}}}
 {{end}}
 
@@ -312,7 +312,7 @@ func TestPerformanceBottlenecks(t *testing.T) {
 	start := time.Now()
 	baseTplData := TemplateData{
 		PackageName: "models",
-		JsonLibrary: "encoding/json",
+		JSONLibrary: "encoding/json",
 		Collections: make([]CollectionData, 0, len(schemas)),
 	}
 
@@ -329,7 +329,7 @@ func TestPerformanceBottlenecks(t *testing.T) {
 			}
 			goType, _, getter := MapPbTypeToGoType(field, !field.Required)
 			collectionData.Fields = append(collectionData.Fields, FieldData{
-				JsonName:     field.Name,
+				JSONName:     field.Name,
 				GoName:       ToPascalCase(field.Name),
 				GoType:       goType,
 				OmitEmpty:    !field.Required,
@@ -532,7 +532,7 @@ func generateComplexRelationSchemas() []CollectionSchema {
 func processSchemas(schemas []CollectionSchema) {
 	baseTplData := TemplateData{
 		PackageName: "models",
-		JsonLibrary: "encoding/json",
+		JSONLibrary: "encoding/json",
 		Collections: make([]CollectionData, 0, len(schemas)),
 	}
 
@@ -549,7 +549,7 @@ func processSchemas(schemas []CollectionSchema) {
 			}
 			goType, _, getter := MapPbTypeToGoType(field, !field.Required)
 			collectionData.Fields = append(collectionData.Fields, FieldData{
-				JsonName:     field.Name,
+				JSONName:     field.Name,
 				GoName:       ToPascalCase(field.Name),
 				GoType:       goType,
 				OmitEmpty:    !field.Required,

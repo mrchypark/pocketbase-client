@@ -31,7 +31,7 @@ func BenchmarkCodeGeneration(b *testing.B) {
 		// 기본 TemplateData 생성
 		baseTplData := generator.TemplateData{
 			PackageName: "models",
-			JsonLibrary: "encoding/json",
+			JSONLibrary: "encoding/json",
 			Collections: make([]generator.CollectionData, 0, len(schemas)),
 		}
 
@@ -48,7 +48,7 @@ func BenchmarkCodeGeneration(b *testing.B) {
 				}
 				goType, _, getter := generator.MapPbTypeToGoType(field, !field.Required)
 				collectionData.Fields = append(collectionData.Fields, generator.FieldData{
-					JsonName:     field.Name,
+					JSONName:     field.Name,
 					GoName:       generator.ToPascalCase(field.Name),
 					GoType:       goType,
 					OmitEmpty:    !field.Required,
@@ -111,21 +111,21 @@ func BenchmarkTemplateExecution(b *testing.B) {
 	testData := generator.EnhancedTemplateData{
 		TemplateData: generator.TemplateData{
 			PackageName: "models",
-			JsonLibrary: "encoding/json",
+			JSONLibrary: "encoding/json",
 			Collections: []generator.CollectionData{
 				{
 					CollectionName: "test_collection",
 					StructName:     "TestCollection",
 					Fields: []generator.FieldData{
 						{
-							JsonName:     "name",
+							JSONName:     "name",
 							GoName:       "Name",
 							GoType:       "string",
 							OmitEmpty:    false,
 							GetterMethod: "GetString",
 						},
 						{
-							JsonName:     "count",
+							JSONName:     "count",
 							GoName:       "Count",
 							GoType:       "int",
 							OmitEmpty:    false,
@@ -312,7 +312,7 @@ func BenchmarkMemoryUsage(b *testing.B) {
 		// 전체 코드 생성 프로세스
 		baseTplData := generator.TemplateData{
 			PackageName: "models",
-			JsonLibrary: "encoding/json",
+			JSONLibrary: "encoding/json",
 			Collections: make([]generator.CollectionData, 0, len(schemas)),
 		}
 
@@ -329,7 +329,7 @@ func BenchmarkMemoryUsage(b *testing.B) {
 				}
 				goType, _, getter := generator.MapPbTypeToGoType(field, !field.Required)
 				collectionData.Fields = append(collectionData.Fields, generator.FieldData{
-					JsonName:     field.Name,
+					JSONName:     field.Name,
 					GoName:       generator.ToPascalCase(field.Name),
 					GoType:       goType,
 					OmitEmpty:    !field.Required,

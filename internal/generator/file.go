@@ -54,7 +54,7 @@ func (g *FileGenerator) GenerateFileTypes(collections []CollectionData, schemas 
 }
 
 // GenerateFileTypeData generates file type data for a single file field
-func (g *FileGenerator) GenerateFileTypeData(enhanced EnhancedFieldInfo, collectionName string) FileTypeData {
+func (g *FileGenerator) GenerateFileTypeData(enhanced EnhancedFieldInfo, _ string) FileTypeData {
 	methods := g.GenerateFileMethods(enhanced)
 
 	return FileTypeData{
@@ -312,7 +312,7 @@ func (g *FileGenerator) GenerateThumbnailSizeConstants(fileType FileTypeData) st
 }
 
 // generateFileTypeDataOptimized 성능 최적화된 file 타입 데이터 생성 함수
-func (g *FileGenerator) generateFileTypeDataOptimized(field FieldSchema, collectionName string) FileTypeData {
+func (g *FileGenerator) generateFileTypeDataOptimized(field FieldSchema, _ string) FileTypeData {
 	// 성능 최적화: 미리 계산된 값들 사용
 	fileTypeName := ToPascalCase(field.Name) + "File"
 

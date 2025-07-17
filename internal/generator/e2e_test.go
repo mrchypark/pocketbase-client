@@ -68,7 +68,7 @@ func TestEndToEndCodeGeneration(t *testing.T) {
 			// 기본 TemplateData 생성
 			baseTplData := TemplateData{
 				PackageName: "models",
-				JsonLibrary: "encoding/json",
+				JSONLibrary: "encoding/json",
 				Collections: make([]CollectionData, 0, len(schemas)),
 			}
 
@@ -85,7 +85,7 @@ func TestEndToEndCodeGeneration(t *testing.T) {
 					}
 					goType, _, getter := MapPbTypeToGoType(field, !field.Required)
 					collectionData.Fields = append(collectionData.Fields, FieldData{
-						JsonName:     field.Name,
+						JSONName:     field.Name,
 						GoName:       ToPascalCase(field.Name),
 						GoType:       goType,
 						OmitEmpty:    !field.Required,
@@ -191,7 +191,7 @@ func TestGeneratedCodeUsability(t *testing.T) {
 	// 모든 기능을 활성화하여 코드 생성
 	baseTplData := TemplateData{
 		PackageName: "models",
-		JsonLibrary: "encoding/json",
+		JSONLibrary: "encoding/json",
 		Collections: make([]CollectionData, 0, len(schemas)),
 	}
 
@@ -208,7 +208,7 @@ func TestGeneratedCodeUsability(t *testing.T) {
 			}
 			goType, _, getter := MapPbTypeToGoType(field, !field.Required)
 			collectionData.Fields = append(collectionData.Fields, FieldData{
-				JsonName:     field.Name,
+				JSONName:     field.Name,
 				GoName:       ToPascalCase(field.Name),
 				GoType:       goType,
 				OmitEmpty:    !field.Required,
@@ -374,7 +374,7 @@ type BaseModel struct {
 // {{.StructName}}은 {{.CollectionName}} 컬렉션의 구조체입니다
 type {{.StructName}} struct {
 	BaseModel
-	{{range .Fields}}{{.GoName}} {{.GoType}} ` + "`json:\"{{.JsonName}}{{if .OmitEmpty}},omitempty{{end}}\"`" + `
+	{{range .Fields}}{{.GoName}} {{.GoType}} ` + "`json:\"{{.JSONName}}{{if .OmitEmpty}},omitempty{{end}}\"`" + `
 	{{end}}
 }
 {{end}}

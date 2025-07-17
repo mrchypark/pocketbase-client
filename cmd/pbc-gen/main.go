@@ -6,6 +6,7 @@ import (
 	"flag"
 	"log"
 	"os"
+	"path/filepath"
 	"text/template"
 
 	"github.com/mrchypark/pocketbase-client/internal/generator"
@@ -35,13 +36,19 @@ func main() {
 
 	schemas, err := generator.LoadSchema(*schemaPath)
 	if err != nil {
-		log.Fatalf("Error loading schema: %v", err)
+		genErr := generator.WrapSchemaError(err, *schemaPath, "load")
+		log.Fatalf("Schema loading failed: %v", genErr)
+	}
+
+	// Validate basic configuration
+	if err := validateConfig(*schemaPath, *outputPath, *pkgName); err != nil {
+		log.Fatalf("Configuration validation failed: %v", err)
 	}
 
 	// 기본 TemplateData 생성
 	baseTplData := generator.TemplateData{
 		PackageName: *pkgName,
-		JsonLibrary: *jsonLib,
+		JSONLibrary: *jsonLib,
 		Collections: make([]generator.CollectionData, 0, len(schemas)),
 	}
 
@@ -65,7 +72,7 @@ func main() {
 			// Comment is currently not used, so ignore with '_'.
 			goType, _, getter := generator.MapPbTypeToGoType(field, !field.Required)
 			collectionData.Fields = append(collectionData.Fields, generator.FieldData{
-				JsonName:     field.Name,
+				JSONName:     field.Name,
 				GoName:       generator.ToPascalCase(field.Name),
 				GoType:       goType,
 				OmitEmpty:    !field.Required,
@@ -107,33 +114,151 @@ func main() {
 		tplData = baseTplData
 	}
 
-	// 3. Parse the embed-injected variable (templateFile) instead of reading from file system.
+	// Parse template with better error handling
 	tpl, err := template.New("models").Parse(templateFile)
 	if err != nil {
-		log.Fatalf("Error parsing template: %v", err)
+		genErr := generator.WrapTemplateError(err, "models", "parse")
+		log.Fatalf("Template parsing failed: %v", genErr)
 	}
 
+	// Create output file with better error handling
 	outputFile, err := os.Create(*outputPath)
 	if err != nil {
-		log.Fatalf("Error creating output file: %v", err)
+		genErr := generator.WrapFileError(err, *outputPath, "create")
+		log.Fatalf("Output file creation failed: %v", genErr)
 	}
-	defer outputFile.Close()
-
+	// Execute template with better error handling
 	err = tpl.Execute(outputFile, tplData)
 	if err != nil {
-		log.Fatalf("Error executing template: %v", err)
+		outputFile.Close() // Close file on error
+		genErr := generator.WrapTemplateError(err, "models", "execute")
+		log.Fatalf("Template execution failed: %v", genErr)
 	}
-	outputFile.Close()
 
+	// Close file before formatting
+	if err := outputFile.Close(); err != nil {
+		genErr := generator.WrapFileError(err, *outputPath, "close")
+		log.Fatalf("Failed to close output file: %v", genErr)
+	}
+
+	// Format generated code with better error handling
 	formattedBytes, err := imports.Process(*outputPath, nil, nil)
 	if err != nil {
-		log.Fatalf("Error formatting generated code: %v", err)
+		genErr := generator.NewGenerationError(generator.ErrorTypeCodeFormat,
+			"failed to format generated code", err).
+			WithDetail("file_path", *outputPath).
+			WithDetail("suggestion", "check for syntax errors in generated code")
+		log.Fatalf("Code formatting failed: %v", genErr)
 	}
 
+	// Write formatted code with better error handling
 	err = os.WriteFile(*outputPath, formattedBytes, 0644)
 	if err != nil {
-		log.Fatalf("Error writing formatted code to file: %v", err)
+		genErr := generator.WrapFileError(err, *outputPath, "write")
+		log.Fatalf("Failed to write formatted code: %v", genErr)
 	}
 
 	log.Printf("Successfully generated models to %s\n", *outputPath)
+}
+
+// validateConfig validates the basic configuration parameters
+func validateConfig(schemaPath, outputPath, pkgName string) error {
+	validationErr := generator.NewValidationError()
+
+	// Validate schema path
+	if schemaPath == "" {
+		validationErr.AddError("schema path cannot be empty", "schema")
+	} else {
+		if _, err := os.Stat(schemaPath); os.IsNotExist(err) {
+			validationErr.AddIssue(generator.ValidationIssue{
+				Type:       "schema_not_found",
+				Message:    "schema file does not exist",
+				Path:       "schema",
+				Suggestion: "ensure the schema file exists and is accessible",
+				Severity:   generator.SeverityError,
+				Context:    map[string]interface{}{"path": schemaPath},
+			})
+		}
+	}
+
+	// Validate output path
+	if outputPath == "" {
+		validationErr.AddError("output path cannot be empty", "output")
+	} else {
+		// Check if output directory exists
+		outputDir := filepath.Dir(outputPath)
+		if outputDir != "." {
+			if _, err := os.Stat(outputDir); os.IsNotExist(err) {
+				validationErr.AddIssue(generator.ValidationIssue{
+					Type:       "directory_not_found",
+					Message:    "output directory does not exist, will be created",
+					Path:       "output",
+					Suggestion: "directory will be created automatically",
+					Severity:   generator.SeverityWarning,
+					Context:    map[string]interface{}{"directory": outputDir},
+				})
+			}
+		}
+
+		// Check if output file already exists
+		if _, err := os.Stat(outputPath); err == nil {
+			validationErr.AddIssue(generator.ValidationIssue{
+				Type:     "file_exists",
+				Message:  "output file already exists and will be overwritten",
+				Path:     "output",
+				Severity: generator.SeverityWarning,
+				Context:  map[string]interface{}{"path": outputPath},
+			})
+		}
+	}
+
+	// Validate package name
+	if pkgName == "" {
+		validationErr.AddError("package name cannot be empty", "package")
+	} else if !isValidGoIdentifier(pkgName) {
+		validationErr.AddIssue(generator.ValidationIssue{
+			Type:       "invalid_identifier",
+			Message:    "package name is not a valid Go identifier",
+			Path:       "package",
+			Suggestion: "use a valid Go package name (letters, digits, underscore)",
+			Severity:   generator.SeverityError,
+			Context:    map[string]interface{}{"name": pkgName},
+		})
+	}
+
+	// Return error only if there are actual errors (not warnings)
+	if validationErr.HasErrors() {
+		return validationErr
+	}
+
+	// Log warnings if any
+	if validationErr.HasWarnings() {
+		for _, warning := range validationErr.GetWarnings() {
+			log.Printf("Warning: %s", warning.Message)
+		}
+	}
+
+	return nil
+}
+
+// isValidGoIdentifier checks if a string is a valid Go identifier
+func isValidGoIdentifier(name string) bool {
+	if name == "" {
+		return false
+	}
+
+	// First character must be a letter or underscore
+	first := rune(name[0])
+	if !((first >= 'a' && first <= 'z') || (first >= 'A' && first <= 'Z') || first == '_') {
+		return false
+	}
+
+	// Remaining characters must be letters, digits, or underscores
+	for _, r := range name[1:] {
+		if !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '_') {
+			return false
+		}
+	}
+
+	return true
 }

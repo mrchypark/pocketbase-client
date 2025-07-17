@@ -5,7 +5,8 @@ import (
 	"fmt" // Required for error message formatting
 )
 
-// CollectionSchema definition (same as before)
+// CollectionSchema represents a PocketBase collection schema with all its metadata.
+// It contains information about the collection structure, rules, and field definitions.
 type CollectionSchema struct {
 	ID         string   `json:"id"`
 	Name       string   `json:"name"`
@@ -25,8 +26,8 @@ type CollectionSchema struct {
 	Fields []FieldSchema `json:"fields"` // Keep `json:"fields"` tag
 }
 
-// CollectionSchema.UnmarshalJSON method (keep same as before)
-// This method unmarshals the 'schema' or 'fields' array of CollectionSchema to cs.Fields.
+// UnmarshalJSON unmarshals the 'schema' or 'fields' array of CollectionSchema to cs.Fields.
+// This method handles both legacy 'schema' field and newer 'fields' field formats.
 func (cs *CollectionSchema) UnmarshalJSON(data []byte) error {
 	type Alias CollectionSchema
 	aux := &struct {
@@ -56,7 +57,8 @@ func (cs *CollectionSchema) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// FieldSchema definition (includes new custom UnmarshalJSON)
+// FieldSchema represents a single field definition within a PocketBase collection.
+// It contains all metadata about the field including type, validation rules, and options.
 type FieldSchema struct {
 	ID          string `json:"id"`
 	Name        string `json:"name"`
@@ -123,7 +125,8 @@ func (fs *FieldSchema) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// FieldOptions (simple struct, MaxSelect/MinSelect kept as *int type, no custom UnmarshalJSON)
+// FieldOptions represents the options/configuration for a PocketBase field.
+// It contains validation rules, constraints, and field-specific settings.
 type FieldOptions struct {
 	CollectionID  string `json:"collectionId"`
 	CascadeDelete bool   `json:"cascadeDelete"`

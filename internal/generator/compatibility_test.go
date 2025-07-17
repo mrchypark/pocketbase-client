@@ -224,8 +224,8 @@ func TestExistingBehaviorPreservation(t *testing.T) {
 		}
 
 		field := collection.Fields[i]
-		if field.JsonName != expected.jsonName {
-			t.Errorf("필드 %d JsonName: 예상 %s, 실제 %s", i, expected.jsonName, field.JsonName)
+		if field.JSONName != expected.jsonName {
+			t.Errorf("필드 %d JSONName: 예상 %s, 실제 %s", i, expected.jsonName, field.JSONName)
 		}
 		if field.GoName != expected.goName {
 			t.Errorf("필드 %d GoName: 예상 %s, 실제 %s", i, expected.goName, field.GoName)
@@ -287,7 +287,7 @@ func TestTemplateCompatibility(t *testing.T) {
 
 {{range .Collections}}
 type {{.StructName}} struct {
-	{{range .Fields}}{{.GoName}} {{.GoType}} ` + "`json:\"{{.JsonName}}{{if .OmitEmpty}},omitempty{{end}}\"`" + `
+	{{range .Fields}}{{.GoName}} {{.GoType}} ` + "`json:\"{{.JSONName}}{{if .OmitEmpty}},omitempty{{end}}\"`" + `
 	{{end}}
 }
 {{end}}`
@@ -384,7 +384,7 @@ func generateCodeWithData(t *testing.T, data interface{}) string {
 
 {{range .Collections}}
 type {{.StructName}} struct {
-	{{range .Fields}}{{.GoName}} {{.GoType}} ` + "`json:\"{{.JsonName}}{{if .OmitEmpty}},omitempty{{end}}\"`" + `
+	{{range .Fields}}{{.GoName}} {{.GoType}} ` + "`json:\"{{.JSONName}}{{if .OmitEmpty}},omitempty{{end}}\"`" + `
 	{{end}}
 }
 {{end}}`
@@ -454,7 +454,7 @@ type Users struct {
 
 {{range .Collections}}
 type {{.StructName}} struct {
-	{{range .Fields}}{{.GoName}} {{.GoType}} ` + "`json:\"{{.JsonName}}{{if .OmitEmpty}},omitempty{{end}}\"`" + `
+	{{range .Fields}}{{.GoName}} {{.GoType}} ` + "`json:\"{{.JSONName}}{{if .OmitEmpty}},omitempty{{end}}\"`" + `
 	{{end}}
 }
 {{end}}

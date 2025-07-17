@@ -5,6 +5,7 @@ import (
 )
 
 // MapPbTypeToGoType maps PocketBase field types to Go types and their corresponding getter methods.
+// It returns the Go type, a comment (currently unused), and the getter method name.
 func MapPbTypeToGoType(field FieldSchema, omitEmpty bool) (string, string, string) {
 	var goType, comment, getterMethod string
 
@@ -74,6 +75,8 @@ func MapPbTypeToGoType(field FieldSchema, omitEmpty bool) (string, string, strin
 	return goType, comment, getterMethod
 }
 
+// ToPascalCase converts a string to PascalCase format.
+// It handles common abbreviations like ID, URL, HTML, JSON properly.
 func ToPascalCase(s string) string {
 	if s == "" {
 		return ""
@@ -94,7 +97,10 @@ func ToPascalCase(s string) string {
 		case "json":
 			parts[i] = "JSON"
 		default:
-			parts[i] = strings.Title(part)
+			// 수동으로 첫 글자를 대문자로 변환 (strings.Title 대체)
+			if len(part) > 0 {
+				parts[i] = strings.ToUpper(part[:1]) + part[1:]
+			}
 		}
 	}
 
@@ -152,7 +158,7 @@ func analyzeRelationField(enhanced EnhancedFieldInfo, collectionName string, all
 }
 
 // analyzeFileField analyzes file field for file type generation
-func analyzeFileField(enhanced EnhancedFieldInfo, collectionName string) EnhancedFieldInfo {
+func analyzeFileField(enhanced EnhancedFieldInfo, _ string) EnhancedFieldInfo {
 	enhanced.FileTypeName = ToPascalCase(enhanced.Name) + "File"
 
 	if enhanced.Options != nil {

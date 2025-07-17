@@ -6,7 +6,7 @@ package {{.PackageName}}
 import (
 	"context"
 	{{with .FileTypes}}"fmt"{{end}}
-	"{{.JsonLibrary}}"
+	"{{.JSONLibrary}}"
 
 	"github.com/mrchypark/pocketbase-client"
 	"github.com/pocketbase/pocketbase/tools/types"
@@ -251,12 +251,12 @@ func (m *{{$collection.StructName}}) ToMap() map[string]any {
 	{{- range .Fields}}
 	{{- if .OmitEmpty}}
 	if val := m.{{.GoName}}(); val != nil {
-		data["{{.JsonName}}"] = val
+		data["{{.JSONName}}"] = val
 	}
 	{{- else}}
 	// For required fields, we always include them.
 	// You can add more complex logic here if needed, e.g., checking for zero values.
-	data["{{.JsonName}}"] = m.{{.GoName}}()
+	data["{{.JSONName}}"] = m.{{.GoName}}()
 	{{- end}}
     {{- end}}
 
@@ -264,14 +264,14 @@ func (m *{{$collection.StructName}}) ToMap() map[string]any {
 }
 
 {{range .Fields}}
-// {{.GoName}} returns the value of the '{{.JsonName}}' field.
+// {{.GoName}} returns the value of the '{{.JSONName}}' field.
 func (m *{{$collection.StructName}}) {{.GoName}}() {{.GoType}} {
-	return m.{{.GetterMethod}}("{{.JsonName}}")
+	return m.{{.GetterMethod}}("{{.JSONName}}")
 }
 
-// Set{{.GoName}} sets the value of the '{{.JsonName}}' field.
+// Set{{.GoName}} sets the value of the '{{.JSONName}}' field.
 func (m *{{$collection.StructName}}) Set{{.GoName}}(value {{.GoType}}) {
-	m.Set("{{.JsonName}}", value)
+	m.Set("{{.JSONName}}", value)
 }
 {{end}}
 {{end}}
