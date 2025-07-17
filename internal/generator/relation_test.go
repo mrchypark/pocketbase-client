@@ -16,10 +16,17 @@ func TestRelationGenerator_GenerateRelationTypes(t *testing.T) {
 		{
 			CollectionName: "comments",
 		},
+		{
+			CollectionName: "users",
+		},
+		{
+			CollectionName: "categories",
+		},
 	}
 
 	schemas := []CollectionSchema{
 		{
+			ID:   "posts_collection_id",
 			Name: "posts",
 			Fields: []FieldSchema{
 				{
@@ -48,6 +55,7 @@ func TestRelationGenerator_GenerateRelationTypes(t *testing.T) {
 			},
 		},
 		{
+			ID:   "comments_collection_id",
 			Name: "comments",
 			Fields: []FieldSchema{
 				{
@@ -73,10 +81,6 @@ func TestRelationGenerator_GenerateRelationTypes(t *testing.T) {
 		{
 			ID:   "categories_collection_id",
 			Name: "categories",
-		},
-		{
-			ID:   "posts_collection_id",
-			Name: "posts",
 		},
 	}
 

@@ -26,13 +26,16 @@ func (g *RelationGenerator) GenerateRelationTypes(collections []CollectionData, 
 	}
 
 	relationTypes := make([]RelationTypeData, 0, estimatedRelations)
+	seenRelations := make(map[string]bool) // 중복 제거를 위한 맵
 
 	// 성능 최적화: 스키마를 맵으로 변환하여 O(1) 조회
 	schemaMap := make(map[string]CollectionSchema, len(schemas))
 	collectionIDMap := make(map[string]string, len(schemas)) // ID -> Name 매핑
 	for _, schema := range schemas {
 		schemaMap[schema.Name] = schema
-		collectionIDMap[schema.ID] = schema.Name
+		if schema.ID != "" {
+			collectionIDMap[schema.ID] = schema.Name
+		}
 	}
 
 	for _, collection := range collections {
@@ -51,7 +54,11 @@ func (g *RelationGenerator) GenerateRelationTypes(collections []CollectionData, 
 				targetCollection, exists := collectionIDMap[field.Options.CollectionID]
 				if exists {
 					relationType := g.generateRelationTypeDataOptimized(field, collection.CollectionName, targetCollection)
-					relationTypes = append(relationTypes, relationType)
+					// 중복 제거: 같은 타입명이 이미 존재하는지 확인
+					if !seenRelations[relationType.TypeName] {
+						seenRelations[relationType.TypeName] = true
+						relationTypes = append(relationTypes, relationType)
+					}
 				}
 			}
 		}

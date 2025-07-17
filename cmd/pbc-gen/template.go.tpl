@@ -5,18 +5,18 @@ package {{.PackageName}}
 
 import (
 	"context"
-	"fmt"
+	{{with .FileTypes}}"fmt"{{end}}
 	"{{.JsonLibrary}}"
 
 	"github.com/mrchypark/pocketbase-client"
 	"github.com/pocketbase/pocketbase/tools/types"
 )
 
-{{if .GenerateEnums}}
+{{with .Enums}}
 // ==============
 //  Enum Constants
 // ==============
-{{range .Enums}}
+{{range .}}
 {{$enum := .}}
 
 // {{$enum.EnumTypeName}} enum constants for {{$enum.CollectionName}}.{{$enum.FieldName}}
@@ -35,19 +35,19 @@ func {{$enum.EnumTypeName}}Values() []string {
 func IsValid{{$enum.EnumTypeName}}(value string) bool {
 	switch value {
 {{range .Constants}}	case {{.Name}}:
-{{end}}		return true
-	default:
+		return true
+{{end}}	default:
 		return false
 	}
 }
 {{end}}
 {{end}}
 
-{{if .GenerateRelations}}
+{{with .RelationTypes}}
 // ==============
 //  Relation Types
 // ==============
-{{range .RelationTypes}}
+{{range .}}
 {{$relation := .}}
 
 // {{$relation.TypeName}} represents a relation to {{$relation.TargetCollection}} collection
@@ -118,7 +118,7 @@ func (r {{$relation.TypeName}}s) IsEmpty() bool {
 {{end}}
 {{end}}
 
-{{if .GenerateFiles}}
+{{with .FileTypes}}
 // ==============
 //  File Types
 // ==============

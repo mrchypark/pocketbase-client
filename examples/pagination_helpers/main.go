@@ -19,7 +19,7 @@ func main() {
 		log.Printf("인증 실패 (예제는 계속 진행): %v", err)
 	}
 
-	fmt.Println("=== PocketBase 페이지네이션 헬퍼 사용법 예제 ===\n")
+	fmt.Println("=== PocketBase 페이지네이션 헬퍼 사용법 예제 ===")
 
 	// 1. GetAll 메서드 사용 예제
 	demonstrateGetAll(ctx, client)

@@ -257,7 +257,6 @@ func TestGeneratedCodeUsability(t *testing.T) {
 	usageTestCode := `package models
 
 import (
-	"context"
 	"testing"
 )
 
@@ -361,9 +360,7 @@ func getTestTemplate() string {
 	return `package {{.PackageName}}
 
 import (
-	"context"
-	"fmt"
-	{{.JsonLibrary | printf "%q"}}
+	{{if .FileTypes}}"fmt"{{end}}
 )
 
 // BaseModel은 모든 PocketBase 레코드의 기본 필드를 포함합니다
@@ -382,8 +379,8 @@ type {{.StructName}} struct {
 }
 {{end}}
 
-{{if .GenerateEnums}}
-{{range .Enums}}
+{{with .Enums}}
+{{range .}}
 // {{.CollectionName}} {{.FieldName}} enum constants
 {{range .Constants}}const {{.Name}} = {{.Value | printf "%q"}}
 {{end}}
@@ -395,8 +392,8 @@ func {{.CollectionName}}{{.FieldName}}Values() []string {
 {{end}}
 {{end}}
 
-{{if .GenerateRelations}}
-{{range .RelationTypes}}
+{{with .RelationTypes}}
+{{range .}}
 // {{.TypeName}}은 {{.TargetCollection}} 컬렉션에 대한 관계를 나타냅니다
 type {{.TypeName}} struct {
 	id string
@@ -419,7 +416,7 @@ func New{{.TypeName}}(id string) {{.TypeName}} {
 {{end}}
 {{end}}
 
-{{if .GenerateFiles}}
+{{if .FileTypes}}
 // FileReference represents a file reference
 type FileReference struct {
 	filename   string

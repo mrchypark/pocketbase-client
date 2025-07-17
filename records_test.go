@@ -1237,6 +1237,7 @@ func TestRecordIterator_Next(t *testing.T) {
 
 		c := NewClient(srv.URL)
 		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
 		iterator := c.Records.Iterate(ctx, "test", nil)
 
 		recordCount := 0
@@ -1782,6 +1783,15 @@ func TestPaginationIntegration(t *testing.T) {
 
 	// Test collection name
 	testCollection := "integration_test"
+
+	// PocketBase 서버 연결 확인
+	_, err := client.Records.GetList(ctx, testCollection, &ListOptions{
+		Page:    1,
+		PerPage: 1,
+	})
+	if err != nil {
+		t.Skipf("PocketBase server not available or collection '%s' not found: %v", testCollection, err)
+	}
 
 	t.Run("대용량 데이터 처리 시나리오", func(t *testing.T) {
 		// 먼저 테스트 데이터가 충분히 있는지 확인

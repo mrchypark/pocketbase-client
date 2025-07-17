@@ -217,6 +217,14 @@ func TestTemplateExecution(t *testing.T) {
 						},
 					},
 				},
+				FileTypes: []FileTypeData{
+					{
+						TypeName:       "ImageFile",
+						IsMulti:        false,
+						HasThumbnails:  true,
+						ThumbnailSizes: []string{"100x100", "200x200"},
+					},
+				},
 				GenerateEnums:     false,
 				GenerateRelations: false,
 				GenerateFiles:     true,
@@ -465,6 +473,14 @@ func TestTemplateCompilation(t *testing.T) {
 				TargetCollection: "profiles",
 				TargetTypeName:   "Profile",
 				IsMulti:          false,
+			},
+		},
+		FileTypes: []FileTypeData{
+			{
+				TypeName:       "AvatarFile",
+				IsMulti:        false,
+				HasThumbnails:  true,
+				ThumbnailSizes: []string{"50x50", "100x100"},
 			},
 		},
 		GenerateEnums:     true,

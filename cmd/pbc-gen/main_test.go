@@ -162,7 +162,7 @@ func TestCLIIntegration(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// CLI 실행
-			cmd := exec.Command("go", append([]string{"run", "main.go"}, tt.args...)...)
+			cmd := exec.Command("go", append([]string{"run", "."}, tt.args...)...)
 			cmd.Dir = "."
 
 			var stdout, stderr bytes.Buffer
@@ -239,21 +239,21 @@ func TestCLIErrorHandling(t *testing.T) {
 		},
 		{
 			name:        "읽기 전용 출력 디렉토리",
-			args:        []string{"-schema", createValidSchemaFile(t, tempDir), "-path", "/root/readonly.go"},
+			args:        []string{"-schema", createValidSchemaFile(t, tempDir), "-path", "/dev/null/readonly.go"},
 			expectError: true,
-			errorMsg:    "permission",
+			errorMsg:    "not a directory",
 		},
 		{
 			name:        "잘못된 패키지명",
 			args:        []string{"-schema", createValidSchemaFile(t, tempDir), "-path", filepath.Join(tempDir, "out2.go"), "-pkgname", "123invalid"},
-			expectError: false, // 패키지명 검증은 현재 구현되지 않음
-			errorMsg:    "",
+			expectError: true, // 패키지명이 잘못되면 포맷팅에서 에러 발생
+			errorMsg:    "expected 'IDENT'",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cmd := exec.Command("go", append([]string{"run", "main.go"}, tt.args...)...)
+			cmd := exec.Command("go", append([]string{"run", "."}, tt.args...)...)
 			cmd.Dir = "."
 
 			var stderr bytes.Buffer
@@ -298,7 +298,7 @@ func TestCLIBackwardCompatibility(t *testing.T) {
 
 	// 두 방식 모두 실행
 	for i, args := range [][]string{oldStyleArgs, newStyleArgs} {
-		cmd := exec.Command("go", append([]string{"run", "main.go"}, args...)...)
+		cmd := exec.Command("go", append([]string{"run", "."}, args...)...)
 		cmd.Dir = "."
 
 		var stderr bytes.Buffer
@@ -393,16 +393,17 @@ func createInvalidSchemaFile(t *testing.T, dir string) string {
 
 // TestCLIHelp는 도움말 출력을 테스트합니다
 func TestCLIHelp(t *testing.T) {
-	cmd := exec.Command("go", "run", "main.go", "-help")
+	cmd := exec.Command("go", "run", ".", "-help")
 	cmd.Dir = "."
 
-	var stdout bytes.Buffer
+	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
 
 	// -help 플래그는 exit code 2를 반환하므로 에러는 예상됨
 	cmd.Run()
 
-	helpOutput := stdout.String()
+	helpOutput := stdout.String() + stderr.String()
 
 	// 새로운 플래그들이 도움말에 포함되어 있는지 확인
 	expectedFlags := []string{"-enums", "-relations", "-files"}

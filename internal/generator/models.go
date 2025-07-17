@@ -4,6 +4,11 @@ type TemplateData struct {
 	PackageName string
 	JsonLibrary string
 	Collections []CollectionData
+
+	// Enhanced 기능을 위한 필드들 (기본값은 빈 슬라이스)
+	Enums         []EnumData         `json:"enums,omitempty"`
+	RelationTypes []RelationTypeData `json:"relationTypes,omitempty"`
+	FileTypes     []FileTypeData     `json:"fileTypes,omitempty"`
 }
 
 type CollectionData struct {
