@@ -4,20 +4,19 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math"
+	"maps"
 	"net/http"
 	"net/url"
-	"time"
 )
 
 // RecordServiceAPI defines the API operations related to records.
 type RecordServiceAPI interface {
 	GetList(ctx context.Context, collection string, opts *ListOptions) (*ListResult, error)
 	GetOne(ctx context.Context, collection, recordID string, opts *GetOneOptions) (*Record, error)
-	Create(ctx context.Context, collection string, body interface{}) (*Record, error)
-	CreateWithOptions(ctx context.Context, collection string, body interface{}, opts *WriteOptions) (*Record, error)
-	Update(ctx context.Context, collection, recordID string, body interface{}) (*Record, error)
-	UpdateWithOptions(ctx context.Context, collection, recordID string, body interface{}, opts *WriteOptions) (*Record, error)
+	Create(ctx context.Context, collection string, body any) (*Record, error)
+	CreateWithOptions(ctx context.Context, collection string, body any, opts *WriteOptions) (*Record, error)
+	Update(ctx context.Context, collection, recordID string, body any) (*Record, error)
+	UpdateWithOptions(ctx context.Context, collection, recordID string, body any, opts *WriteOptions) (*Record, error)
 	Delete(ctx context.Context, collection, recordID string) error
 	NewCreateRequest(collection string, body map[string]any) (*BatchRequest, error)
 	NewUpdateRequest(collection, recordID string, body map[string]any) (*BatchRequest, error)
@@ -31,6 +30,7 @@ type RecordServiceAPI interface {
 	IterateWithBatchSize(ctx context.Context, collection string, opts *ListOptions, batchSize int) *RecordIterator
 }
 
+// Mappable interface allows types to convert themselves to map[string]any.
 type Mappable interface {
 	ToMap() map[string]any
 }
@@ -78,11 +78,14 @@ func (s *RecordService) GetOne(ctx context.Context, collection, recordID string,
 	}
 	return &rec, nil
 }
-func (s *RecordService) Create(ctx context.Context, collection string, body interface{}) (*Record, error) {
+
+// Create creates a new record in the specified collection.
+func (s *RecordService) Create(ctx context.Context, collection string, body any) (*Record, error) {
 	return s.CreateWithOptions(ctx, collection, body, nil)
 }
 
-func (s *RecordService) CreateWithOptions(ctx context.Context, collection string, body interface{}, opts *WriteOptions) (*Record, error) {
+// CreateWithOptions creates a new record in the specified collection with additional options.
+func (s *RecordService) CreateWithOptions(ctx context.Context, collection string, body any, opts *WriteOptions) (*Record, error) {
 	path := fmt.Sprintf("/api/collections/%s/records", url.PathEscape(collection))
 	q := url.Values{}
 	if opts != nil {
@@ -109,11 +112,13 @@ func (s *RecordService) CreateWithOptions(ctx context.Context, collection string
 	return &rec, nil
 }
 
-func (s *RecordService) Update(ctx context.Context, collection, recordID string, body interface{}) (*Record, error) {
+// Update updates an existing record in the specified collection.
+func (s *RecordService) Update(ctx context.Context, collection, recordID string, body any) (*Record, error) {
 	return s.UpdateWithOptions(ctx, collection, recordID, body, nil)
 }
 
-func (s *RecordService) UpdateWithOptions(ctx context.Context, collection, recordID string, body interface{}, opts *WriteOptions) (*Record, error) {
+// UpdateWithOptions updates an existing record in the specified collection with additional options.
+func (s *RecordService) UpdateWithOptions(ctx context.Context, collection, recordID string, body any, opts *WriteOptions) (*Record, error) {
 	path := fmt.Sprintf("/api/collections/%s/records/%s", url.PathEscape(collection), url.PathEscape(recordID))
 	q := url.Values{}
 	if opts != nil {
@@ -140,6 +145,7 @@ func (s *RecordService) UpdateWithOptions(ctx context.Context, collection, recor
 	return &rec, nil
 }
 
+// Delete deletes a record from the specified collection.
 func (s *RecordService) Delete(ctx context.Context, collection, recordID string) error {
 	path := fmt.Sprintf("/api/collections/%s/records/%s", url.PathEscape(collection), url.PathEscape(recordID))
 	if err := s.Client.send(ctx, http.MethodDelete, path, nil, nil); err != nil {
@@ -148,6 +154,7 @@ func (s *RecordService) Delete(ctx context.Context, collection, recordID string)
 	return nil
 }
 
+// NewCreateRequest creates a new batch request for creating a record.
 func (s *RecordService) NewCreateRequest(collection string, body map[string]any) (*BatchRequest, error) {
 	return &BatchRequest{
 		Method: http.MethodPost,
@@ -156,6 +163,7 @@ func (s *RecordService) NewCreateRequest(collection string, body map[string]any)
 	}, nil
 }
 
+// NewUpdateRequest creates a new batch request for updating a record.
 func (s *RecordService) NewUpdateRequest(collection, recordID string, body map[string]any) (*BatchRequest, error) {
 	return &BatchRequest{
 		Method: http.MethodPatch,
@@ -164,6 +172,7 @@ func (s *RecordService) NewUpdateRequest(collection, recordID string, body map[s
 	}, nil
 }
 
+// NewDeleteRequest creates a new batch request for deleting a record.
 func (s *RecordService) NewDeleteRequest(collection, recordID string) (*BatchRequest, error) {
 	return &BatchRequest{
 		Method: http.MethodDelete,
@@ -171,6 +180,7 @@ func (s *RecordService) NewDeleteRequest(collection, recordID string) (*BatchReq
 	}, nil
 }
 
+// NewUpsertRequest creates a new batch request for upserting a record.
 func (s *RecordService) NewUpsertRequest(collection string, body map[string]any) (*BatchRequest, error) {
 	if _, ok := body["id"]; !ok {
 		return nil, fmt.Errorf("upsert error: 'id' field is required in the body")
@@ -282,6 +292,12 @@ func (s *RecordService) GetAllWithBatchSizeAndMetrics(ctx context.Context, colle
 		if page == 1 && result.TotalItems > 0 {
 			estimatedTotal = result.TotalItems
 			// 메모리 효율성을 위해 슬라이스 용량을 미리 할당
+			// 단, 너무 큰 경우 메모리 사용량을 제한
+			maxPrealloc := 10000 // 최대 10,000개까지만 미리 할당
+			if estimatedTotal > maxPrealloc {
+				estimatedTotal = maxPrealloc
+			}
+
 			if cap(allRecords) < estimatedTotal {
 				// 새로운 슬라이스를 생성하고 기존 데이터 복사
 				newRecords := make([]*Record, len(allRecords), estimatedTotal)
@@ -291,6 +307,14 @@ func (s *RecordService) GetAllWithBatchSizeAndMetrics(ctx context.Context, colle
 		}
 
 		// 레코드 추가 - 메모리 효율적인 방식으로
+		// 슬라이스 용량이 충분하지 않은 경우에만 재할당
+		if cap(allRecords)-len(allRecords) < len(result.Items) {
+			// 현재 크기의 1.5배로 확장하여 재할당 빈도 줄이기
+			newCap := max(len(allRecords)*3/2, len(allRecords)+len(result.Items))
+			newRecords := make([]*Record, len(allRecords), newCap)
+			copy(newRecords, allRecords)
+			allRecords = newRecords
+		}
 		allRecords = append(allRecords, result.Items...)
 		totalProcessed += len(result.Items)
 
@@ -309,9 +333,9 @@ func (s *RecordService) GetAllWithBatchSizeAndMetrics(ctx context.Context, colle
 
 		page++
 
-		// 중간 가비지 컬렉션 힌트 (대용량 데이터 처리 시)
-		if totalProcessed%1000 == 0 {
-			// 1000개 레코드마다 가비지 컬렉션 힌트
+		// 메모리 압박 상황에서 가비지 컬렉션 힌트 제공
+		if totalProcessed%5000 == 0 && totalProcessed > 0 {
+			// 5000개 레코드마다 메모리 상태 확인
 			// 실제 GC 호출은 하지 않고 런타임에 맡김
 		}
 	}
@@ -383,64 +407,10 @@ func (s *RecordService) copyListOptions(opts *ListOptions) *ListOptions {
 	// QueryParams 맵을 깊은 복사
 	if opts.QueryParams != nil {
 		copied.QueryParams = make(map[string]string, len(opts.QueryParams))
-		for key, value := range opts.QueryParams {
-			copied.QueryParams[key] = value
-		}
+		maps.Copy(copied.QueryParams, opts.QueryParams)
 	}
 
 	return copied
-}
-
-// retryableRequest 네트워크 오류에 대한 자동 재시도 메커니즘을 제공하는 함수입니다.
-// 지수적 백오프 전략을 적용하여 재시도 간격을 조정합니다.
-func (s *RecordService) retryableRequest(ctx context.Context, requestFunc func() error, maxRetries int, baseDelay time.Duration) error {
-	var lastErr error
-
-	for attempt := 0; attempt <= maxRetries; attempt++ {
-		// 컨텍스트 취소 확인
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-		}
-
-		// 요청 실행
-		err := requestFunc()
-		if err == nil {
-			return nil // 성공
-		}
-
-		lastErr = err
-
-		// 재시도 불가능한 에러인지 확인
-		if isNonRetryableError(err) {
-			return err
-		}
-
-		// 마지막 시도였다면 에러 반환
-		if attempt == maxRetries {
-			break
-		}
-
-		// 지수적 백오프 계산 (2^attempt * baseDelay)
-		delay := time.Duration(math.Pow(2, float64(attempt))) * baseDelay
-
-		// 최대 지연 시간 제한 (30초)
-		maxDelay := 30 * time.Second
-		if delay > maxDelay {
-			delay = maxDelay
-		}
-
-		// 지연 시간만큼 대기 (컨텍스트 취소 가능)
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-time.After(delay):
-			// 다음 시도 계속
-		}
-	}
-
-	return lastErr
 }
 
 // isNonRetryableError 재시도하면 안 되는 에러 타입을 판단합니다.
@@ -453,32 +423,7 @@ func isNonRetryableError(err error) bool {
 	// APIError 타입 확인
 	var apiErr *APIError
 	if errors.As(err, &apiErr) {
-		// HTTP 상태 코드 기반 판단
-		switch apiErr.Code {
-		case 400: // Bad Request - 잘못된 요청
-			return true
-		case 401: // Unauthorized - 인증 실패
-			return true
-		case 403: // Forbidden - 권한 없음
-			return true
-		case 404: // Not Found - 리소스 없음
-			return true
-		case 409: // Conflict - 충돌
-			return true
-		case 422: // Unprocessable Entity - 유효성 검사 실패
-			return true
-		case 429: // Too Many Requests - 속도 제한 (재시도 가능)
-			return false
-		case 500, 502, 503, 504: // 서버 에러 (재시도 가능)
-			return false
-		default:
-			// 기타 4xx 에러는 재시도 불가능
-			if apiErr.Code >= 400 && apiErr.Code < 500 {
-				return true
-			}
-			// 5xx 에러는 재시도 가능
-			return false
-		}
+		return isNonRetryableHTTPStatus(apiErr.Code)
 	}
 
 	// ClientError 타입 확인
@@ -487,8 +432,42 @@ func isNonRetryableError(err error) bool {
 		return isNonRetryableError(clientErr.OriginalErr)
 	}
 
+	// 컨텍스트 관련 에러는 재시도 불가능
+	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		return true
+	}
+
 	// 기본적으로 네트워크 관련 에러는 재시도 가능
 	return false
+}
+
+// isNonRetryableHTTPStatus HTTP 상태 코드가 재시도 불가능한지 판단합니다.
+func isNonRetryableHTTPStatus(statusCode int) bool {
+	switch statusCode {
+	case 400: // Bad Request - 잘못된 요청
+		return true
+	case 401: // Unauthorized - 인증 실패
+		return true
+	case 403: // Forbidden - 권한 없음
+		return true
+	case 404: // Not Found - 리소스 없음
+		return true
+	case 409: // Conflict - 충돌
+		return true
+	case 422: // Unprocessable Entity - 유효성 검사 실패
+		return true
+	case 429: // Too Many Requests - 속도 제한 (재시도 가능하지만 백오프 필요)
+		return false
+	case 500, 502, 503, 504: // 서버 에러 (재시도 가능)
+		return false
+	default:
+		// 기타 4xx 에러는 재시도 불가능
+		if statusCode >= 400 && statusCode < 500 {
+			return true
+		}
+		// 5xx 에러는 재시도 가능
+		return false
+	}
 }
 
 // GetAllWithMetrics 성능 모니터링을 활성화하여 모든 레코드를 가져옵니다.

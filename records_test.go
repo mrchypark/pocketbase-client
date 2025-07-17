@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -215,6 +217,368 @@ func BenchmarkGetListEager(b *testing.B) {
 			b.Fatalf("unexpected error: %v", err)
 		}
 	}
+}
+
+// --- Pagination Benchmark Tests ---
+
+// BenchmarkGetAll measures performance of GetAll method
+func BenchmarkGetAll(b *testing.B) {
+	// 다양한 데이터 크기로 벤치마크
+	sizes := []int{100, 500, 1000, 5000}
+
+	for _, size := range sizes {
+		b.Run(fmt.Sprintf("records_%d", size), func(b *testing.B) {
+			srv, _ := createPaginationMockServer(&testing.T{}, size, 100)
+			defer srv.Close()
+
+			c := NewClient(srv.URL)
+			b.ResetTimer()
+			b.ReportAllocs()
+
+			for i := 0; i < b.N; i++ {
+				records, err := c.Records.GetAll(context.Background(), "test", nil)
+				if err != nil {
+					b.Fatalf("GetAll failed: %v", err)
+				}
+				if len(records) != size {
+					b.Fatalf("Expected %d records, got %d", size, len(records))
+				}
+			}
+		})
+	}
+}
+
+// BenchmarkGetAllWithBatchSize measures performance with different batch sizes
+func BenchmarkGetAllWithBatchSize(b *testing.B) {
+	const totalRecords = 1000
+	batchSizes := []int{10, 50, 100, 200, 500}
+
+	for _, batchSize := range batchSizes {
+		b.Run(fmt.Sprintf("batch_%d", batchSize), func(b *testing.B) {
+			srv, _ := createPaginationMockServer(&testing.T{}, totalRecords, batchSize)
+			defer srv.Close()
+
+			c := NewClient(srv.URL)
+			b.ResetTimer()
+			b.ReportAllocs()
+
+			for i := 0; i < b.N; i++ {
+				records, err := c.Records.GetAllWithBatchSize(context.Background(), "test", nil, batchSize)
+				if err != nil {
+					b.Fatalf("GetAllWithBatchSize failed: %v", err)
+				}
+				if len(records) != totalRecords {
+					b.Fatalf("Expected %d records, got %d", totalRecords, len(records))
+				}
+			}
+		})
+	}
+}
+
+// BenchmarkIterator measures performance of Iterator pattern
+func BenchmarkIterator(b *testing.B) {
+	sizes := []int{100, 500, 1000, 5000}
+
+	for _, size := range sizes {
+		b.Run(fmt.Sprintf("records_%d", size), func(b *testing.B) {
+			srv, _ := createPaginationMockServer(&testing.T{}, size, 100)
+			defer srv.Close()
+
+			c := NewClient(srv.URL)
+			b.ResetTimer()
+			b.ReportAllocs()
+
+			for i := 0; i < b.N; i++ {
+				iterator := c.Records.Iterate(context.Background(), "test", nil)
+				recordCount := 0
+				for iterator.Next() {
+					_ = iterator.Record()
+					recordCount++
+				}
+				if err := iterator.Error(); err != nil {
+					b.Fatalf("Iterator failed: %v", err)
+				}
+				if recordCount != size {
+					b.Fatalf("Expected %d records, got %d", size, recordCount)
+				}
+			}
+		})
+	}
+}
+
+// BenchmarkIteratorWithBatchSize measures Iterator performance with different batch sizes
+func BenchmarkIteratorWithBatchSize(b *testing.B) {
+	const totalRecords = 1000
+	batchSizes := []int{10, 50, 100, 200, 500}
+
+	for _, batchSize := range batchSizes {
+		b.Run(fmt.Sprintf("batch_%d", batchSize), func(b *testing.B) {
+			srv, _ := createPaginationMockServer(&testing.T{}, totalRecords, batchSize)
+			defer srv.Close()
+
+			c := NewClient(srv.URL)
+			b.ResetTimer()
+			b.ReportAllocs()
+
+			for i := 0; i < b.N; i++ {
+				iterator := c.Records.IterateWithBatchSize(context.Background(), "test", nil, batchSize)
+				recordCount := 0
+				for iterator.Next() {
+					_ = iterator.Record()
+					recordCount++
+				}
+				if err := iterator.Error(); err != nil {
+					b.Fatalf("Iterator failed: %v", err)
+				}
+				if recordCount != totalRecords {
+					b.Fatalf("Expected %d records, got %d", totalRecords, recordCount)
+				}
+			}
+		})
+	}
+}
+
+// BenchmarkGetAllVsManualPagination compares GetAll with manual pagination
+func BenchmarkGetAllVsManualPagination(b *testing.B) {
+	const totalRecords = 1000
+	const pageSize = 100
+
+	srv, _ := createPaginationMockServer(&testing.T{}, totalRecords, pageSize)
+	defer srv.Close()
+
+	c := NewClient(srv.URL)
+
+	b.Run("GetAll", func(b *testing.B) {
+		b.ResetTimer()
+		b.ReportAllocs()
+
+		for i := 0; i < b.N; i++ {
+			records, err := c.Records.GetAll(context.Background(), "test", nil)
+			if err != nil {
+				b.Fatalf("GetAll failed: %v", err)
+			}
+			if len(records) != totalRecords {
+				b.Fatalf("Expected %d records, got %d", totalRecords, len(records))
+			}
+		}
+	})
+
+	b.Run("ManualPagination", func(b *testing.B) {
+		b.ResetTimer()
+		b.ReportAllocs()
+
+		for i := 0; i < b.N; i++ {
+			var allRecords []*Record
+			page := 1
+
+			for {
+				result, err := c.Records.GetList(context.Background(), "test", &ListOptions{
+					Page:    page,
+					PerPage: pageSize,
+				})
+				if err != nil {
+					b.Fatalf("GetList failed: %v", err)
+				}
+
+				allRecords = append(allRecords, result.Items...)
+
+				if page >= result.TotalPages || len(result.Items) == 0 {
+					break
+				}
+				page++
+			}
+
+			if len(allRecords) != totalRecords {
+				b.Fatalf("Expected %d records, got %d", totalRecords, len(allRecords))
+			}
+		}
+	})
+}
+
+// BenchmarkIteratorVsGetAll compares memory usage between Iterator and GetAll
+func BenchmarkIteratorVsGetAll(b *testing.B) {
+	const totalRecords = 5000
+	srv, _ := createPaginationMockServer(&testing.T{}, totalRecords, 100)
+	defer srv.Close()
+
+	c := NewClient(srv.URL)
+
+	b.Run("GetAll_Memory", func(b *testing.B) {
+		b.ResetTimer()
+		b.ReportAllocs()
+
+		for i := 0; i < b.N; i++ {
+			records, err := c.Records.GetAll(context.Background(), "test", nil)
+			if err != nil {
+				b.Fatalf("GetAll failed: %v", err)
+			}
+			// 메모리 사용량 측정을 위해 레코드를 실제로 사용
+			_ = len(records)
+		}
+	})
+
+	b.Run("Iterator_Memory", func(b *testing.B) {
+		b.ResetTimer()
+		b.ReportAllocs()
+
+		for i := 0; i < b.N; i++ {
+			iterator := c.Records.Iterate(context.Background(), "test", nil)
+			recordCount := 0
+			for iterator.Next() {
+				record := iterator.Record()
+				// 메모리 사용량 측정을 위해 레코드를 실제로 사용
+				_ = record.ID
+				recordCount++
+			}
+			if err := iterator.Error(); err != nil {
+				b.Fatalf("Iterator failed: %v", err)
+			}
+		}
+	})
+}
+
+// BenchmarkPaginationWithFilters measures performance with complex filters
+func BenchmarkPaginationWithFilters(b *testing.B) {
+	const totalRecords = 1000
+
+	// 복잡한 필터를 시뮬레이션하는 모킹 서버
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// 쿼리 파라미터 파싱
+		page := 1
+		perPage := 100
+		if pageStr := r.URL.Query().Get("page"); pageStr != "" {
+			fmt.Sscanf(pageStr, "%d", &page)
+		}
+		if perPageStr := r.URL.Query().Get("perPage"); perPageStr != "" {
+			fmt.Sscanf(perPageStr, "%d", &perPage)
+		}
+
+		// 필터 시뮬레이션 (실제로는 필터링하지 않고 전체 데이터 반환)
+		totalPages := (totalRecords + perPage - 1) / perPage
+		startIdx := (page - 1) * perPage
+		endIdx := startIdx + perPage
+		if endIdx > totalRecords {
+			endIdx = totalRecords
+		}
+
+		var items []map[string]interface{}
+		if startIdx < totalRecords {
+			items = generateTestRecords(endIdx-startIdx, fmt.Sprintf("rec%d", startIdx))
+		}
+
+		response := map[string]interface{}{
+			"page":       page,
+			"perPage":    perPage,
+			"totalItems": totalRecords,
+			"totalPages": totalPages,
+			"items":      items,
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+	}))
+	defer srv.Close()
+
+	c := NewClient(srv.URL)
+
+	complexOptions := &ListOptions{
+		Filter: "status = 'active' && created >= '2024-01-01' && (category = 'tech' || category = 'science')",
+		Sort:   "-created,title",
+		Expand: "author,category,tags",
+		Fields: "id,title,content,created,updated,author.name,category.name",
+	}
+
+	b.Run("GetAll_WithFilters", func(b *testing.B) {
+		b.ResetTimer()
+		b.ReportAllocs()
+
+		for i := 0; i < b.N; i++ {
+			records, err := c.Records.GetAll(context.Background(), "test", complexOptions)
+			if err != nil {
+				b.Fatalf("GetAll with filters failed: %v", err)
+			}
+			_ = len(records)
+		}
+	})
+
+	b.Run("Iterator_WithFilters", func(b *testing.B) {
+		b.ResetTimer()
+		b.ReportAllocs()
+
+		for i := 0; i < b.N; i++ {
+			iterator := c.Records.Iterate(context.Background(), "test", complexOptions)
+			recordCount := 0
+			for iterator.Next() {
+				_ = iterator.Record()
+				recordCount++
+			}
+			if err := iterator.Error(); err != nil {
+				b.Fatalf("Iterator with filters failed: %v", err)
+			}
+		}
+	})
+}
+
+// BenchmarkPaginationErrorHandling measures performance impact of error handling
+func BenchmarkPaginationErrorHandling(b *testing.B) {
+	// 가끔 에러를 발생시키는 모킹 서버
+	requestCount := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestCount++
+
+		// 10번 중 1번은 일시적 에러 발생
+		if requestCount%10 == 0 {
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(APIError{
+				Code:    500,
+				Message: "Temporary server error",
+			})
+			return
+		}
+
+		// 정상 응답
+		page := 1
+		if pageStr := r.URL.Query().Get("page"); pageStr != "" {
+			fmt.Sscanf(pageStr, "%d", &page)
+		}
+
+		response := map[string]interface{}{
+			"page":       page,
+			"perPage":    100,
+			"totalItems": 500,
+			"totalPages": 5,
+			"items":      generateTestRecords(100, fmt.Sprintf("rec%d", (page-1)*100)),
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+	}))
+	defer srv.Close()
+
+	c := NewClient(srv.URL)
+
+	b.Run("GetAll_WithRetry", func(b *testing.B) {
+		b.ResetTimer()
+		b.ReportAllocs()
+
+		for i := 0; i < b.N; i++ {
+			// 에러가 발생할 수 있지만 재시도 로직으로 인해 대부분 성공
+			records, err := c.Records.GetAll(context.Background(), "test", nil)
+			if err != nil {
+				// 일부 실패는 예상됨
+				var paginationErr *PaginationError
+				if errors.As(err, &paginationErr) {
+					// 부분 데이터라도 있으면 성공으로 간주
+					if len(paginationErr.PartialData) > 0 {
+						continue
+					}
+				}
+				b.Logf("GetAll failed: %v", err)
+			} else {
+				_ = len(records)
+			}
+		}
+	})
 }
 
 // --- Existing unit tests (no modifications) ---
@@ -1395,6 +1759,792 @@ func TestPaginationErrorHandling(t *testing.T) {
 			t.Errorf("expected first record ID 'test1', got '%s'", retrievedData[0].ID)
 		}
 	})
+}
+
+// --- Integration Tests ---
+
+// TestPaginationIntegration tests pagination helpers with a real PocketBase server
+// This test requires a running PocketBase instance with test data
+func TestPaginationIntegration(t *testing.T) {
+	// Skip integration tests unless explicitly enabled
+	if testing.Short() {
+		t.Skip("Skipping integration tests in short mode")
+	}
+
+	// Check if PocketBase server is available
+	pbURL := "http://localhost:8090"
+	if url := os.Getenv("POCKETBASE_URL"); url != "" {
+		pbURL = url
+	}
+
+	client := NewClient(pbURL)
+	ctx := context.Background()
+
+	// Test collection name
+	testCollection := "integration_test"
+
+	t.Run("대용량 데이터 처리 시나리오", func(t *testing.T) {
+		// 먼저 테스트 데이터가 충분히 있는지 확인
+		result, err := client.Records.GetList(ctx, testCollection, &ListOptions{
+			Page:    1,
+			PerPage: 1,
+		})
+		if err != nil {
+			t.Skipf("PocketBase server not available or collection '%s' not found: %v", testCollection, err)
+		}
+
+		if result.TotalItems < 100 {
+			t.Skipf("Not enough test data in collection '%s' (need at least 100, got %d)", testCollection, result.TotalItems)
+		}
+
+		t.Logf("Testing with %d total records", result.TotalItems)
+
+		// GetAll 테스트
+		t.Run("GetAll 대용량 데이터", func(t *testing.T) {
+			start := time.Now()
+			allRecords, err := client.Records.GetAll(ctx, testCollection, &ListOptions{
+				Sort: "created",
+			})
+			duration := time.Since(start)
+
+			if err != nil {
+				t.Fatalf("GetAll failed: %v", err)
+			}
+
+			t.Logf("GetAll retrieved %d records in %v", len(allRecords), duration)
+
+			if len(allRecords) != result.TotalItems {
+				t.Errorf("Expected %d records, got %d", result.TotalItems, len(allRecords))
+			}
+
+			// 순서 확인 (created 필드로 정렬했으므로)
+			for i := 1; i < len(allRecords); i++ {
+				if allRecords[i].Created.Before(allRecords[i-1].Created) {
+					t.Errorf("Records not properly sorted at index %d", i)
+					break
+				}
+			}
+		})
+
+		// Iterator 테스트
+		t.Run("Iterator 대용량 데이터", func(t *testing.T) {
+			start := time.Now()
+			iterator := client.Records.Iterate(ctx, testCollection, &ListOptions{
+				Sort: "created",
+			})
+
+			recordCount := 0
+			var firstRecord, lastRecord *Record
+			for iterator.Next() {
+				record := iterator.Record()
+				if record == nil {
+					t.Error("Got nil record from iterator")
+					continue
+				}
+
+				if firstRecord == nil {
+					firstRecord = record
+				}
+				lastRecord = record
+				recordCount++
+
+				// 메모리 사용량 체크를 위해 주기적으로 로그
+				if recordCount%1000 == 0 {
+					t.Logf("Processed %d records", recordCount)
+				}
+			}
+			duration := time.Since(start)
+
+			if err := iterator.Error(); err != nil {
+				t.Fatalf("Iterator failed: %v", err)
+			}
+
+			t.Logf("Iterator processed %d records in %v", recordCount, duration)
+
+			if recordCount != result.TotalItems {
+				t.Errorf("Expected %d records, got %d", result.TotalItems, recordCount)
+			}
+
+			// 첫 번째와 마지막 레코드 순서 확인
+			if firstRecord != nil && lastRecord != nil && recordCount > 1 {
+				if lastRecord.Created.Before(firstRecord.Created) {
+					t.Error("Records not properly sorted (last record is older than first)")
+				}
+			}
+		})
+
+		// 배치 크기별 성능 비교
+		t.Run("배치 크기별 성능 비교", func(t *testing.T) {
+			batchSizes := []int{10, 50, 100, 200}
+			results := make(map[int]time.Duration)
+
+			for _, batchSize := range batchSizes {
+				start := time.Now()
+				records, err := client.Records.GetAllWithBatchSize(ctx, testCollection, &ListOptions{
+					Sort: "created",
+				}, batchSize)
+				duration := time.Since(start)
+
+				if err != nil {
+					t.Errorf("GetAllWithBatchSize(%d) failed: %v", batchSize, err)
+					continue
+				}
+
+				if len(records) != result.TotalItems {
+					t.Errorf("Batch size %d: expected %d records, got %d", batchSize, result.TotalItems, len(records))
+				}
+
+				results[batchSize] = duration
+				t.Logf("Batch size %d: %v", batchSize, duration)
+			}
+
+			// 성능 결과 분석
+			if len(results) > 1 {
+				t.Log("Performance comparison:")
+				for batchSize, duration := range results {
+					t.Logf("  Batch size %d: %v", batchSize, duration)
+				}
+			}
+		})
+	})
+
+	t.Run("에러 복구 시나리오", func(t *testing.T) {
+		// 존재하지 않는 컬렉션으로 테스트
+		t.Run("존재하지 않는 컬렉션", func(t *testing.T) {
+			_, err := client.Records.GetAll(ctx, "nonexistent_collection", nil)
+			if err == nil {
+				t.Error("Expected error for nonexistent collection")
+			}
+
+			iterator := client.Records.Iterate(ctx, "nonexistent_collection", nil)
+			hasNext := iterator.Next()
+			if hasNext {
+				t.Error("Expected iterator to fail for nonexistent collection")
+			}
+			if iterator.Error() == nil {
+				t.Error("Expected error from iterator for nonexistent collection")
+			}
+		})
+
+		// 잘못된 필터로 테스트
+		t.Run("잘못된 필터", func(t *testing.T) {
+			_, err := client.Records.GetAll(ctx, testCollection, &ListOptions{
+				Filter: "invalid_field = 'value'",
+			})
+			if err == nil {
+				t.Error("Expected error for invalid filter")
+			}
+		})
+
+		// 타임아웃 테스트
+		t.Run("타임아웃 처리", func(t *testing.T) {
+			shortCtx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
+			defer cancel()
+
+			_, err := client.Records.GetAll(shortCtx, testCollection, nil)
+			if err == nil {
+				t.Error("Expected timeout error")
+			}
+
+			if !errors.Is(err, context.DeadlineExceeded) {
+				var paginationErr *PaginationError
+				if errors.As(err, &paginationErr) {
+					if !errors.Is(paginationErr.OriginalErr, context.DeadlineExceeded) {
+						t.Errorf("Expected timeout error, got %v", err)
+					}
+				} else {
+					t.Errorf("Expected timeout error, got %v", err)
+				}
+			}
+		})
+	})
+
+	t.Run("필터링 및 정렬 통합 테스트", func(t *testing.T) {
+		// 복잡한 쿼리 옵션으로 테스트
+		options := &ListOptions{
+			Filter: "created >= '2024-01-01 00:00:00'",
+			Sort:   "-created",
+			Expand: "",
+			Fields: "id,created,updated",
+		}
+
+		// GetAll로 테스트
+		allRecords, err := client.Records.GetAll(ctx, testCollection, options)
+		if err != nil {
+			t.Fatalf("GetAll with complex options failed: %v", err)
+		}
+
+		// Iterator로 같은 결과 확인
+		iterator := client.Records.Iterate(ctx, testCollection, options)
+		var iteratorRecords []*Record
+		for iterator.Next() {
+			iteratorRecords = append(iteratorRecords, iterator.Record())
+		}
+
+		if err := iterator.Error(); err != nil {
+			t.Fatalf("Iterator with complex options failed: %v", err)
+		}
+
+		// 결과 비교
+		if len(allRecords) != len(iteratorRecords) {
+			t.Errorf("GetAll and Iterator returned different counts: %d vs %d", len(allRecords), len(iteratorRecords))
+		}
+
+		// 첫 번째 몇 개 레코드의 ID 비교
+		compareCount := min(len(allRecords), len(iteratorRecords), 10)
+		for i := 0; i < compareCount; i++ {
+			if allRecords[i].ID != iteratorRecords[i].ID {
+				t.Errorf("Record %d ID mismatch: GetAll=%s, Iterator=%s", i, allRecords[i].ID, iteratorRecords[i].ID)
+			}
+		}
+
+		t.Logf("Complex query returned %d records", len(allRecords))
+	})
+}
+
+// TestPaginationMemoryUsage tests memory efficiency of pagination helpers
+func TestPaginationMemoryUsage(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping memory usage tests in short mode")
+	}
+
+	// 대용량 데이터를 시뮬레이션하는 모킹 서버
+	srv, _ := createPaginationMockServer(t, 10000, 100) // 10,000 records
+	defer srv.Close()
+
+	client := NewClient(srv.URL)
+	ctx := context.Background()
+
+	t.Run("Iterator vs GetAll 메모리 사용량", func(t *testing.T) {
+		// GetAll 메모리 사용량 측정
+		var m1, m2 runtime.MemStats
+		runtime.GC()
+		runtime.ReadMemStats(&m1)
+
+		allRecords, err := client.Records.GetAll(ctx, "test", nil)
+		if err != nil {
+			t.Fatalf("GetAll failed: %v", err)
+		}
+
+		runtime.ReadMemStats(&m2)
+		getAllMemory := m2.Alloc - m1.Alloc
+
+		t.Logf("GetAll processed %d records, memory used: %d bytes", len(allRecords), getAllMemory)
+
+		// Iterator 메모리 사용량 측정
+		runtime.GC()
+		runtime.ReadMemStats(&m1)
+
+		iterator := client.Records.Iterate(ctx, "test", nil)
+		recordCount := 0
+		for iterator.Next() {
+			_ = iterator.Record()
+			recordCount++
+		}
+
+		if err := iterator.Error(); err != nil {
+			t.Fatalf("Iterator failed: %v", err)
+		}
+
+		runtime.ReadMemStats(&m2)
+		iteratorMemory := m2.Alloc - m1.Alloc
+
+		t.Logf("Iterator processed %d records, memory used: %d bytes", recordCount, iteratorMemory)
+
+		// Iterator가 더 메모리 효율적이어야 함
+		if iteratorMemory >= getAllMemory {
+			t.Logf("Warning: Iterator used more memory (%d) than GetAll (%d)", iteratorMemory, getAllMemory)
+		} else {
+			memoryReduction := float64(getAllMemory-iteratorMemory) / float64(getAllMemory) * 100
+			t.Logf("Iterator used %.1f%% less memory than GetAll", memoryReduction)
+		}
+	})
+
+	t.Run("배치 크기별 메모리 사용량", func(t *testing.T) {
+		batchSizes := []int{10, 50, 100, 500}
+
+		for _, batchSize := range batchSizes {
+			var m1, m2 runtime.MemStats
+			runtime.GC()
+			runtime.ReadMemStats(&m1)
+
+			iterator := client.Records.IterateWithBatchSize(ctx, "test", nil, batchSize)
+			recordCount := 0
+			for iterator.Next() {
+				_ = iterator.Record()
+				recordCount++
+			}
+
+			if err := iterator.Error(); err != nil {
+				t.Fatalf("Iterator with batch size %d failed: %v", batchSize, err)
+			}
+
+			runtime.ReadMemStats(&m2)
+			memoryUsed := m2.Alloc - m1.Alloc
+
+			t.Logf("Batch size %d: processed %d records, memory used: %d bytes", batchSize, recordCount, memoryUsed)
+		}
+	})
+}
+
+// --- Backward Compatibility Tests ---
+
+// TestBackwardCompatibility ensures new pagination helpers don't break existing functionality
+func TestBackwardCompatibility(t *testing.T) {
+	t.Run("기존 GetList 메서드 동작 확인", func(t *testing.T) {
+		// 기존 GetList 동작이 변경되지 않았는지 확인
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// 요청 경로 확인
+			expectedPath := "/api/collections/posts/records"
+			if r.URL.Path != expectedPath {
+				t.Errorf("Expected path %s, got %s", expectedPath, r.URL.Path)
+			}
+
+			// 쿼리 파라미터 확인
+			query := r.URL.Query()
+			if query.Get("page") != "2" {
+				t.Errorf("Expected page=2, got %s", query.Get("page"))
+			}
+			if query.Get("perPage") != "50" {
+				t.Errorf("Expected perPage=50, got %s", query.Get("perPage"))
+			}
+			if query.Get("filter") != "status='active'" {
+				t.Errorf("Expected filter=status='active', got %s", query.Get("filter"))
+			}
+			if query.Get("sort") != "-created" {
+				t.Errorf("Expected sort=-created, got %s", query.Get("sort"))
+			}
+			if query.Get("expand") != "author" {
+				t.Errorf("Expected expand=author, got %s", query.Get("expand"))
+			}
+
+			// 기존과 동일한 응답 구조
+			response := ListResult{
+				Page:       2,
+				PerPage:    50,
+				TotalItems: 150,
+				TotalPages: 3,
+				Items: []*Record{
+					{
+						BaseModel: BaseModel{
+							ID: "test1",
+						},
+						CollectionID:   "posts_col",
+						CollectionName: "posts",
+					},
+					{
+						BaseModel: BaseModel{
+							ID: "test2",
+						},
+						CollectionID:   "posts_col",
+						CollectionName: "posts",
+					},
+				},
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(response)
+		}))
+		defer srv.Close()
+
+		client := NewClient(srv.URL)
+
+		// 기존 방식으로 GetList 호출
+		result, err := client.Records.GetList(context.Background(), "posts", &ListOptions{
+			Page:    2,
+			PerPage: 50,
+			Filter:  "status='active'",
+			Sort:    "-created",
+			Expand:  "author",
+		})
+
+		if err != nil {
+			t.Fatalf("GetList failed: %v", err)
+		}
+
+		// 응답 구조 확인
+		if result.Page != 2 {
+			t.Errorf("Expected page 2, got %d", result.Page)
+		}
+		if result.PerPage != 50 {
+			t.Errorf("Expected perPage 50, got %d", result.PerPage)
+		}
+		if result.TotalItems != 150 {
+			t.Errorf("Expected totalItems 150, got %d", result.TotalItems)
+		}
+		if result.TotalPages != 3 {
+			t.Errorf("Expected totalPages 3, got %d", result.TotalPages)
+		}
+		if len(result.Items) != 2 {
+			t.Errorf("Expected 2 items, got %d", len(result.Items))
+		}
+
+		// 레코드 구조 확인
+		if result.Items[0].ID != "test1" {
+			t.Errorf("Expected first record ID 'test1', got '%s'", result.Items[0].ID)
+		}
+		if result.Items[0].CollectionName != "posts" {
+			t.Errorf("Expected collection name 'posts', got '%s'", result.Items[0].CollectionName)
+		}
+	})
+
+	t.Run("기존 ListOptions 호환성 테스트", func(t *testing.T) {
+		// 모든 ListOptions 필드가 새로운 헬퍼에서도 동작하는지 확인
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			query := r.URL.Query()
+
+			// 모든 옵션이 올바르게 전달되는지 확인
+			expectedParams := map[string]string{
+				"filter":    "status='published' && author.id='123'",
+				"sort":      "-created,title",
+				"expand":    "author,category,tags",
+				"fields":    "id,title,content,author.name",
+				"skipTotal": "1",
+			}
+
+			for key, expected := range expectedParams {
+				if actual := query.Get(key); actual != expected {
+					t.Errorf("Parameter %s: expected '%s', got '%s'", key, expected, actual)
+				}
+			}
+
+			// 페이지네이션 파라미터는 GetAll에서 자동으로 설정됨
+			if query.Get("page") == "" {
+				t.Error("Expected page parameter to be set")
+			}
+			if query.Get("perPage") == "" {
+				t.Error("Expected perPage parameter to be set")
+			}
+
+			response := map[string]interface{}{
+				"page":       1,
+				"perPage":    100,
+				"totalItems": 50,
+				"totalPages": 1,
+				"items":      generateTestRecords(50, "rec0"),
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(response)
+		}))
+		defer srv.Close()
+
+		client := NewClient(srv.URL)
+
+		// 복잡한 ListOptions로 테스트
+		options := &ListOptions{
+			Filter:    "status='published' && author.id='123'",
+			Sort:      "-created,title",
+			Expand:    "author,category,tags",
+			Fields:    "id,title,content,author.name",
+			SkipTotal: true,
+			QueryParams: map[string]string{
+				"custom_param": "custom_value",
+			},
+		}
+
+		// GetAll에서 ListOptions 호환성 확인
+		records, err := client.Records.GetAll(context.Background(), "posts", options)
+		if err != nil {
+			t.Fatalf("GetAll with complex ListOptions failed: %v", err)
+		}
+
+		if len(records) != 50 {
+			t.Errorf("Expected 50 records, got %d", len(records))
+		}
+
+		// Iterator에서 ListOptions 호환성 확인
+		iterator := client.Records.Iterate(context.Background(), "posts", options)
+		recordCount := 0
+		for iterator.Next() {
+			record := iterator.Record()
+			if record != nil {
+				recordCount++
+			}
+			// 무한 루프 방지를 위한 제한
+			if recordCount >= 100 {
+				break
+			}
+		}
+
+		if err := iterator.Error(); err != nil {
+			t.Fatalf("Iterator with complex ListOptions failed: %v", err)
+		}
+
+		if recordCount != 50 {
+			t.Errorf("Expected 50 records from iterator, got %d", recordCount)
+		}
+	})
+
+	t.Run("기존 에러 타입 일관성 테스트", func(t *testing.T) {
+		// 기존 에러 타입들이 새로운 헬퍼에서도 일관되게 동작하는지 확인
+
+		t.Run("404 Not Found 에러", func(t *testing.T) {
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusNotFound)
+				json.NewEncoder(w).Encode(APIError{
+					Code:    404,
+					Message: "Collection not found",
+				})
+			}))
+			defer srv.Close()
+
+			client := NewClient(srv.URL)
+
+			// GetList에서의 404 에러
+			_, err := client.Records.GetList(context.Background(), "nonexistent", nil)
+			if err == nil {
+				t.Fatal("Expected 404 error from GetList")
+			}
+
+			var apiErr *APIError
+			if !errors.As(err, &apiErr) || apiErr.Code != 404 {
+				t.Errorf("Expected APIError with code 404, got %v", err)
+			}
+
+			// GetAll에서의 404 에러
+			_, err = client.Records.GetAll(context.Background(), "nonexistent", nil)
+			if err == nil {
+				t.Fatal("Expected 404 error from GetAll")
+			}
+
+			// PaginationError로 래핑되어야 함
+			var paginationErr *PaginationError
+			if errors.As(err, &paginationErr) {
+				// 원본 에러가 APIError여야 함
+				if !errors.As(paginationErr.OriginalErr, &apiErr) || apiErr.Code != 404 {
+					t.Errorf("Expected wrapped APIError with code 404, got %v", paginationErr.OriginalErr)
+				}
+			} else {
+				t.Errorf("Expected PaginationError wrapping APIError, got %v", err)
+			}
+
+			// Iterator에서의 404 에러
+			iterator := client.Records.Iterate(context.Background(), "nonexistent", nil)
+			hasNext := iterator.Next()
+			if hasNext {
+				t.Error("Expected iterator to fail immediately")
+			}
+
+			err = iterator.Error()
+			if err == nil {
+				t.Fatal("Expected 404 error from Iterator")
+			}
+
+			if !errors.As(err, &apiErr) || apiErr.Code != 404 {
+				t.Errorf("Expected APIError with code 404 from iterator, got %v", err)
+			}
+		})
+
+		t.Run("401 Unauthorized 에러", func(t *testing.T) {
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusUnauthorized)
+				json.NewEncoder(w).Encode(APIError{
+					Code:    401,
+					Message: "Unauthorized",
+				})
+			}))
+			defer srv.Close()
+
+			client := NewClient(srv.URL)
+
+			// GetAll에서 인증 에러는 즉시 실패해야 함 (재시도 없음)
+			_, err := client.Records.GetAll(context.Background(), "posts", nil)
+			if err == nil {
+				t.Fatal("Expected 401 error from GetAll")
+			}
+
+			var paginationErr *PaginationError
+			if errors.As(err, &paginationErr) {
+				var apiErr *APIError
+				if !errors.As(paginationErr.OriginalErr, &apiErr) || apiErr.Code != 401 {
+					t.Errorf("Expected wrapped APIError with code 401, got %v", paginationErr.OriginalErr)
+				}
+				// 첫 번째 페이지에서 실패했으므로 부분 데이터가 없어야 함
+				if len(paginationErr.PartialData) != 0 {
+					t.Errorf("Expected no partial data for auth error, got %d records", len(paginationErr.PartialData))
+				}
+			} else {
+				t.Errorf("Expected PaginationError, got %v", err)
+			}
+		})
+
+		t.Run("500 Internal Server Error 재시도", func(t *testing.T) {
+			requestCount := 0
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				requestCount++
+				// 500 에러는 재시도하지 않으므로 항상 에러 반환
+				w.WriteHeader(http.StatusInternalServerError)
+				json.NewEncoder(w).Encode(APIError{
+					Code:    500,
+					Message: "Internal Server Error",
+				})
+			}))
+			defer srv.Close()
+
+			client := NewClient(srv.URL)
+
+			// 500 에러는 재시도하지 않으므로 실패해야 함
+			_, err := client.Records.GetAll(context.Background(), "posts", nil)
+			if err == nil {
+				t.Fatal("Expected GetAll to fail with 500 error")
+			}
+
+			var paginationErr *PaginationError
+			if errors.As(err, &paginationErr) {
+				var apiErr *APIError
+				if !errors.As(paginationErr.OriginalErr, &apiErr) || apiErr.Code != 500 {
+					t.Errorf("Expected wrapped APIError with code 500, got %v", paginationErr.OriginalErr)
+				}
+			} else {
+				t.Errorf("Expected PaginationError, got %v", err)
+			}
+
+			// 재시도하지 않으므로 1번만 요청해야 함
+			if requestCount != 1 {
+				t.Errorf("Expected exactly 1 request (no retries for 500), got %d", requestCount)
+			}
+		})
+	})
+
+	t.Run("기존 인터페이스 변경 없음 확인", func(t *testing.T) {
+		// RecordServiceAPI 인터페이스가 기존 메서드를 포함하고 있는지 확인
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// 간단한 성공 응답
+			if strings.Contains(r.URL.Path, "/records/") && !strings.HasSuffix(r.URL.Path, "/records") {
+				// GetOne 요청
+				json.NewEncoder(w).Encode(Record{
+					BaseModel: BaseModel{ID: "test1"},
+				})
+			} else if r.Method == http.MethodPost {
+				// Create 요청
+				json.NewEncoder(w).Encode(Record{
+					BaseModel: BaseModel{ID: "new1"},
+				})
+			} else if r.Method == http.MethodPatch {
+				// Update 요청
+				json.NewEncoder(w).Encode(Record{
+					BaseModel: BaseModel{ID: "updated1"},
+				})
+			} else if r.Method == http.MethodDelete {
+				// Delete 요청
+				w.WriteHeader(http.StatusNoContent)
+			} else {
+				// GetList 요청
+				json.NewEncoder(w).Encode(ListResult{
+					Items: []*Record{{BaseModel: BaseModel{ID: "list1"}}},
+				})
+			}
+		}))
+		defer srv.Close()
+
+		client := NewClient(srv.URL)
+		ctx := context.Background()
+
+		// 기존 메서드들이 모두 정상 동작하는지 확인
+		_, err := client.Records.GetList(ctx, "posts", nil)
+		if err != nil {
+			t.Errorf("GetList failed: %v", err)
+		}
+
+		_, err = client.Records.GetOne(ctx, "posts", "1", nil)
+		if err != nil {
+			t.Errorf("GetOne failed: %v", err)
+		}
+
+		_, err = client.Records.Create(ctx, "posts", map[string]string{"title": "test"})
+		if err != nil {
+			t.Errorf("Create failed: %v", err)
+		}
+
+		_, err = client.Records.Update(ctx, "posts", "1", map[string]string{"title": "updated"})
+		if err != nil {
+			t.Errorf("Update failed: %v", err)
+		}
+
+		err = client.Records.Delete(ctx, "posts", "1")
+		if err != nil {
+			t.Errorf("Delete failed: %v", err)
+		}
+
+		// 새로운 메서드들도 동작하는지 확인
+		_, err = client.Records.GetAll(ctx, "posts", nil)
+		if err != nil {
+			t.Errorf("GetAll failed: %v", err)
+		}
+
+		iterator := client.Records.Iterate(ctx, "posts", nil)
+		_ = iterator.Next() // 최소한 호출 가능한지 확인
+	})
+
+	t.Run("ListOptions 복사 동작 확인", func(t *testing.T) {
+		// ListOptions가 올바르게 복사되어 원본이 변경되지 않는지 확인
+		srv, _ := createPaginationMockServer(t, 200, 100)
+		defer srv.Close()
+
+		client := NewClient(srv.URL)
+
+		originalOptions := &ListOptions{
+			Page:    1,
+			PerPage: 50,
+			Filter:  "status='active'",
+			Sort:    "-created",
+			Expand:  "author",
+			Fields:  "id,title",
+			QueryParams: map[string]string{
+				"custom": "value",
+			},
+		}
+
+		// 원본 옵션의 복사본 생성
+		originalPage := originalOptions.Page
+		originalPerPage := originalOptions.PerPage
+		originalCustom := originalOptions.QueryParams["custom"]
+
+		// GetAll 호출
+		_, err := client.Records.GetAll(context.Background(), "test", originalOptions)
+		if err != nil {
+			t.Fatalf("GetAll failed: %v", err)
+		}
+
+		// 원본 옵션이 변경되지 않았는지 확인
+		if originalOptions.Page != originalPage {
+			t.Errorf("Original Page was modified: expected %d, got %d", originalPage, originalOptions.Page)
+		}
+		if originalOptions.PerPage != originalPerPage {
+			t.Errorf("Original PerPage was modified: expected %d, got %d", originalPerPage, originalOptions.PerPage)
+		}
+		if originalOptions.QueryParams["custom"] != originalCustom {
+			t.Errorf("Original QueryParams was modified: expected %s, got %s", originalCustom, originalOptions.QueryParams["custom"])
+		}
+
+		// Iterator에서도 동일하게 확인
+		iterator := client.Records.Iterate(context.Background(), "test", originalOptions)
+		for iterator.Next() {
+			break // 첫 번째 레코드만 확인
+		}
+
+		if originalOptions.Page != originalPage {
+			t.Errorf("Original Page was modified by Iterator: expected %d, got %d", originalPage, originalOptions.Page)
+		}
+		if originalOptions.PerPage != originalPerPage {
+			t.Errorf("Original PerPage was modified by Iterator: expected %d, got %d", originalPerPage, originalOptions.PerPage)
+		}
+	})
+}
+
+// min helper function for Go versions that don't have it built-in
+func min(a, b, c int) int {
+	if a < b {
+		if a < c {
+			return a
+		}
+		return c
+	}
+	if b < c {
+		return b
+	}
+	return c
 }
 
 // --- Model definitions for testing ---

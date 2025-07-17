@@ -1,0 +1,155 @@
+[
+  {
+    "id": "test_users",
+    "name": "users",
+    "type": "auth",
+    "system": false,
+    "fields": [
+      {
+        "id": "users_name",
+        "name": "name",
+        "type": "text",
+        "required": true,
+        "options": {
+          "min": 1,
+          "max": 100
+        }
+      },
+      {
+        "id": "users_avatar",
+        "name": "avatar",
+        "type": "file",
+        "required": false,
+        "options": {
+          "maxSelect": 1,
+          "maxSize": 5242880,
+          "mimeTypes": ["image/jpeg", "image/png"],
+          "thumbs": ["100x100", "400x0"]
+        }
+      },
+      {
+        "id": "users_role",
+        "name": "role",
+        "type": "select",
+        "required": true,
+        "options": {
+          "maxSelect": 1,
+          "values": ["admin", "user", "moderator"]
+        }
+      }
+    ]
+  },
+  {
+    "id": "test_posts",
+    "name": "posts",
+    "type": "base",
+    "system": false,
+    "fields": [
+      {
+        "id": "posts_title",
+        "name": "title",
+        "type": "text",
+        "required": true,
+        "options": {
+          "min": 1,
+          "max": 200
+        }
+      },
+      {
+        "id": "posts_content",
+        "name": "content",
+        "type": "editor",
+        "required": false,
+        "options": {}
+      },
+      {
+        "id": "posts_author",
+        "name": "author",
+        "type": "relation",
+        "required": true,
+        "options": {
+          "collectionId": "test_users",
+          "cascadeDelete": false,
+          "minSelect": null,
+          "maxSelect": 1,
+          "displayFields": ["name"]
+        }
+      },
+      {
+        "id": "posts_tags",
+        "name": "tags",
+        "type": "select",
+        "required": false,
+        "options": {
+          "maxSelect": 5,
+          "values": ["tech", "news", "tutorial", "review", "opinion"]
+        }
+      },
+      {
+        "id": "posts_attachments",
+        "name": "attachments",
+        "type": "file",
+        "required": false,
+        "options": {
+          "maxSelect": 3,
+          "maxSize": 10485760,
+          "mimeTypes": ["image/jpeg", "image/png", "application/pdf"]
+        }
+      },
+      {
+        "id": "posts_status",
+        "name": "status",
+        "type": "select",
+        "required": true,
+        "options": {
+          "maxSelect": 1,
+          "values": ["draft", "published", "archived"]
+        }
+      }
+    ]
+  },
+  {
+    "id": "test_comments",
+    "name": "comments",
+    "type": "base",
+    "system": false,
+    "fields": [
+      {
+        "id": "comments_content",
+        "name": "content",
+        "type": "text",
+        "required": true,
+        "options": {
+          "min": 1,
+          "max": 1000
+        }
+      },
+      {
+        "id": "comments_post",
+        "name": "post",
+        "type": "relation",
+        "required": true,
+        "options": {
+          "collectionId": "test_posts",
+          "cascadeDelete": true,
+          "minSelect": null,
+          "maxSelect": 1,
+          "displayFields": ["title"]
+        }
+      },
+      {
+        "id": "comments_author",
+        "name": "author",
+        "type": "relation",
+        "required": true,
+        "options": {
+          "collectionId": "test_users",
+          "cascadeDelete": false,
+          "minSelect": null,
+          "maxSelect": 1,
+          "displayFields": ["name"]
+        }
+      }
+    ]
+  }
+]

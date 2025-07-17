@@ -1,0 +1,733 @@
+[
+  {
+    "id": "collection_001",
+    "name": "users",
+    "type": "base",
+    "system": false,
+    "schema": [
+      {
+        "id": "field_001",
+        "name": "username",
+        "type": "text",
+        "system": false,
+        "required": true,
+        "presentable": false,
+        "unique": true,
+        "options": {
+          "min": 3,
+          "max": 50,
+          "pattern": ""
+        }
+      },
+      {
+        "id": "field_002",
+        "name": "email",
+        "type": "email",
+        "system": false,
+        "required": true,
+        "presentable": false,
+        "unique": true,
+        "options": {
+          "exceptDomains": [],
+          "onlyDomains": []
+        }
+      },
+      {
+        "id": "field_003",
+        "name": "role",
+        "type": "select",
+        "system": false,
+        "required": true,
+        "presentable": false,
+        "unique": false,
+        "options": {
+          "maxSelect": 1,
+          "values": ["admin", "moderator", "user", "guest", "premium", "enterprise", "trial", "suspended"]
+        }
+      },
+      {
+        "id": "field_004",
+        "name": "subscription_type",
+        "type": "select",
+        "system": false,
+        "required": false,
+        "presentable": false,
+        "unique": false,
+        "options": {
+          "maxSelect": 1,
+          "values": ["free", "basic", "premium", "enterprise", "trial", "lifetime", "student", "nonprofit"]
+        }
+      },
+      {
+        "id": "field_005",
+        "name": "preferences",
+        "type": "select",
+        "system": false,
+        "required": false,
+        "presentable": false,
+        "unique": false,
+        "options": {
+          "maxSelect": 10,
+          "values": ["email_notifications", "sms_notifications", "push_notifications", "marketing_emails", "newsletter", "product_updates", "security_alerts", "billing_alerts", "feature_announcements", "community_updates", "event_invitations", "survey_requests"]
+        }
+      },
+      {
+        "id": "field_006",
+        "name": "profile_image",
+        "type": "file",
+        "system": false,
+        "required": false,
+        "presentable": false,
+        "unique": false,
+        "options": {
+          "maxSelect": 1,
+          "maxSize": 5242880,
+          "mimeTypes": ["image/jpeg", "image/png", "image/gif", "image/webp"],
+          "thumbs": ["400x400", "200x200", "100x100", "50x50"]
+        }
+      },
+      {
+        "id": "field_007",
+        "name": "documents",
+        "type": "file",
+        "system": false,
+        "required": false,
+        "presentable": false,
+        "unique": false,
+        "options": {
+          "maxSelect": 20,
+          "maxSize": 10485760,
+          "mimeTypes": ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "text/plain"],
+          "thumbs": []
+        }
+      },
+      {
+        "id": "field_008",
+        "name": "organization",
+        "type": "relation",
+        "system": false,
+        "required": false,
+        "presentable": false,
+        "unique": false,
+        "options": {
+          "collectionId": "collection_002",
+          "cascadeDelete": false,
+          "minSelect": null,
+          "maxSelect": 1,
+          "displayFields": ["name"]
+        }
+      },
+      {
+        "id": "field_009",
+        "name": "teams",
+        "type": "relation",
+        "system": false,
+        "required": false,
+        "presentable": false,
+        "unique": false,
+        "options": {
+          "collectionId": "collection_003",
+          "cascadeDelete": false,
+          "minSelect": null,
+          "maxSelect": 10,
+          "displayFields": ["name", "description"]
+        }
+      },
+      {
+        "id": "field_010",
+        "name": "metadata",
+        "type": "json",
+        "system": false,
+        "required": false,
+        "presentable": false,
+        "unique": false,
+        "options": {}
+      }
+    ]
+  },
+  {
+    "id": "collection_002",
+    "name": "organizations",
+    "type": "base",
+    "system": false,
+    "schema": [
+      {
+        "id": "field_011",
+        "name": "name",
+        "type": "text",
+        "system": false,
+        "required": true,
+        "presentable": true,
+        "unique": true,
+        "options": {
+          "min": 2,
+          "max": 100,
+          "pattern": ""
+        }
+      },
+      {
+        "id": "field_012",
+        "name": "type",
+        "type": "select",
+        "system": false,
+        "required": true,
+        "presentable": false,
+        "unique": false,
+        "options": {
+          "maxSelect": 1,
+          "values": ["corporation", "llc", "partnership", "nonprofit", "government", "educational", "startup", "enterprise", "small_business", "freelancer"]
+        }
+      },
+      {
+        "id": "field_013",
+        "name": "industry",
+        "type": "select",
+        "system": false,
+        "required": false,
+        "presentable": false,
+        "unique": false,
+        "options": {
+          "maxSelect": 3,
+          "values": ["technology", "healthcare", "finance", "education", "retail", "manufacturing", "consulting", "media", "real_estate", "transportation", "energy", "agriculture", "hospitality", "construction", "legal", "marketing", "design", "research", "logistics", "telecommunications"]
+        }
+      },
+      {
+        "id": "field_014",
+        "name": "logo",
+        "type": "file",
+        "system": false,
+        "required": false,
+        "presentable": false,
+        "unique": false,
+        "options": {
+          "maxSelect": 1,
+          "maxSize": 2097152,
+          "mimeTypes": ["image/jpeg", "image/png", "image/svg+xml"],
+          "thumbs": ["300x300", "150x150", "75x75"]
+        }
+      },
+      {
+        "id": "field_015",
+        "name": "parent_organization",
+        "type": "relation",
+        "system": false,
+        "required": false,
+        "presentable": false,
+        "unique": false,
+        "options": {
+          "collectionId": "collection_002",
+          "cascadeDelete": false,
+          "minSelect": null,
+          "maxSelect": 1,
+          "displayFields": ["name"]
+        }
+      }
+    ]
+  },
+  {
+    "id": "collection_003",
+    "name": "teams",
+    "type": "base",
+    "system": false,
+    "schema": [
+      {
+        "id": "field_016",
+        "name": "name",
+        "type": "text",
+        "system": false,
+        "required": true,
+        "presentable": true,
+        "unique": false,
+        "options": {
+          "min": 2,
+          "max": 50,
+          "pattern": ""
+        }
+      },
+      {
+        "id": "field_017",
+        "name": "description",
+        "type": "editor",
+        "system": false,
+        "required": false,
+        "presentable": false,
+        "unique": false,
+        "options": {
+          "convertUrls": false
+        }
+      },
+      {
+        "id": "field_018",
+        "name": "status",
+        "type": "select",
+        "system": false,
+        "required": true,
+        "presentable": false,
+        "unique": false,
+        "options": {
+          "maxSelect": 1,
+          "values": ["active", "inactive", "archived", "pending", "suspended", "disbanded"]
+        }
+      },
+      {
+        "id": "field_019",
+        "name": "visibility",
+        "type": "select",
+        "system": false,
+        "required": true,
+        "presentable": false,
+        "unique": false,
+        "options": {
+          "maxSelect": 1,
+          "values": ["public", "private", "internal", "restricted"]
+        }
+      },
+      {
+        "id": "field_020",
+        "name": "organization",
+        "type": "relation",
+        "system": false,
+        "required": true,
+        "presentable": false,
+        "unique": false,
+        "options": {
+          "collectionId": "collection_002",
+          "cascadeDelete": true,
+          "minSelect": null,
+          "maxSelect": 1,
+          "displayFields": ["name"]
+        }
+      },
+      {
+        "id": "field_021",
+        "name": "members",
+        "type": "relation",
+        "system": false,
+        "required": false,
+        "presentable": false,
+        "unique": false,
+        "options": {
+          "collectionId": "collection_001",
+          "cascadeDelete": false,
+          "minSelect": null,
+          "maxSelect": 100,
+          "displayFields": ["username", "email"]
+        }
+      },
+      {
+        "id": "field_022",
+        "name": "projects",
+        "type": "relation",
+        "system": false,
+        "required": false,
+        "presentable": false,
+        "unique": false,
+        "options": {
+          "collectionId": "collection_004",
+          "cascadeDelete": false,
+          "minSelect": null,
+          "maxSelect": 50,
+          "displayFields": ["name", "status"]
+        }
+      }
+    ]
+  },
+  {
+    "id": "collection_004",
+    "name": "projects",
+    "type": "base",
+    "system": false,
+    "schema": [
+      {
+        "id": "field_023",
+        "name": "name",
+        "type": "text",
+        "system": false,
+        "required": true,
+        "presentable": true,
+        "unique": false,
+        "options": {
+          "min": 2,
+          "max": 100,
+          "pattern": ""
+        }
+      },
+      {
+        "id": "field_024",
+        "name": "description",
+        "type": "editor",
+        "system": false,
+        "required": false,
+        "presentable": false,
+        "unique": false,
+        "options": {
+          "convertUrls": true
+        }
+      },
+      {
+        "id": "field_025",
+        "name": "status",
+        "type": "select",
+        "system": false,
+        "required": true,
+        "presentable": false,
+        "unique": false,
+        "options": {
+          "maxSelect": 1,
+          "values": ["planning", "active", "on_hold", "completed", "cancelled", "archived"]
+        }
+      },
+      {
+        "id": "field_026",
+        "name": "priority",
+        "type": "select",
+        "system": false,
+        "required": true,
+        "presentable": false,
+        "unique": false,
+        "options": {
+          "maxSelect": 1,
+          "values": ["low", "medium", "high", "critical", "urgent"]
+        }
+      },
+      {
+        "id": "field_027",
+        "name": "tags",
+        "type": "select",
+        "system": false,
+        "required": false,
+        "presentable": false,
+        "unique": false,
+        "options": {
+          "maxSelect": 10,
+          "values": ["frontend", "backend", "mobile", "web", "api", "database", "ui_ux", "testing", "deployment", "maintenance", "research", "documentation", "security", "performance", "integration"]
+        }
+      },
+      {
+        "id": "field_028",
+        "name": "budget",
+        "type": "number",
+        "system": false,
+        "required": false,
+        "presentable": false,
+        "unique": false,
+        "options": {
+          "min": 0,
+          "max": null,
+          "noDecimal": false
+        }
+      },
+      {
+        "id": "field_029",
+        "name": "start_date",
+        "type": "date",
+        "system": false,
+        "required": false,
+        "presentable": false,
+        "unique": false,
+        "options": {
+          "min": "",
+          "max": ""
+        }
+      },
+      {
+        "id": "field_030",
+        "name": "end_date",
+        "type": "date",
+        "system": false,
+        "required": false,
+        "presentable": false,
+        "unique": false,
+        "options": {
+          "min": "",
+          "max": ""
+        }
+      },
+      {
+        "id": "field_031",
+        "name": "attachments",
+        "type": "file",
+        "system": false,
+        "required": false,
+        "presentable": false,
+        "unique": false,
+        "options": {
+          "maxSelect": 30,
+          "maxSize": 52428800,
+          "mimeTypes": [],
+          "thumbs": ["400x0", "200x0"]
+        }
+      },
+      {
+        "id": "field_032",
+        "name": "team",
+        "type": "relation",
+        "system": false,
+        "required": true,
+        "presentable": false,
+        "unique": false,
+        "options": {
+          "collectionId": "collection_003",
+          "cascadeDelete": true,
+          "minSelect": null,
+          "maxSelect": 1,
+          "displayFields": ["name"]
+        }
+      },
+      {
+        "id": "field_033",
+        "name": "assignees",
+        "type": "relation",
+        "system": false,
+        "required": false,
+        "presentable": false,
+        "unique": false,
+        "options": {
+          "collectionId": "collection_001",
+          "cascadeDelete": false,
+          "minSelect": null,
+          "maxSelect": 20,
+          "displayFields": ["username"]
+        }
+      },
+      {
+        "id": "field_034",
+        "name": "dependencies",
+        "type": "relation",
+        "system": false,
+        "required": false,
+        "presentable": false,
+        "unique": false,
+        "options": {
+          "collectionId": "collection_004",
+          "cascadeDelete": false,
+          "minSelect": null,
+          "maxSelect": 10,
+          "displayFields": ["name"]
+        }
+      }
+    ]
+  },
+  {
+    "id": "collection_005",
+    "name": "tasks",
+    "type": "base",
+    "system": false,
+    "schema": [
+      {
+        "id": "field_035",
+        "name": "title",
+        "type": "text",
+        "system": false,
+        "required": true,
+        "presentable": true,
+        "unique": false,
+        "options": {
+          "min": 1,
+          "max": 200,
+          "pattern": ""
+        }
+      },
+      {
+        "id": "field_036",
+        "name": "description",
+        "type": "editor",
+        "system": false,
+        "required": false,
+        "presentable": false,
+        "unique": false,
+        "options": {
+          "convertUrls": true
+        }
+      },
+      {
+        "id": "field_037",
+        "name": "status",
+        "type": "select",
+        "system": false,
+        "required": true,
+        "presentable": false,
+        "unique": false,
+        "options": {
+          "maxSelect": 1,
+          "values": ["todo", "in_progress", "review", "testing", "done", "blocked", "cancelled"]
+        }
+      },
+      {
+        "id": "field_038",
+        "name": "priority",
+        "type": "select",
+        "system": false,
+        "required": true,
+        "presentable": false,
+        "unique": false,
+        "options": {
+          "maxSelect": 1,
+          "values": ["lowest", "low", "medium", "high", "highest", "critical"]
+        }
+      },
+      {
+        "id": "field_039",
+        "name": "type",
+        "type": "select",
+        "system": false,
+        "required": true,
+        "presentable": false,
+        "unique": false,
+        "options": {
+          "maxSelect": 1,
+          "values": ["feature", "bug", "improvement", "task", "epic", "story", "spike", "subtask"]
+        }
+      },
+      {
+        "id": "field_040",
+        "name": "labels",
+        "type": "select",
+        "system": false,
+        "required": false,
+        "presentable": false,
+        "unique": false,
+        "options": {
+          "maxSelect": 15,
+          "values": ["frontend", "backend", "mobile", "web", "api", "database", "ui", "ux", "testing", "deployment", "documentation", "security", "performance", "bug", "feature", "improvement", "critical", "urgent", "blocked", "ready"]
+        }
+      },
+      {
+        "id": "field_041",
+        "name": "estimated_hours",
+        "type": "number",
+        "system": false,
+        "required": false,
+        "presentable": false,
+        "unique": false,
+        "options": {
+          "min": 0,
+          "max": 1000,
+          "noDecimal": false
+        }
+      },
+      {
+        "id": "field_042",
+        "name": "actual_hours",
+        "type": "number",
+        "system": false,
+        "required": false,
+        "presentable": false,
+        "unique": false,
+        "options": {
+          "min": 0,
+          "max": 1000,
+          "noDecimal": false
+        }
+      },
+      {
+        "id": "field_043",
+        "name": "due_date",
+        "type": "date",
+        "system": false,
+        "required": false,
+        "presentable": false,
+        "unique": false,
+        "options": {
+          "min": "",
+          "max": ""
+        }
+      },
+      {
+        "id": "field_044",
+        "name": "project",
+        "type": "relation",
+        "system": false,
+        "required": true,
+        "presentable": false,
+        "unique": false,
+        "options": {
+          "collectionId": "collection_004",
+          "cascadeDelete": true,
+          "minSelect": null,
+          "maxSelect": 1,
+          "displayFields": ["name"]
+        }
+      },
+      {
+        "id": "field_045",
+        "name": "assignee",
+        "type": "relation",
+        "system": false,
+        "required": false,
+        "presentable": false,
+        "unique": false,
+        "options": {
+          "collectionId": "collection_001",
+          "cascadeDelete": false,
+          "minSelect": null,
+          "maxSelect": 1,
+          "displayFields": ["username"]
+        }
+      },
+      {
+        "id": "field_046",
+        "name": "reporter",
+        "type": "relation",
+        "system": false,
+        "required": true,
+        "presentable": false,
+        "unique": false,
+        "options": {
+          "collectionId": "collection_001",
+          "cascadeDelete": false,
+          "minSelect": null,
+          "maxSelect": 1,
+          "displayFields": ["username"]
+        }
+      },
+      {
+        "id": "field_047",
+        "name": "watchers",
+        "type": "relation",
+        "system": false,
+        "required": false,
+        "presentable": false,
+        "unique": false,
+        "options": {
+          "collectionId": "collection_001",
+          "cascadeDelete": false,
+          "minSelect": null,
+          "maxSelect": 50,
+          "displayFields": ["username"]
+        }
+      },
+      {
+        "id": "field_048",
+        "name": "parent_task",
+        "type": "relation",
+        "system": false,
+        "required": false,
+        "presentable": false,
+        "unique": false,
+        "options": {
+          "collectionId": "collection_005",
+          "cascadeDelete": false,
+          "minSelect": null,
+          "maxSelect": 1,
+          "displayFields": ["title"]
+        }
+      },
+      {
+        "id": "field_049",
+        "name": "attachments",
+        "type": "file",
+        "system": false,
+        "required": false,
+        "presentable": false,
+        "unique": false,
+        "options": {
+          "maxSelect": 10,
+          "maxSize": 10485760,
+          "mimeTypes": [],
+          "thumbs": ["300x0", "150x0"]
+        }
+      }
+    ]
+  }
+]

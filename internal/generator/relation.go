@@ -1,0 +1,308 @@
+package generator
+
+import (
+	"fmt"
+	"strings"
+)
+
+// RelationGenerator handles relation type generation for relation fields
+type RelationGenerator struct{}
+
+// NewRelationGenerator creates a new RelationGenerator instance
+func NewRelationGenerator() *RelationGenerator {
+	return &RelationGenerator{}
+}
+
+// GenerateRelationTypes generates relation type data for all collections
+func (g *RelationGenerator) GenerateRelationTypes(collections []CollectionData, schemas []CollectionSchema) []RelationTypeData {
+	// 성능 최적화: 예상 크기로 슬라이스 미리 할당
+	estimatedRelations := 0
+	for _, schema := range schemas {
+		for _, field := range schema.Fields {
+			if !field.System && field.Type == "relation" {
+				estimatedRelations++
+			}
+		}
+	}
+
+	relationTypes := make([]RelationTypeData, 0, estimatedRelations)
+
+	// 성능 최적화: 스키마를 맵으로 변환하여 O(1) 조회
+	schemaMap := make(map[string]CollectionSchema, len(schemas))
+	collectionIDMap := make(map[string]string, len(schemas)) // ID -> Name 매핑
+	for _, schema := range schemas {
+		schemaMap[schema.Name] = schema
+		collectionIDMap[schema.ID] = schema.Name
+	}
+
+	for _, collection := range collections {
+		schema, exists := schemaMap[collection.CollectionName]
+		if !exists {
+			continue
+		}
+
+		for _, field := range schema.Fields {
+			if field.System || field.Type != "relation" {
+				continue
+			}
+
+			// 성능 최적화: 직접 relation 정보 추출
+			if field.Options != nil && field.Options.CollectionID != "" {
+				targetCollection, exists := collectionIDMap[field.Options.CollectionID]
+				if exists {
+					relationType := g.generateRelationTypeDataOptimized(field, collection.CollectionName, targetCollection)
+					relationTypes = append(relationTypes, relationType)
+				}
+			}
+		}
+	}
+
+	return relationTypes
+}
+
+// GenerateRelationTypeData generates relation type data for a single relation field
+func (g *RelationGenerator) GenerateRelationTypeData(enhanced EnhancedFieldInfo, collectionName string) RelationTypeData {
+	methods := g.GenerateRelationMethods(enhanced)
+
+	return RelationTypeData{
+		TypeName:         enhanced.RelationTypeName,
+		TargetCollection: enhanced.TargetCollection,
+		TargetTypeName:   ToPascalCase(enhanced.TargetCollection),
+		IsMulti:          enhanced.IsMultiRelation,
+		Methods:          methods,
+	}
+}
+
+// GenerateRelationMethods generates methods for a relation type
+func (g *RelationGenerator) GenerateRelationMethods(enhanced EnhancedFieldInfo) []MethodData {
+	var methods []MethodData
+
+	// ID method
+	idMethod := MethodData{
+		Name:       "ID",
+		ReturnType: "string",
+		Body:       "return r.id",
+	}
+	methods = append(methods, idMethod)
+
+	// Load method
+	targetTypeName := ToPascalCase(enhanced.TargetCollection)
+	loadMethod := MethodData{
+		Name:       "Load",
+		ReturnType: fmt.Sprintf("(*%s, error)", targetTypeName),
+		Body: fmt.Sprintf(`if r.id == "" {
+		return nil, nil
+	}
+	return Get%s(client, r.id, nil)`, targetTypeName),
+	}
+	methods = append(methods, loadMethod)
+
+	// IsEmpty method
+	isEmptyMethod := MethodData{
+		Name:       "IsEmpty",
+		ReturnType: "bool",
+		Body:       `return r.id == ""`,
+	}
+	methods = append(methods, isEmptyMethod)
+
+	return methods
+}
+
+// GenerateRelationTypeCode generates the complete Go code for a relation type
+func (g *RelationGenerator) GenerateRelationTypeCode(relationType RelationTypeData) string {
+	var code strings.Builder
+
+	// Type definition
+	code.WriteString(fmt.Sprintf("// %s represents a relation to %s collection\n",
+		relationType.TypeName, relationType.TargetCollection))
+	code.WriteString(fmt.Sprintf("type %s struct {\n", relationType.TypeName))
+	code.WriteString("\tid string\n")
+	code.WriteString("}\n\n")
+
+	// Methods
+	for _, method := range relationType.Methods {
+		code.WriteString(g.GenerateMethodCode(relationType.TypeName, method))
+		code.WriteString("\n")
+	}
+
+	// Constructor
+	code.WriteString(g.GenerateConstructorCode(relationType))
+
+	return code.String()
+}
+
+// GenerateMethodCode generates Go code for a single method
+func (g *RelationGenerator) GenerateMethodCode(typeName string, method MethodData) string {
+	var code strings.Builder
+
+	// Method signature
+	if method.Name == "Load" {
+		code.WriteString(fmt.Sprintf("// %s fetches the related %s record\n",
+			method.Name, strings.TrimSuffix(typeName, "Relation")))
+		code.WriteString(fmt.Sprintf("func (r %s) %s(ctx context.Context, client pocketbase.RecordServiceAPI) %s {\n",
+			typeName, method.Name, method.ReturnType))
+	} else {
+		code.WriteString(fmt.Sprintf("// %s returns the %s\n",
+			method.Name, strings.ToLower(method.Name)))
+		code.WriteString(fmt.Sprintf("func (r %s) %s() %s {\n",
+			typeName, method.Name, method.ReturnType))
+	}
+
+	// Method body
+	lines := strings.Split(method.Body, "\n")
+	for _, line := range lines {
+		if strings.TrimSpace(line) != "" {
+			code.WriteString(fmt.Sprintf("\t%s\n", line))
+		}
+	}
+
+	code.WriteString("}\n")
+
+	return code.String()
+}
+
+// GenerateConstructorCode generates constructor function for relation type
+func (g *RelationGenerator) GenerateConstructorCode(relationType RelationTypeData) string {
+	return fmt.Sprintf(`// New%s creates a new %s
+func New%s(id string) %s {
+	return %s{id: id}
+}`, relationType.TypeName, relationType.TypeName, relationType.TypeName,
+		relationType.TypeName, relationType.TypeName)
+}
+
+// GenerateMultiRelationTypeCode generates code for multi-relation types
+func (g *RelationGenerator) GenerateMultiRelationTypeCode(relationType RelationTypeData) string {
+	if !relationType.IsMulti {
+		return g.GenerateRelationTypeCode(relationType)
+	}
+
+	var code strings.Builder
+
+	// Multi-relation type definition
+	multiTypeName := relationType.TypeName + "s" // Pluralize
+	code.WriteString(fmt.Sprintf("// %s represents multiple relations to %s collection\n",
+		multiTypeName, relationType.TargetCollection))
+	code.WriteString(fmt.Sprintf("type %s []%s\n\n", multiTypeName, relationType.TypeName))
+
+	// Multi-relation methods
+	code.WriteString(g.GenerateMultiRelationMethods(relationType, multiTypeName))
+
+	return code.String()
+}
+
+// GenerateMultiRelationMethods generates methods for multi-relation types
+func (g *RelationGenerator) GenerateMultiRelationMethods(relationType RelationTypeData, multiTypeName string) string {
+	var code strings.Builder
+
+	// IDs method
+	code.WriteString(fmt.Sprintf(`// IDs returns all relation IDs
+func (r %s) IDs() []string {
+	ids := make([]string, len(r))
+	for i, rel := range r {
+		ids[i] = rel.ID()
+	}
+	return ids
+}
+
+`, multiTypeName))
+
+	// LoadAll method
+	targetTypeName := relationType.TargetTypeName
+	code.WriteString(fmt.Sprintf(`// LoadAll fetches all related %s records
+func (r %s) LoadAll(ctx context.Context, client pocketbase.RecordServiceAPI) ([]*%s, error) {
+	if len(r) == 0 {
+		return nil, nil
+	}
+	
+	var results []*%s
+	for _, rel := range r {
+		record, err := rel.Load(ctx, client)
+		if err != nil {
+			return nil, err
+		}
+		if record != nil {
+			results = append(results, record)
+		}
+	}
+	return results, nil
+}
+
+`, targetTypeName, multiTypeName, targetTypeName, targetTypeName))
+
+	// IsEmpty method
+	code.WriteString(fmt.Sprintf(`// IsEmpty returns true if there are no relations
+func (r %s) IsEmpty() bool {
+	return len(r) == 0
+}
+
+`, multiTypeName))
+
+	return code.String()
+}
+
+// ValidateRelationName ensures the relation name is a valid Go identifier
+func (g *RelationGenerator) ValidateRelationName(name string) string {
+	// Remove any invalid characters and ensure it starts with a letter
+	cleaned := strings.Map(func(r rune) rune {
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') {
+			return r
+		}
+		return -1
+	}, name)
+
+	// Ensure it starts with a letter
+	if len(cleaned) > 0 && cleaned[0] >= '0' && cleaned[0] <= '9' {
+		cleaned = "Relation" + cleaned
+	}
+
+	if cleaned == "" {
+		cleaned = "RelationType"
+	}
+
+	return cleaned
+}
+
+// generateRelationTypeDataOptimized 성능 최적화된 relation 타입 데이터 생성 함수
+func (g *RelationGenerator) generateRelationTypeDataOptimized(field FieldSchema, collectionName, targetCollection string) RelationTypeData {
+	// 성능 최적화: 미리 계산된 값들 사용
+	relationTypeName := ToPascalCase(targetCollection) + "Relation"
+	targetTypeName := ToPascalCase(targetCollection)
+
+	// 다중 관계 여부 확인
+	isMulti := field.Options.MaxSelect != nil && *field.Options.MaxSelect > 1
+
+	// 메서드 생성 (미리 할당된 슬라이스 사용)
+	methods := make([]MethodData, 0, 3)
+
+	// ID method
+	methods = append(methods, MethodData{
+		Name:       "ID",
+		ReturnType: "string",
+		Body:       "return r.id",
+	})
+
+	// Load method
+	methods = append(methods, MethodData{
+		Name:       "Load",
+		ReturnType: fmt.Sprintf("(*%s, error)", targetTypeName),
+		Body: fmt.Sprintf(`if r.id == "" {
+		return nil, nil
+	}
+	return Get%s(client, r.id, nil)`, targetTypeName),
+	})
+
+	// IsEmpty method
+	methods = append(methods, MethodData{
+		Name:       "IsEmpty",
+		ReturnType: "bool",
+		Body:       `return r.id == ""`,
+	})
+
+	return RelationTypeData{
+		TypeName:         relationTypeName,
+		TargetCollection: targetCollection,
+		TargetTypeName:   targetTypeName,
+		IsMulti:          isMulti,
+		Methods:          methods,
+	}
+}

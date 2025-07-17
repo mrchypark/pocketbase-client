@@ -24,6 +24,11 @@ func main() {
 	pkgName := flag.String("pkgname", "models", "Package name for the generated file")
 	jsonLib := flag.String("jsonlib", "encoding/json", "JSON library to use (e.g., github.com/goccy/go-json)")
 
+	// 새로운 enhanced 기능 플래그들
+	generateEnums := flag.Bool("enums", true, "Generate enum constants for select fields")
+	generateRelations := flag.Bool("relations", true, "Generate enhanced relation types")
+	generateFiles := flag.Bool("files", true, "Generate enhanced file types")
+
 	flag.Parse()
 
 	log.Printf("Generating Go models from schema: %s\n", *schemaPath)
@@ -33,7 +38,8 @@ func main() {
 		log.Fatalf("Error loading schema: %v", err)
 	}
 
-	tplData := generator.TemplateData{
+	// 기본 TemplateData 생성
+	baseTplData := generator.TemplateData{
 		PackageName: *pkgName,
 		JsonLibrary: *jsonLib,
 		Collections: make([]generator.CollectionData, 0, len(schemas)),
@@ -66,7 +72,39 @@ func main() {
 				GetterMethod: getter, // Assign value to the newly added GetterMethod field.
 			})
 		}
-		tplData.Collections = append(tplData.Collections, collectionData)
+		baseTplData.Collections = append(baseTplData.Collections, collectionData)
+	}
+
+	// Enhanced 기능이 활성화된 경우 EnhancedTemplateData 생성
+	var tplData any
+	if *generateEnums || *generateRelations || *generateFiles {
+		enhancedData := generator.EnhancedTemplateData{
+			TemplateData:      baseTplData,
+			GenerateEnums:     *generateEnums,
+			GenerateRelations: *generateRelations,
+			GenerateFiles:     *generateFiles,
+		}
+
+		// Enhanced 분석 및 데이터 생성
+		if *generateEnums {
+			enumGenerator := generator.NewEnumGenerator()
+			enhancedData.Enums = enumGenerator.GenerateEnums(baseTplData.Collections, schemas)
+		}
+
+		if *generateRelations {
+			relationGenerator := generator.NewRelationGenerator()
+			enhancedData.RelationTypes = relationGenerator.GenerateRelationTypes(baseTplData.Collections, schemas)
+		}
+
+		if *generateFiles {
+			fileGenerator := generator.NewFileGenerator()
+			enhancedData.FileTypes = fileGenerator.GenerateFileTypes(baseTplData.Collections, schemas)
+		}
+
+		tplData = enhancedData
+	} else {
+		// 기존 동작 유지 (하위 호환성)
+		tplData = baseTplData
 	}
 
 	// 3. Parse the embed-injected variable (templateFile) instead of reading from file system.

@@ -5,11 +5,214 @@ package {{.PackageName}}
 
 import (
 	"context"
+	"fmt"
 	"{{.JsonLibrary}}"
 
 	"github.com/mrchypark/pocketbase-client"
 	"github.com/pocketbase/pocketbase/tools/types"
 )
+
+{{if .GenerateEnums}}
+// ==============
+//  Enum Constants
+// ==============
+{{range .Enums}}
+{{$enum := .}}
+
+// {{$enum.EnumTypeName}} enum constants for {{$enum.CollectionName}}.{{$enum.FieldName}}
+const (
+{{range .Constants}}	{{.Name}} = "{{.Value}}"
+{{end}})
+
+// {{$enum.EnumTypeName}}Values returns all possible values for {{$enum.EnumTypeName}}
+func {{$enum.EnumTypeName}}Values() []string {
+	return []string{
+{{range .Constants}}		{{.Name}},
+{{end}}	}
+}
+
+// IsValid{{$enum.EnumTypeName}} checks if the given value is a valid {{$enum.EnumTypeName}}
+func IsValid{{$enum.EnumTypeName}}(value string) bool {
+	switch value {
+{{range .Constants}}	case {{.Name}}:
+{{end}}		return true
+	default:
+		return false
+	}
+}
+{{end}}
+{{end}}
+
+{{if .GenerateRelations}}
+// ==============
+//  Relation Types
+// ==============
+{{range .RelationTypes}}
+{{$relation := .}}
+
+// {{$relation.TypeName}} represents a relation to {{$relation.TargetCollection}} collection
+type {{$relation.TypeName}} struct {
+	id string
+}
+
+// ID returns the relation ID
+func (r {{$relation.TypeName}}) ID() string {
+	return r.id
+}
+
+// Load fetches the related {{$relation.TargetTypeName}} record
+func (r {{$relation.TypeName}}) Load(ctx context.Context, client pocketbase.RecordServiceAPI) (*{{$relation.TargetTypeName}}, error) {
+	if r.id == "" {
+		return nil, nil
+	}
+	return Get{{$relation.TargetTypeName}}(client, r.id, nil)
+}
+
+// IsEmpty returns true if the relation is empty
+func (r {{$relation.TypeName}}) IsEmpty() bool {
+	return r.id == ""
+}
+
+// New{{$relation.TypeName}} creates a new {{$relation.TypeName}}
+func New{{$relation.TypeName}}(id string) {{$relation.TypeName}} {
+	return {{$relation.TypeName}}{id: id}
+}
+
+{{if $relation.IsMulti}}
+// {{$relation.TypeName}}s represents multiple relations to {{$relation.TargetCollection}} collection
+type {{$relation.TypeName}}s []{{$relation.TypeName}}
+
+// IDs returns all relation IDs
+func (r {{$relation.TypeName}}s) IDs() []string {
+	ids := make([]string, len(r))
+	for i, rel := range r {
+		ids[i] = rel.ID()
+	}
+	return ids
+}
+
+// LoadAll fetches all related {{$relation.TargetTypeName}} records
+func (r {{$relation.TypeName}}s) LoadAll(ctx context.Context, client pocketbase.RecordServiceAPI) ([]*{{$relation.TargetTypeName}}, error) {
+	if len(r) == 0 {
+		return nil, nil
+	}
+	
+	var results []*{{$relation.TargetTypeName}}
+	for _, rel := range r {
+		record, err := rel.Load(ctx, client)
+		if err != nil {
+			return nil, err
+		}
+		if record != nil {
+			results = append(results, record)
+		}
+	}
+	return results, nil
+}
+
+// IsEmpty returns true if there are no relations
+func (r {{$relation.TypeName}}s) IsEmpty() bool {
+	return len(r) == 0
+}
+{{end}}
+{{end}}
+{{end}}
+
+{{if .GenerateFiles}}
+// ==============
+//  File Types
+// ==============
+
+// FileReference represents a file reference
+type FileReference struct {
+	filename   string
+	recordID   string
+	collection string
+	fieldName  string
+}
+
+// Filename returns the filename
+func (f FileReference) Filename() string {
+	return f.filename
+}
+
+// URL generates the file URL
+func (f FileReference) URL(baseURL string) string {
+	if f.filename == "" {
+		return ""
+	}
+	return fmt.Sprintf("%s/api/files/%s/%s/%s", baseURL, f.collection, f.recordID, f.filename)
+}
+
+// ThumbURL generates thumbnail URL
+func (f FileReference) ThumbURL(baseURL, thumb string) string {
+	if f.filename == "" {
+		return ""
+	}
+	return fmt.Sprintf("%s/api/files/%s/%s/%s?thumb=%s", baseURL, f.collection, f.recordID, f.filename, thumb)
+}
+
+// IsEmpty returns true if the file reference is empty
+func (f FileReference) IsEmpty() bool {
+	return f.filename == ""
+}
+
+// NewFileReference creates a new FileReference
+func NewFileReference(filename, recordID, collection, fieldName string) FileReference {
+	return FileReference{
+		filename:   filename,
+		recordID:   recordID,
+		collection: collection,
+		fieldName:  fieldName,
+	}
+}
+
+// FileReferences represents multiple file references
+type FileReferences []FileReference
+
+// Filenames returns all filenames
+func (f FileReferences) Filenames() []string {
+	names := make([]string, len(f))
+	for i, file := range f {
+		names[i] = file.Filename()
+	}
+	return names
+}
+
+// URLs generates URLs for all files
+func (f FileReferences) URLs(baseURL string) []string {
+	urls := make([]string, len(f))
+	for i, file := range f {
+		urls[i] = file.URL(baseURL)
+	}
+	return urls
+}
+
+// ThumbURLs generates thumbnail URLs for all files
+func (f FileReferences) ThumbURLs(baseURL, thumb string) []string {
+	urls := make([]string, len(f))
+	for i, file := range f {
+		urls[i] = file.ThumbURL(baseURL, thumb)
+	}
+	return urls
+}
+
+// IsEmpty returns true if there are no file references
+func (f FileReferences) IsEmpty() bool {
+	return len(f) == 0
+}
+
+// Filter returns non-empty file references
+func (f FileReferences) Filter() FileReferences {
+	var filtered FileReferences
+	for _, file := range f {
+		if !file.IsEmpty() {
+			filtered = append(filtered, file)
+		}
+	}
+	return filtered
+}
+{{end}}
 
 // ==============
 //  Collection Types
@@ -42,7 +245,7 @@ func To{{$collection.StructName}}(r *pocketbase.Record) *{{$collection.StructNam
 // ToMap converts the struct to a map[string]any for creating/updating records.
 // It omits empty or zero-value fields to support PATCH operations.
 func (m *{{$collection.StructName}}) ToMap() map[string]any {
-	data := make(map[string]interface{})
+	data := make(map[string]any)
     
 	// non-zero, non-empty, and non-nil values will be added to the map.
 	{{- range .Fields}}

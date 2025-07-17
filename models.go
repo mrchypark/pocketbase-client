@@ -2,7 +2,9 @@ package pocketbase
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"maps"
 	"time"
 
 	"github.com/goccy/go-json" // Modified to use goccy/go-json directly
@@ -32,7 +34,7 @@ type Record struct {
 	Expand         map[string][]*Record `json:"expand,omitempty"`
 
 	// Map to store data. From now on, this field is the only data source.
-	deserializedData map[string]interface{}
+	deserializedData map[string]any
 }
 
 // ListResult is a struct containing a list of records along with pagination information.
@@ -44,7 +46,7 @@ type ListResult struct {
 	Items      []*Record `json:"items"`
 }
 
-// ... (Other option structs like ListOptions, GetOneOptions remain the same)
+// ListOptions contains options for listing records.
 type ListOptions struct {
 	Page        int
 	PerPage     int
@@ -56,16 +58,19 @@ type ListOptions struct {
 	QueryParams map[string]string
 }
 
+// GetOneOptions contains options for retrieving a single record.
 type GetOneOptions struct {
 	Expand string
 	Fields string
 }
 
+// WriteOptions contains options for create and update operations.
 type WriteOptions struct {
 	Expand string
 	Fields string
 }
 
+// FileDownloadOptions contains options for file download operations.
 type FileDownloadOptions struct {
 	Thumb    string
 	Download bool
@@ -84,10 +89,10 @@ type RealtimeEvent struct {
 	Record *Record `json:"record"`
 }
 
-// ✅ Modified: Change UnmarshalJSON to be much simpler and more efficient.
+// UnmarshalJSON deserializes JSON data into the Record struct efficiently.
 func (r *Record) UnmarshalJSON(data []byte) error {
 	// Decode all JSON data into temporary map at once.
-	var allData map[string]interface{}
+	var allData map[string]any
 	if err := json.Unmarshal(data, &allData); err != nil {
 		return err
 	}
@@ -132,28 +137,26 @@ func (r *Record) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// Get returns a raw interface{} value for a given key.
-func (r *Record) Get(key string) interface{} {
+// Get returns a raw any value for a given key.
+func (r *Record) Get(key string) any {
 	if r.deserializedData == nil {
-		r.deserializedData = make(map[string]interface{})
+		r.deserializedData = make(map[string]any)
 	}
 	return r.deserializedData[key]
 }
 
 // Set stores a key-value pair in the record's data.
-func (r *Record) Set(key string, value interface{}) {
+func (r *Record) Set(key string, value any) {
 	if r.deserializedData == nil {
-		r.deserializedData = make(map[string]interface{})
+		r.deserializedData = make(map[string]any)
 	}
 	r.deserializedData[key] = value
 }
 
-// ✅ Modified: Change MarshalJSON to also use deserializedData directly.
+// MarshalJSON serializes the Record to JSON using deserializedData directly.
 func (r *Record) MarshalJSON() ([]byte, error) {
-	combinedData := make(map[string]interface{}, len(r.deserializedData)+6)
-	for k, v := range r.deserializedData {
-		combinedData[k] = v
-	}
+	combinedData := make(map[string]any, len(r.deserializedData)+6)
+	maps.Copy(combinedData, r.deserializedData)
 
 	combinedData["id"] = r.ID
 	combinedData["collectionId"] = r.CollectionID
@@ -223,7 +226,7 @@ func (r *Record) GetStringSlice(key string) []string {
 	if slice, ok := val.([]string); ok {
 		return slice
 	}
-	if slice, ok := val.([]interface{}); ok {
+	if slice, ok := val.([]any); ok {
 		result := make([]string, len(slice))
 		for i, v := range slice {
 			if str, ok := v.(string); ok {
@@ -380,28 +383,79 @@ type PaginationError struct {
 
 // Error PaginationError가 error 인터페이스를 구현하도록 합니다.
 func (pe *PaginationError) Error() string {
-	if pe.Message != "" {
-		return fmt.Sprintf("pagination %s failed at page %d (processed %d records): %s - %v",
-			pe.Operation, pe.Page, pe.TotalProcessed, pe.Message, pe.OriginalErr)
+	if pe == nil {
+		return "pagination error: nil error"
 	}
-	return fmt.Sprintf("pagination %s failed at page %d (processed %d records): %v",
-		pe.Operation, pe.Page, pe.TotalProcessed, pe.OriginalErr)
+
+	baseMsg := fmt.Sprintf("pagination %s failed at page %d", pe.Operation, pe.Page)
+
+	if pe.TotalProcessed > 0 {
+		baseMsg += fmt.Sprintf(" (processed %d records)", pe.TotalProcessed)
+	}
+
+	if pe.Message != "" {
+		baseMsg += fmt.Sprintf(": %s", pe.Message)
+	}
+
+	if pe.OriginalErr != nil {
+		baseMsg += fmt.Sprintf(" - %v", pe.OriginalErr)
+	}
+
+	return baseMsg
 }
 
 // Unwrap 원본 에러를 반환합니다 (Go 1.13+ error unwrapping 지원).
 func (pe *PaginationError) Unwrap() error {
+	if pe == nil {
+		return nil
+	}
 	return pe.OriginalErr
 }
 
 // GetPartialData 에러 발생 전까지 수집된 부분 데이터를 반환합니다.
 func (pe *PaginationError) GetPartialData() []*Record {
+	if pe == nil {
+		return nil
+	}
 	return pe.PartialData
 }
 
 // Is 에러 타입 비교를 위한 메서드입니다.
 func (pe *PaginationError) Is(target error) bool {
+	if pe == nil || target == nil {
+		return pe == target
+	}
 	_, ok := target.(*PaginationError)
 	return ok
+}
+
+// HasPartialData 부분 데이터가 있는지 확인합니다.
+func (pe *PaginationError) HasPartialData() bool {
+	return pe != nil && len(pe.PartialData) > 0
+}
+
+// GetRecoveryInfo 에러 복구를 위한 정보를 반환합니다.
+func (pe *PaginationError) GetRecoveryInfo() (operation string, lastPage int, processedCount int, canRetry bool) {
+	if pe == nil {
+		return "", 0, 0, false
+	}
+
+	operation = pe.Operation
+	lastPage = pe.Page
+	processedCount = pe.TotalProcessed
+
+	// 원본 에러가 재시도 가능한지 확인
+	// 컨텍스트 관련 에러는 재시도 불가능
+	if pe.OriginalErr != nil {
+		if errors.Is(pe.OriginalErr, context.Canceled) || errors.Is(pe.OriginalErr, context.DeadlineExceeded) {
+			canRetry = false
+		} else {
+			// 기본적으로 재시도 가능하다고 가정 (구체적인 판단은 호출자가 결정)
+			canRetry = true
+		}
+	}
+
+	return operation, lastPage, processedCount, canRetry
 }
 
 // IteratorFunc 레코드 반복 처리를 위한 함수 타입입니다.
@@ -472,7 +526,7 @@ func (ri *RecordIterator) Next() bool {
 	}
 
 	// 새로 로드된 배치에 레코드가 있는지 확인
-	if ri.currentBatch != nil && len(ri.currentBatch) > 0 {
+	if len(ri.currentBatch) > 0 {
 		return true
 	}
 
@@ -568,14 +622,13 @@ func (ri *RecordIterator) loadNextBatch() bool {
 // cleanupCurrentBatch 현재 배치의 메모리를 정리합니다.
 // 사용 완료된 레코드들의 참조를 제거하여 가비지 컬렉션을 돕습니다.
 func (ri *RecordIterator) cleanupCurrentBatch() {
-	if ri.currentBatch == nil {
+	if len(ri.currentBatch) == 0 {
 		return
 	}
 
 	// 슬라이스의 각 요소를 nil로 설정하여 참조 해제
-	for i := range ri.currentBatch {
-		ri.currentBatch[i] = nil
-	}
+	// 성능 최적화: clear 함수 사용 (Go 1.21+)
+	clear(ri.currentBatch)
 
 	// 슬라이스 자체를 nil로 설정
 	ri.currentBatch = nil
