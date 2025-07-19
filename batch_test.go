@@ -1,4 +1,4 @@
-package pocketbase_test
+package pocketbase
 
 import (
 	"context"
@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/goccy/go-json"
-	"github.com/mrchypark/pocketbase-client"
 )
 
 // TestBatchExecuteSuccess tests the successful execution of batch requests.
@@ -21,7 +20,7 @@ func TestBatchExecuteSuccess(t *testing.T) {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
 		body := struct {
-			Requests []*pocketbase.BatchRequest `json:"requests"`
+			Requests []*BatchRequest `json:"requests"`
 		}{}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 			t.Fatalf("invalid body: %v", err)
@@ -29,7 +28,7 @@ func TestBatchExecuteSuccess(t *testing.T) {
 		if len(body.Requests) != 4 {
 			t.Fatalf("unexpected request count: %d", len(body.Requests))
 		}
-		responses := []*pocketbase.BatchResponse{
+		responses := []*BatchResponse{
 			{Status: http.StatusCreated, Body: map[string]any{"id": "1"}},
 			{Status: http.StatusOK, Body: map[string]any{"id": "2"}},
 			{Status: http.StatusNoContent},
@@ -39,13 +38,13 @@ func TestBatchExecuteSuccess(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	c := pocketbase.NewClient(srv.URL)
+	c := NewClient(srv.URL)
 	createReq, _ := c.Records.NewCreateRequest("posts", map[string]any{"title": "a"})
 	updateReq, _ := c.Records.NewUpdateRequest("posts", "2", map[string]any{"title": "b"})
 	deleteReq, _ := c.Records.NewDeleteRequest("posts", "3")
 	upsertReq, _ := c.Records.NewUpsertRequest("posts", map[string]any{"id": "4", "title": "c"})
 
-	res, err := c.Batch.Execute(context.Background(), []*pocketbase.BatchRequest{createReq, updateReq, deleteReq, upsertReq})
+	res, err := c.Batch.Execute(context.Background(), []*BatchRequest{createReq, updateReq, deleteReq, upsertReq})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -63,11 +62,11 @@ func TestBatchExecuteSuccess(t *testing.T) {
 // TestBatchExecutePartialFailure tests batch execution with a partial failure.
 func TestBatchExecutePartialFailure(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		responses := []*pocketbase.BatchResponse{
+		responses := []*BatchResponse{
 			{
 				Status: http.StatusBadRequest,
 				Body:   json.RawMessage(`{"code":400,"message":"invalid","data":{"title":"required"}}`),
-				ParsedError: &pocketbase.APIError{
+				ParsedError: &APIError{
 					Code:    400,
 					Message: "invalid",
 					Data: map[string]any{
@@ -81,11 +80,11 @@ func TestBatchExecutePartialFailure(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	c := pocketbase.NewClient(srv.URL)
+	c := NewClient(srv.URL)
 	createReq, _ := c.Records.NewCreateRequest("posts", map[string]any{"title": "a"})
 	deleteReq, _ := c.Records.NewDeleteRequest("posts", "1")
 
-	res, err := c.Batch.Execute(context.Background(), []*pocketbase.BatchRequest{createReq, deleteReq})
+	res, err := c.Batch.Execute(context.Background(), []*BatchRequest{createReq, deleteReq})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -104,12 +103,12 @@ func TestBatchExecutePartialFailure(t *testing.T) {
 func TestBatchExecuteFailure(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
-		_ = json.NewEncoder(w).Encode(pocketbase.APIError{Code: 401, Message: "unauthorized"})
+		_ = json.NewEncoder(w).Encode(APIError{Code: 401, Message: "unauthorized"})
 	}))
 	defer srv.Close()
 
-	c := pocketbase.NewClient(srv.URL)
-	_, err := c.Batch.Execute(context.Background(), []*pocketbase.BatchRequest{})
+	c := NewClient(srv.URL)
+	_, err := c.Batch.Execute(context.Background(), []*BatchRequest{})
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -118,11 +117,11 @@ func TestBatchExecuteFailure(t *testing.T) {
 // TestBatchExecuteParsedError tests batch execution where a parsed error is returned.
 func TestBatchExecuteParsedError(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		responses := []*pocketbase.BatchResponse{
+		responses := []*BatchResponse{
 			{
 				Status: http.StatusBadRequest,
 				Body:   json.RawMessage(`{"code":400,"message":"validation failed","data":{"title":"required"}}`),
-				ParsedError: &pocketbase.APIError{
+				ParsedError: &APIError{
 					Code:    400,
 					Message: "validation failed",
 					Data:    map[string]any{"title": "required"},
@@ -133,10 +132,10 @@ func TestBatchExecuteParsedError(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	c := pocketbase.NewClient(srv.URL)
+	c := NewClient(srv.URL)
 	req, _ := c.Records.NewCreateRequest("posts", map[string]any{"title": ""})
 
-	res, err := c.Batch.Execute(context.Background(), []*pocketbase.BatchRequest{req})
+	res, err := c.Batch.Execute(context.Background(), []*BatchRequest{req})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -152,16 +151,16 @@ func TestBatchExecuteParsedError(t *testing.T) {
 func TestBatchExecuteForbidden(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusForbidden)
-		_ = json.NewEncoder(w).Encode(pocketbase.APIError{Code: 403, Message: "Batch requests are not allowed."})
+		_ = json.NewEncoder(w).Encode(APIError{Code: 403, Message: "Batch requests are not allowed."})
 	}))
 	defer srv.Close()
 
-	c := pocketbase.NewClient(srv.URL)
-	_, err := c.Batch.Execute(context.Background(), []*pocketbase.BatchRequest{})
+	c := NewClient(srv.URL)
+	_, err := c.Batch.Execute(context.Background(), []*BatchRequest{})
 	if err == nil {
 		t.Fatal("expected error")
 	}
-	apiErr := &pocketbase.APIError{}
+	apiErr := &APIError{}
 	if !errors.As(err, &apiErr) {
 		t.Fatalf("expected APIError, got %T", err)
 	}
@@ -175,7 +174,7 @@ func TestBatchExecuteForbidden(t *testing.T) {
 
 // TestNewUpsertRequestMissingID tests the NewUpsertRequest with a missing ID.
 func TestNewUpsertRequestMissingID(t *testing.T) {
-	c := pocketbase.NewClient("http://example.com")
+	c := NewClient("http://example.com")
 	if _, err := c.Records.NewUpsertRequest("posts", map[string]any{"title": "a"}); err == nil {
 		t.Fatal("expected error for missing id")
 	}

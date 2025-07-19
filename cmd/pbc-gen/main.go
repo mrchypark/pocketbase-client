@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"text/template"
 
 	"github.com/mrchypark/pocketbase-client/internal/generator"
@@ -71,12 +72,22 @@ func main() {
 			// Receive all 3 return values as goType, _, getter.
 			// Comment is currently not used, so ignore with '_'.
 			goType, _, getter := generator.MapPbTypeToGoType(field, !field.Required)
+
+			// 포인터 타입인지 확인하고 기본 타입 추출
+			isPointer := strings.HasPrefix(goType, "*")
+			baseType := goType
+			if isPointer {
+				baseType = strings.TrimPrefix(goType, "*")
+			}
+
 			collectionData.Fields = append(collectionData.Fields, generator.FieldData{
 				JSONName:     field.Name,
 				GoName:       generator.ToPascalCase(field.Name),
 				GoType:       goType,
 				OmitEmpty:    !field.Required,
 				GetterMethod: getter, // Assign value to the newly added GetterMethod field.
+				IsPointer:    isPointer,
+				BaseType:     baseType,
 			})
 		}
 		baseTplData.Collections = append(baseTplData.Collections, collectionData)

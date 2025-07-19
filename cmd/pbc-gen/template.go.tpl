@@ -269,6 +269,16 @@ func (m *{{$collection.StructName}}) {{.GoName}}() {{.GoType}} {
 	return m.{{.GetterMethod}}("{{.JSONName}}")
 }
 
+{{if .IsPointer}}
+// {{.GoName}}ValueOr returns the value of the '{{.JSONName}}' field or the provided default value if nil.
+func (m *{{$collection.StructName}}) {{.GoName}}ValueOr(defaultValue {{.BaseType}}) {{.BaseType}} {
+	if val := m.{{.GoName}}(); val != nil {
+		return *val
+	}
+	return defaultValue
+}
+{{end}}
+
 // Set{{.GoName}} sets the value of the '{{.JSONName}}' field.
 func (m *{{$collection.StructName}}) Set{{.GoName}}(value {{.GoType}}) {
 	m.Set("{{.JSONName}}", value)

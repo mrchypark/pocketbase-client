@@ -29,6 +29,8 @@ type FieldData struct {
 	GoType       string // Go type for the field (e.g., 'bool')
 	OmitEmpty    bool   // Whether to add omitempty tag for optional fields
 	GetterMethod string // Getter method name (e.g., GetString, GetBool)
+	IsPointer    bool   // Whether this field is a pointer type (for ValueOr method generation)
+	BaseType     string // Base type without pointer (e.g., 'string' for '*string')
 }
 
 // EnhancedFieldInfo contains additional information for enhanced code generation.

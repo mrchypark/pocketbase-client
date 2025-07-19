@@ -2,6 +2,7 @@ package generator
 
 import (
 	"os"
+	"strings"
 
 	"github.com/goccy/go-json"
 )
@@ -77,12 +78,23 @@ func BuildTemplateData(schemas []CollectionSchema, packageName string) TemplateD
 				continue
 			}
 
-			goType, _, _ := MapPbTypeToGoType(f, !f.Required)
+			goType, _, getterMethod := MapPbTypeToGoType(f, !f.Required)
+
+			// 포인터 타입인지 확인하고 기본 타입 추출
+			isPointer := strings.HasPrefix(goType, "*")
+			baseType := goType
+			if isPointer {
+				baseType = strings.TrimPrefix(goType, "*")
+			}
+
 			fields = append(fields, FieldData{
-				JSONName:  f.Name,
-				GoName:    ToPascalCase(f.Name),
-				GoType:    goType,
-				OmitEmpty: !f.Required, // Use 'required' field directly
+				JSONName:     f.Name,
+				GoName:       ToPascalCase(f.Name),
+				GoType:       goType,
+				OmitEmpty:    !f.Required, // Use 'required' field directly
+				GetterMethod: getterMethod,
+				IsPointer:    isPointer,
+				BaseType:     baseType,
 			})
 		}
 
