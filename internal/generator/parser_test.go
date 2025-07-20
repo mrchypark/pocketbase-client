@@ -103,10 +103,11 @@ func TestLoadSchema(t *testing.T) {
 	defer os.Remove(testFilePath)
 
 	// Test successful parsing
-	schemas, err := LoadSchema(testFilePath)
+	schemaResult, err := LoadSchema(testFilePath)
 	if err != nil {
 		t.Fatalf("LoadSchema failed: %v", err)
 	}
+	schemas := schemaResult.Schemas
 
 	if len(schemas) != 2 {
 		t.Errorf("Expected 2 schemas, got %d", len(schemas))
@@ -175,7 +176,7 @@ func TestBuildTemplateData(t *testing.T) {
 	}
 
 	pkgName := "testpkg"
-	tplData := BuildTemplateData(schemas, pkgName)
+	tplData := BuildTemplateData(schemas, pkgName, SchemaVersionLatest)
 
 	if tplData.PackageName != pkgName {
 		t.Errorf("Expected package name %q, got %q", pkgName, tplData.PackageName)

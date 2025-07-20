@@ -60,10 +60,11 @@ func TestEndToEndCodeGeneration(t *testing.T) {
 			outputFile := filepath.Join(tempDir, "models.gen.go")
 
 			// 스키마 로드
-			schemas, err := LoadSchema(tt.schemaFile)
+			schemaResult, err := LoadSchema(tt.schemaFile)
 			if err != nil {
 				t.Fatalf("스키마 로드 실패: %v", err)
 			}
+			schemas := schemaResult.Schemas
 
 			// 기본 TemplateData 생성
 			baseTplData := TemplateData{
@@ -183,10 +184,11 @@ func TestGeneratedCodeUsability(t *testing.T) {
 	outputFile := filepath.Join(tempDir, "models.gen.go")
 
 	// 복잡한 스키마로 코드 생성
-	schemas, err := LoadSchema("testdata/complex_schema.json")
+	schemaResult, err := LoadSchema("testdata/complex_schema.json")
 	if err != nil {
 		t.Fatalf("스키마 로드 실패: %v", err)
 	}
+	schemas := schemaResult.Schemas
 
 	// 모든 기능을 활성화하여 코드 생성
 	baseTplData := TemplateData{

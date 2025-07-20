@@ -14,10 +14,11 @@ func BenchmarkLargeSchemaProcessing(b *testing.B) {
 	schemaPath := "testdata/large_schema.json"
 
 	// 스키마 로드 (벤치마크 외부에서 한 번만 수행)
-	schemas, err := LoadSchema(schemaPath)
+	schemaResult, err := LoadSchema(schemaPath)
 	if err != nil {
 		b.Fatalf("대용량 스키마 로드 실패: %v", err)
 	}
+	schemas := schemaResult.Schemas
 
 	b.Logf("로드된 컬렉션 수: %d", len(schemas))
 
@@ -163,10 +164,11 @@ func BenchmarkMemoryUsageBySize(b *testing.B) {
 func TestLargeSchemaGeneration(t *testing.T) {
 	schemaPath := "testdata/large_schema.json"
 
-	schemas, err := LoadSchema(schemaPath)
+	schemaResult, err := LoadSchema(schemaPath)
 	if err != nil {
 		t.Fatalf("대용량 스키마 로드 실패: %v", err)
 	}
+	schemas := schemaResult.Schemas
 
 	start := time.Now()
 

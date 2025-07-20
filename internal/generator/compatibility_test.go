@@ -42,7 +42,7 @@ func TestBackwardCompatibility(t *testing.T) {
 	}
 
 	// 기존 방식으로 TemplateData 생성
-	legacyData := BuildTemplateData(schemas, "models")
+	legacyData := BuildTemplateData(schemas, "models", SchemaVersionLatest)
 
 	// 새로운 방식으로 동일한 데이터 생성 (enhanced 기능 비활성화)
 	enhancedData := EnhancedTemplateData{
@@ -193,7 +193,7 @@ func TestExistingBehaviorPreservation(t *testing.T) {
 	}
 
 	// 기존 방식으로 데이터 생성
-	templateData := BuildTemplateData([]CollectionSchema{schema}, "models")
+	templateData := BuildTemplateData([]CollectionSchema{schema}, "models", SchemaVersionLatest)
 
 	// 컬렉션이 하나만 생성되어야 함
 	if len(templateData.Collections) != 1 {
@@ -248,7 +248,7 @@ func TestSystemCollectionFiltering(t *testing.T) {
 		{Name: "_superusers", System: true},     // 제외되어야 함
 	}
 
-	templateData := BuildTemplateData(schemas, "models")
+	templateData := BuildTemplateData(schemas, "models", SchemaVersionLatest)
 
 	// 현재 구현에서는 _superusers만 제외되므로 3개 컬렉션이 포함됨
 	if len(templateData.Collections) != 3 {
@@ -280,7 +280,7 @@ func TestTemplateCompatibility(t *testing.T) {
 		},
 	}
 
-	templateData := BuildTemplateData(schemas, "testpkg")
+	templateData := BuildTemplateData(schemas, "testpkg", SchemaVersionLatest)
 
 	// 기존 템플릿 형식으로 코드 생성 테스트
 	legacyTemplate := `package {{.PackageName}}
@@ -335,7 +335,7 @@ func TestEnhancedDataBackwardCompatibility(t *testing.T) {
 		},
 	}
 
-	baseData := BuildTemplateData(schemas, "models")
+	baseData := BuildTemplateData(schemas, "models", SchemaVersionLatest)
 
 	// Enhanced 데이터로 래핑 (모든 기능 비활성화)
 	enhancedData := EnhancedTemplateData{
@@ -438,7 +438,7 @@ type Users struct {
 	}
 
 	// Enhanced 기능 활성화
-	baseData := BuildTemplateData(schemas, "models")
+	baseData := BuildTemplateData(schemas, "models", SchemaVersionLatest)
 	enhancedData := EnhancedTemplateData{
 		TemplateData:      baseData,
 		GenerateEnums:     true,

@@ -14,10 +14,11 @@ func BenchmarkCodeGeneration(b *testing.B) {
 	schemaPath := "../../internal/generator/testdata/complex_schema.json"
 
 	// 스키마 로드 (벤치마크 외부에서 한 번만 수행)
-	schemas, err := generator.LoadSchema(schemaPath)
+	schemaResult, err := generator.LoadSchema(schemaPath)
 	if err != nil {
 		b.Fatalf("스키마 로드 실패: %v", err)
 	}
+	schemas := schemaResult.Schemas
 
 	// 템플릿 파싱 (벤치마크 외부에서 한 번만 수행)
 	tpl, err := template.New("models").Parse(templateFile)
@@ -300,10 +301,11 @@ func BenchmarkFileGeneration(b *testing.B) {
 func BenchmarkMemoryUsage(b *testing.B) {
 	schemaPath := "../../internal/generator/testdata/complex_schema.json"
 
-	schemas, err := generator.LoadSchema(schemaPath)
+	schemaResult, err := generator.LoadSchema(schemaPath)
 	if err != nil {
 		b.Fatalf("스키마 로드 실패: %v", err)
 	}
+	schemas := schemaResult.Schemas
 
 	b.ResetTimer()
 	b.ReportAllocs() // 메모리 할당 정보 리포트

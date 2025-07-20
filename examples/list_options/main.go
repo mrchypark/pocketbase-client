@@ -98,7 +98,7 @@ func main() {
 	for _, record := range selectedFieldsResult.Items {
 		// The 'content' field will be empty (zero-value)
 		fmt.Printf("  - Title: %s, Content: '%s', Created: %s\n",
-			record.GetString("title"), record.GetString("content"), record.Created)
+			record.GetString("title"), record.GetString("content"), record.GetString("created"))
 	}
 	fmt.Println()
 

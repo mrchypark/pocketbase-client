@@ -60,7 +60,7 @@ func demonstrateGetAll(ctx context.Context, client *pocketbase.Client) {
 			fmt.Println("...")
 			break
 		}
-		fmt.Printf("  - ID: %s, Created: %s\n", record.ID, record.Created)
+		fmt.Printf("  - ID: %s, Created: %s\n", record.ID, record.GetString("created"))
 	}
 	fmt.Println()
 }
@@ -99,7 +99,7 @@ func demonstrateIterator(ctx context.Context, client *pocketbase.Client) {
 
 		// 처음 5개만 출력
 		if count <= 5 {
-			fmt.Printf("  %d. ID: %s, Created: %s\n", count, record.ID, record.Created)
+			fmt.Printf("  %d. ID: %s, Created: %s\n", count, record.ID, record.GetString("created"))
 		}
 
 		// 예제를 위해 10개만 처리
