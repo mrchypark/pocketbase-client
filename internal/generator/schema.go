@@ -5,6 +5,160 @@ import (
 	"fmt" // Required for error message formatting
 )
 
+// SchemaVersion represents the version of PocketBase schema format
+type SchemaVersion int
+
+const (
+	SchemaVersionUnknown SchemaVersion = iota
+	SchemaVersionLegacy                // schema 키 사용
+	SchemaVersionLatest                // fields 키 사용
+)
+
+// String returns the string representation of SchemaVersion
+func (sv SchemaVersion) String() string {
+	switch sv {
+	case SchemaVersionLegacy:
+		return "legacy"
+	case SchemaVersionLatest:
+		return "latest"
+	default:
+		return "unknown"
+	}
+}
+
+// SchemaVersionError represents errors that occur during schema version detection
+type SchemaVersionError struct {
+	Message string
+	Cause   error
+	Data    []byte
+}
+
+func (e *SchemaVersionError) Error() string {
+	if e.Cause != nil {
+		return fmt.Sprintf("schema version detection failed: %s (cause: %v)", e.Message, e.Cause)
+	}
+	return fmt.Sprintf("schema version detection failed: %s", e.Message)
+}
+
+func (e *SchemaVersionError) Unwrap() error {
+	return e.Cause
+}
+
+// 에러 변수들
+var (
+	ErrUnknownSchemaVersion = &SchemaVersionError{Message: "unknown schema version"}
+	ErrInvalidSchemaFormat  = &SchemaVersionError{Message: "invalid schema format"}
+	ErrMixedSchemaVersions  = &SchemaVersionError{Message: "mixed schema versions detected"}
+)
+
+// SchemaVersionDetector provides functionality to detect PocketBase schema versions
+type SchemaVersionDetector struct{}
+
+// NewSchemaVersionDetector creates a new SchemaVersionDetector instance
+func NewSchemaVersionDetector() *SchemaVersionDetector {
+	return &SchemaVersionDetector{}
+}
+
+// DetectVersion detects the schema version from raw schema data
+func (d *SchemaVersionDetector) DetectVersion(schemaData []byte) (SchemaVersion, error) {
+	if len(schemaData) == 0 {
+		return SchemaVersionUnknown, &SchemaVersionError{
+			Message: "empty schema data",
+			Data:    schemaData,
+		}
+	}
+
+	var collections []map[string]interface{}
+	if err := json.Unmarshal(schemaData, &collections); err != nil {
+		return SchemaVersionUnknown, &SchemaVersionError{
+			Message: "failed to parse schema JSON",
+			Cause:   err,
+			Data:    schemaData,
+		}
+	}
+
+	if len(collections) == 0 {
+		return SchemaVersionUnknown, &SchemaVersionError{
+			Message: "no collections found in schema",
+			Data:    schemaData,
+		}
+	}
+
+	return d.detectSchemaVersion(collections)
+}
+
+// detectSchemaVersion performs the actual version detection logic
+func (d *SchemaVersionDetector) detectSchemaVersion(collections []map[string]interface{}) (SchemaVersion, error) {
+	var detectedVersion SchemaVersion
+	var hasFields, hasSchema bool
+
+	for i, collection := range collections {
+		_, fieldsExists := collection["fields"]
+		_, schemaExists := collection["schema"]
+
+		if fieldsExists && schemaExists {
+			return SchemaVersionUnknown, &SchemaVersionError{
+				Message: fmt.Sprintf("collection at index %d has both 'fields' and 'schema' keys", i),
+			}
+		}
+
+		if !fieldsExists && !schemaExists {
+			return SchemaVersionUnknown, &SchemaVersionError{
+				Message: fmt.Sprintf("collection at index %d has neither 'fields' nor 'schema' key", i),
+			}
+		}
+
+		var currentVersion SchemaVersion
+		if fieldsExists {
+			currentVersion = SchemaVersionLatest
+			hasFields = true
+		} else {
+			currentVersion = SchemaVersionLegacy
+			hasSchema = true
+		}
+
+		// 첫 번째 컬렉션에서 버전 설정
+		if i == 0 {
+			detectedVersion = currentVersion
+		} else if detectedVersion != currentVersion {
+			// 혼합된 버전이 감지된 경우
+			return SchemaVersionUnknown, &SchemaVersionError{
+				Message: fmt.Sprintf("mixed schema versions detected: collection at index %d uses %s format while previous collections use %s format",
+					i, currentVersion.String(), detectedVersion.String()),
+			}
+		}
+	}
+
+	// 추가 검증: 모든 컬렉션이 동일한 버전을 사용하는지 확인
+	if hasFields && hasSchema {
+		return SchemaVersionUnknown, ErrMixedSchemaVersions
+	}
+
+	if detectedVersion == SchemaVersionUnknown {
+		return SchemaVersionUnknown, ErrUnknownSchemaVersion
+	}
+
+	return detectedVersion, nil
+}
+
+// ValidateSchema validates the schema format for the given version
+func (d *SchemaVersionDetector) ValidateSchema(schemaData []byte, expectedVersion SchemaVersion) error {
+	detectedVersion, err := d.DetectVersion(schemaData)
+	if err != nil {
+		return err
+	}
+
+	if detectedVersion != expectedVersion {
+		return &SchemaVersionError{
+			Message: fmt.Sprintf("schema version mismatch: expected %s, got %s",
+				expectedVersion.String(), detectedVersion.String()),
+			Data: schemaData,
+		}
+	}
+
+	return nil
+}
+
 // CollectionSchema represents a PocketBase collection schema with all its metadata.
 // It contains information about the collection structure, rules, and field definitions.
 type CollectionSchema struct {
