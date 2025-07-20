@@ -32,9 +32,10 @@ const (
 	ErrorTypeFileRead   ErrorType = "file_read"
 
 	// Code generation errors
-	ErrorTypeCodeFormat   ErrorType = "code_format"
-	ErrorTypeTypeMapping  ErrorType = "type_mapping"
-	ErrorTypeNameConflict ErrorType = "name_conflict"
+	ErrorTypeCodeFormat     ErrorType = "code_format"
+	ErrorTypeCodeGeneration ErrorType = "code_generation"
+	ErrorTypeTypeMapping    ErrorType = "type_mapping"
+	ErrorTypeNameConflict   ErrorType = "name_conflict"
 
 	// Configuration errors
 	ErrorTypeInvalidConfig ErrorType = "invalid_config"

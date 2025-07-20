@@ -5,12 +5,15 @@ package {{.PackageName}}
 
 import (
 	"context"
-	{{with .FileTypes}}"fmt"{{end}}
+	"fmt"
+	"net/url"
 	"{{.JSONLibrary}}"
 
 	"github.com/mrchypark/pocketbase-client"
 	"github.com/pocketbase/pocketbase/tools/types"
 )
+
+
 
 {{with .Enums}}
 // ==============
@@ -222,7 +225,25 @@ func (f FileReferences) Filter() FileReferences {
 
 // {{$collection.StructName}} represents a record from the '{{$collection.CollectionName}}' collection.
 type {{$collection.StructName}} struct {
-	pocketbase.Record
+	{{- if eq $collection.SchemaVersion 1}}
+	// Legacy schema: BaseModel + BaseDateTime embedding
+	pocketbase.BaseModel
+	pocketbase.BaseDateTime
+	{{- else if eq $collection.SchemaVersion 2}}
+	// Latest schema: BaseModel only
+	pocketbase.BaseModel
+	{{- if $collection.UseTimestamps}}
+	// Explicit timestamp fields (when defined in latest schema)
+	Created *types.DateTime `json:"created,omitempty"`
+	Updated *types.DateTime `json:"updated,omitempty"`
+	{{- end}}
+	{{- else}}
+	// Unknown schema version: fallback to BaseModel only
+	pocketbase.BaseModel
+	{{- end}}
+	{{- range .Fields}}
+	{{.GoName}} {{.GoType}} `json:"{{.JSONName}}"{{if .OmitEmpty}},omitempty{{end}}`
+	{{- end}}
 }
 
 // {{$collection.StructName}}Collection is a collection of {{$collection.StructName}} records.
@@ -233,12 +254,206 @@ type {{$collection.StructName}}Collection struct {
 
 // New{{$collection.StructName}} creates a new instance of {{$collection.StructName}}.
 func New{{$collection.StructName}}() *{{$collection.StructName}} {
-	return &{{$collection.StructName}}{Record: pocketbase.Record{}}
+	{{- if eq $collection.SchemaVersion 1}}
+	// Legacy schema initialization
+	return &{{$collection.StructName}}{
+		BaseModel: pocketbase.BaseModel{
+			ID:             "",
+			CollectionID:   "",
+			CollectionName: "{{$collection.CollectionName}}",
+		},
+		BaseDateTime: pocketbase.BaseDateTime{
+			Created: types.DateTime{},
+			Updated: types.DateTime{},
+		},
+	}
+	{{- else if eq $collection.SchemaVersion 2}}
+	// Latest schema initialization
+	return &{{$collection.StructName}}{
+		BaseModel: pocketbase.BaseModel{
+			ID:             "",
+			CollectionID:   "",
+			CollectionName: "{{$collection.CollectionName}}",
+		},
+		{{- if $collection.UseTimestamps}}
+		Created: nil,
+		Updated: nil,
+		{{- end}}
+	}
+	{{- else}}
+	// Unknown schema version: fallback to BaseModel only
+	return &{{$collection.StructName}}{
+		BaseModel: pocketbase.BaseModel{
+			ID:             "",
+			CollectionID:   "",
+			CollectionName: "{{$collection.CollectionName}}",
+		},
+	}
+	{{- end}}
 }
 
-// To{{$collection.StructName}} creates a To instance of {{$collection.StructName}} with the provided record.
+// To{{$collection.StructName}} creates a {{$collection.StructName}} instance from a pocketbase.Record.
 func To{{$collection.StructName}}(r *pocketbase.Record) *{{$collection.StructName}} {
-	return &{{$collection.StructName}}{Record: *r}
+	{{- if eq $collection.SchemaVersion 1}}
+	// Legacy schema conversion
+	result := &{{$collection.StructName}}{
+		BaseModel: pocketbase.BaseModel{
+			ID:             r.ID,
+			CollectionID:   r.CollectionID,
+			CollectionName: r.CollectionName,
+		},
+		BaseDateTime: pocketbase.BaseDateTime{
+			Created: r.GetDateTime("created"),
+			Updated: r.GetDateTime("updated"),
+		},
+	}
+	{{- range .Fields}}
+	{{- if eq .GetterMethod "GetString"}}
+	result.{{.GoName}} = r.{{.GetterMethod}}("{{.JSONName}}")
+	{{- else if eq .GetterMethod "GetStringPointer"}}
+	result.{{.GoName}} = r.{{.GetterMethod}}("{{.JSONName}}")
+	{{- else if eq .GetterMethod "GetBool"}}
+	result.{{.GoName}} = r.{{.GetterMethod}}("{{.JSONName}}")
+	{{- else if eq .GetterMethod "GetBoolPointer"}}
+	result.{{.GoName}} = r.{{.GetterMethod}}("{{.JSONName}}")
+	{{- else if eq .GetterMethod "GetFloat"}}
+	result.{{.GoName}} = r.{{.GetterMethod}}("{{.JSONName}}")
+	{{- else if eq .GetterMethod "GetFloatPointer"}}
+	result.{{.GoName}} = r.{{.GetterMethod}}("{{.JSONName}}")
+	{{- else if eq .GetterMethod "GetDateTime"}}
+	result.{{.GoName}} = r.{{.GetterMethod}}("{{.JSONName}}")
+	{{- else if eq .GetterMethod "GetDateTimePointer"}}
+	result.{{.GoName}} = r.{{.GetterMethod}}("{{.JSONName}}")
+	{{- else if eq .GetterMethod "GetStringSlice"}}
+	result.{{.GoName}} = r.{{.GetterMethod}}("{{.JSONName}}")
+	{{- else if eq .GetterMethod "GetRawMessage"}}
+	result.{{.GoName}} = r.{{.GetterMethod}}("{{.JSONName}}")
+	{{- else}}
+	// Generic getter for unknown types
+	if val := r.Get("{{.JSONName}}"); val != nil {
+		if typedVal, ok := val.({{.GoType}}); ok {
+			result.{{.GoName}} = typedVal
+		}
+	}
+	{{- end}}
+	{{- end}}
+	return result
+	{{- else if eq $collection.SchemaVersion 2}}
+	// Latest schema conversion
+	result := &{{$collection.StructName}}{
+		BaseModel: pocketbase.BaseModel{
+			ID:             r.ID,
+			CollectionID:   r.CollectionID,
+			CollectionName: r.CollectionName,
+		},
+		{{- if $collection.UseTimestamps}}
+		Created: r.GetDateTimePointer("created"),
+		Updated: r.GetDateTimePointer("updated"),
+		{{- end}}
+	}
+	{{- range .Fields}}
+	{{- if eq .GetterMethod "GetString"}}
+	result.{{.GoName}} = r.{{.GetterMethod}}("{{.JSONName}}")
+	{{- else if eq .GetterMethod "GetStringPointer"}}
+	result.{{.GoName}} = r.{{.GetterMethod}}("{{.JSONName}}")
+	{{- else if eq .GetterMethod "GetBool"}}
+	result.{{.GoName}} = r.{{.GetterMethod}}("{{.JSONName}}")
+	{{- else if eq .GetterMethod "GetBoolPointer"}}
+	result.{{.GoName}} = r.{{.GetterMethod}}("{{.JSONName}}")
+	{{- else if eq .GetterMethod "GetFloat"}}
+	result.{{.GoName}} = r.{{.GetterMethod}}("{{.JSONName}}")
+	{{- else if eq .GetterMethod "GetFloatPointer"}}
+	result.{{.GoName}} = r.{{.GetterMethod}}("{{.JSONName}}")
+	{{- else if eq .GetterMethod "GetDateTime"}}
+	result.{{.GoName}} = r.{{.GetterMethod}}("{{.JSONName}}")
+	{{- else if eq .GetterMethod "GetDateTimePointer"}}
+	result.{{.GoName}} = r.{{.GetterMethod}}("{{.JSONName}}")
+	{{- else if eq .GetterMethod "GetStringSlice"}}
+	result.{{.GoName}} = r.{{.GetterMethod}}("{{.JSONName}}")
+	{{- else if eq .GetterMethod "GetRawMessage"}}
+	result.{{.GoName}} = r.{{.GetterMethod}}("{{.JSONName}}")
+	{{- else}}
+	// Generic getter for unknown types
+	if val := r.Get("{{.JSONName}}"); val != nil {
+		if typedVal, ok := val.({{.GoType}}); ok {
+			result.{{.GoName}} = typedVal
+		}
+	}
+	{{- end}}
+	{{- end}}
+	return result
+	{{- else}}
+	// Unknown schema version: fallback to BaseModel only
+	result := &{{$collection.StructName}}{
+		BaseModel: pocketbase.BaseModel{
+			ID:             r.ID,
+			CollectionID:   r.CollectionID,
+			CollectionName: r.CollectionName,
+		},
+	}
+	{{- range .Fields}}
+	{{- if eq .GetterMethod "GetString"}}
+	result.{{.GoName}} = r.{{.GetterMethod}}("{{.JSONName}}")
+	{{- else if eq .GetterMethod "GetStringPointer"}}
+	result.{{.GoName}} = r.{{.GetterMethod}}("{{.JSONName}}")
+	{{- else if eq .GetterMethod "GetBool"}}
+	result.{{.GoName}} = r.{{.GetterMethod}}("{{.JSONName}}")
+	{{- else if eq .GetterMethod "GetBoolPointer"}}
+	result.{{.GoName}} = r.{{.GetterMethod}}("{{.JSONName}}")
+	{{- else if eq .GetterMethod "GetFloat"}}
+	result.{{.GoName}} = r.{{.GetterMethod}}("{{.JSONName}}")
+	{{- else if eq .GetterMethod "GetFloatPointer"}}
+	result.{{.GoName}} = r.{{.GetterMethod}}("{{.JSONName}}")
+	{{- else if eq .GetterMethod "GetDateTime"}}
+	result.{{.GoName}} = r.{{.GetterMethod}}("{{.JSONName}}")
+	{{- else if eq .GetterMethod "GetDateTimePointer"}}
+	result.{{.GoName}} = r.{{.GetterMethod}}("{{.JSONName}}")
+	{{- else if eq .GetterMethod "GetStringSlice"}}
+	result.{{.GoName}} = r.{{.GetterMethod}}("{{.JSONName}}")
+	{{- else if eq .GetterMethod "GetRawMessage"}}
+	result.{{.GoName}} = r.{{.GetterMethod}}("{{.JSONName}}")
+	{{- else}}
+	// Generic getter for unknown types
+	if val := r.Get("{{.JSONName}}"); val != nil {
+		if typedVal, ok := val.({{.GoType}}); ok {
+			result.{{.GoName}} = typedVal
+		}
+	}
+	{{- end}}
+	{{- end}}
+	return result
+	{{- end}}
+}
+
+// ToRecord converts {{$collection.StructName}} to a pocketbase.Record for API operations.
+func (m *{{$collection.StructName}}) ToRecord() *pocketbase.Record {
+	record := &pocketbase.Record{}
+	record.ID = m.ID
+	record.CollectionID = m.CollectionID
+	record.CollectionName = m.CollectionName
+	
+	{{- if eq $collection.SchemaVersion 1}}
+	// Legacy schema: include timestamp fields
+	record.Set("created", m.Created)
+	record.Set("updated", m.Updated)
+	{{- else if eq $collection.SchemaVersion 2}}
+	{{- if $collection.UseTimestamps}}
+	// Latest schema with explicit timestamps
+	if m.Created != nil {
+		record.Set("created", *m.Created)
+	}
+	if m.Updated != nil {
+		record.Set("updated", *m.Updated)
+	}
+	{{- end}}
+	{{- end}}
+	
+	// Set field data
+	{{- range .Fields}}
+	record.Set("{{.JSONName}}", m.{{.GoName}})
+	{{- end}}
+	
+	return record
 }
 
 
@@ -247,22 +462,108 @@ func To{{$collection.StructName}}(r *pocketbase.Record) *{{$collection.StructNam
 func (m *{{$collection.StructName}}) ToMap() map[string]any {
 	data := make(map[string]any)
     
-	// non-zero, non-empty, and non-nil values will be added to the map.
+	{{- if eq $collection.SchemaVersion 1}}
+	// Legacy schema: include timestamp fields
+	if !m.Created.IsZero() {
+		data["created"] = m.Created
+	}
+	if !m.Updated.IsZero() {
+		data["updated"] = m.Updated
+	}
+	{{- else if eq $collection.SchemaVersion 2}}
+	{{- if $collection.UseTimestamps}}
+	// Latest schema with explicit timestamps
+	if m.Created != nil && !m.Created.IsZero() {
+		data["created"] = *m.Created
+	}
+	if m.Updated != nil && !m.Updated.IsZero() {
+		data["updated"] = *m.Updated
+	}
+	{{- end}}
+	{{- end}}
+	
+	// Field data
 	{{- range .Fields}}
 	{{- if .OmitEmpty}}
-	if val := m.{{.GoName}}(); val != nil {
-		data["{{.JSONName}}"] = val
+	{{- if .IsPointer}}
+	if m.{{.GoName}} != nil {
+		data["{{.JSONName}}"] = m.{{.GoName}}
 	}
 	{{- else}}
+	{{- if eq .GoType "string"}}
+	if m.{{.GoName}} != "" {
+		data["{{.JSONName}}"] = m.{{.GoName}}
+	}
+	{{- else if eq .GoType "bool"}}
+	// Always include boolean fields
+	data["{{.JSONName}}"] = m.{{.GoName}}
+	{{- else if eq .GoType "float64"}}
+	if m.{{.GoName}} != 0 {
+		data["{{.JSONName}}"] = m.{{.GoName}}
+	}
+	{{- else if eq .GoType "[]string"}}
+	if len(m.{{.GoName}}) > 0 {
+		data["{{.JSONName}}"] = m.{{.GoName}}
+	}
+	{{- else}}
+	// Generic zero-value check
+	var zero {{.GoType}}
+	if m.{{.GoName}} != zero {
+		data["{{.JSONName}}"] = m.{{.GoName}}
+	}
+	{{- end}}
+	{{- end}}
+	{{- else}}
 	// For required fields, we always include them.
-	// You can add more complex logic here if needed, e.g., checking for zero values.
-	data["{{.JSONName}}"] = m.{{.GoName}}()
+	data["{{.JSONName}}"] = m.{{.GoName}}
 	{{- end}}
     {{- end}}
 
 	return data
 }
 
+{{- if or (eq $collection.SchemaVersion 1) (eq $collection.SchemaVersion 2)}}
+// For type-safe structs (latest/legacy schema), fields are accessed directly.
+// No getter/setter methods are generated as fields are public.
+
+// GetID returns the ID field value
+func (m *{{$collection.StructName}}) GetID() string {
+	return m.ID
+}
+
+// GetCollectionID returns the CollectionID field value
+func (m *{{$collection.StructName}}) GetCollectionID() string {
+	return m.CollectionID
+}
+
+// GetCollectionName returns the CollectionName field value
+func (m *{{$collection.StructName}}) GetCollectionName() string {
+	return m.CollectionName
+}
+
+{{- if eq $collection.SchemaVersion 1}}
+// GetCreated returns the Created field value (legacy schema)
+func (m *{{$collection.StructName}}) GetCreated() types.DateTime {
+	return m.Created
+}
+
+// GetUpdated returns the Updated field value (legacy schema)
+func (m *{{$collection.StructName}}) GetUpdated() types.DateTime {
+	return m.Updated
+}
+{{- else if and (eq $collection.SchemaVersion 2) $collection.UseTimestamps}}
+// GetCreated returns the Created field value (latest schema with timestamps)
+func (m *{{$collection.StructName}}) GetCreated() *types.DateTime {
+	return m.Created
+}
+
+// GetUpdated returns the Updated field value (latest schema with timestamps)
+func (m *{{$collection.StructName}}) GetUpdated() *types.DateTime {
+	return m.Updated
+}
+{{- end}}
+{{- else}}
+// For unknown schema version, generate getter/setter methods for compatibility
 {{range .Fields}}
 // {{.GoName}} returns the value of the '{{.JSONName}}' field.
 func (m *{{$collection.StructName}}) {{.GoName}}() {{.GoType}} {
@@ -284,6 +585,7 @@ func (m *{{$collection.StructName}}) Set{{.GoName}}(value {{.GoType}}) {
 	m.Set("{{.JSONName}}", value)
 }
 {{end}}
+{{- end}}
 {{end}}
 
 // ==============
@@ -292,29 +594,63 @@ func (m *{{$collection.StructName}}) Set{{.GoName}}(value {{.GoType}}) {
 {{range .Collections}}
 
 // Get{{.StructName}} fetches a single {{.StructName}} record by its ID.
-func Get{{.StructName}}(client pocketbase.RecordServiceAPI, id string, opts *pocketbase.GetOneOptions) (*{{.StructName}}, error) {
-	r, err := client.GetOne(context.Background(), "{{.CollectionName}}", id, opts)
-	if err != nil {
-		return nil, err
+func Get{{.StructName}}(client *pocketbase.Client, id string, opts *pocketbase.GetOneOptions) (*{{.StructName}}, error) {
+	path := fmt.Sprintf("/api/collections/{{.CollectionName}}/records/%s", url.PathEscape(id))
+	q := url.Values{}
+	if opts != nil {
+		if opts.Expand != "" {
+			q.Set("expand", opts.Expand)
+		}
+		if opts.Fields != "" {
+			q.Set("fields", opts.Fields)
+		}
 	}
-	return To{{.StructName}}(r), nil
+	if qs := q.Encode(); qs != "" {
+		path += "?" + qs
+	}
+
+	var record {{.StructName}}
+	if err := client.Send(context.Background(), "GET", path, nil, &record); err != nil {
+		return nil, fmt.Errorf("pocketbase: fetch {{.CollectionName}}: %w", err)
+	}
+	return &record, nil
 }
 
 // Get{{.StructName}}List fetches a list of {{.StructName}} records.
-func Get{{.StructName}}List(client pocketbase.RecordServiceAPI, opts *pocketbase.ListOptions) (*{{.StructName}}Collection, error) {
-	listResult, err := client.GetList(context.Background(), "{{.CollectionName}}", opts)
-	if err != nil {
-		return nil, err
+func Get{{.StructName}}List(client *pocketbase.Client, opts *pocketbase.ListOptions) (*{{.StructName}}Collection, error) {
+	path := "/api/collections/{{.CollectionName}}/records"
+	q := url.Values{}
+	if opts != nil {
+		if opts.Page > 0 {
+			q.Set("page", fmt.Sprintf("%d", opts.Page))
+		}
+		if opts.PerPage > 0 {
+			q.Set("perPage", fmt.Sprintf("%d", opts.PerPage))
+		}
+		if opts.Sort != "" {
+			q.Set("sort", opts.Sort)
+		}
+		if opts.Filter != "" {
+			q.Set("filter", opts.Filter)
+		}
+		if opts.Expand != "" {
+			q.Set("expand", opts.Expand)
+		}
+		if opts.Fields != "" {
+			q.Set("fields", opts.Fields)
+		}
+		if opts.SkipTotal {
+			q.Set("skipTotal", "1")
+		}
+	}
+	if qs := q.Encode(); qs != "" {
+		path += "?" + qs
 	}
 
-	typedItems := make([]*{{.StructName}}, len(listResult.Items))
-	for i, r := range listResult.Items {
-		typedItems[i] = To{{.StructName}}(r)
+	var result {{.StructName}}Collection
+	if err := client.Send(context.Background(), "GET", path, nil, &result); err != nil {
+		return nil, fmt.Errorf("pocketbase: fetch {{.CollectionName}} list: %w", err)
 	}
-
-	return &{{.StructName}}Collection{
-		ListResult: listResult,
-		Items:      typedItems,
-	}, nil
+	return &result, nil
 }
 {{end}}

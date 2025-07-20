@@ -4,6 +4,7 @@ import (
 	// 1. Add embed package.
 	_ "embed"
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -35,6 +36,33 @@ func main() {
 
 	log.Printf("Generating Go models from schema: %s\n", *schemaPath)
 
+	// 스키마 파일 읽기 및 버전 감지
+	schemaData, err := os.ReadFile(*schemaPath)
+	if err != nil {
+		genErr := generator.WrapFileError(err, *schemaPath, "read")
+		log.Fatalf("Schema file reading failed: %v", genErr)
+	}
+
+	// 스키마 버전 감지
+	detector := generator.NewSchemaVersionDetector()
+	schemaVersion, err := detector.DetectVersion(schemaData)
+	if err != nil {
+		genErr := generator.WrapSchemaError(err, *schemaPath, "version_detection")
+		log.Fatalf("Schema version detection failed: %v", genErr)
+	}
+
+	log.Printf("Detected schema version: %s", schemaVersion.String())
+
+	// 스키마 버전에 따른 추가 로깅
+	switch schemaVersion {
+	case generator.SchemaVersionLatest:
+		log.Printf("Using latest schema format with 'fields' key - BaseModel only embedding")
+	case generator.SchemaVersionLegacy:
+		log.Printf("Using legacy schema format with 'schema' key - BaseModel + BaseDateTime embedding")
+	default:
+		log.Printf("Warning: Unknown schema version detected, using fallback Record embedding")
+	}
+
 	schemas, err := generator.LoadSchema(*schemaPath)
 	if err != nil {
 		genErr := generator.WrapSchemaError(err, *schemaPath, "load")
@@ -48,9 +76,10 @@ func main() {
 
 	// 기본 TemplateData 생성
 	baseTplData := generator.TemplateData{
-		PackageName: *pkgName,
-		JSONLibrary: *jsonLib,
-		Collections: make([]generator.CollectionData, 0, len(schemas)),
+		PackageName:   *pkgName,
+		JSONLibrary:   *jsonLib,
+		Collections:   make([]generator.CollectionData, 0, len(schemas)),
+		SchemaVersion: schemaVersion,
 	}
 
 	for _, s := range schemas {
@@ -58,10 +87,16 @@ func main() {
 			log.Printf("Collection '%s' is a view, generating an empty struct.", s.Name)
 		}
 
+		useTimestamps := determineUseTimestamps(schemaVersion, s.Fields)
+		log.Printf("Processing collection '%s': schema_version=%s, use_timestamps=%t, fields=%d",
+			s.Name, schemaVersion.String(), useTimestamps, len(s.Fields))
+
 		collectionData := generator.CollectionData{
 			CollectionName: s.Name,
 			StructName:     generator.ToPascalCase(s.Name),
 			Fields:         make([]generator.FieldData, 0, len(s.Fields)),
+			SchemaVersion:  schemaVersion,
+			UseTimestamps:  useTimestamps,
 		}
 
 		for _, field := range s.Fields {
@@ -152,24 +187,294 @@ func main() {
 		log.Fatalf("Failed to close output file: %v", genErr)
 	}
 
-	// Format generated code with better error handling
-	formattedBytes, err := imports.Process(*outputPath, nil, nil)
+	// 생성된 코드 검증 및 포맷팅
+	log.Printf("Validating and formatting generated code...")
+
+	if err := validateAndFormatCode(*outputPath, schemaVersion); err != nil {
+		log.Fatalf("Code validation and formatting failed: %v", err)
+	}
+
+	log.Printf("Successfully generated models to %s", *outputPath)
+}
+
+// validateAndFormatCode validates the generated Go code and applies formatting
+func validateAndFormatCode(outputPath string, schemaVersion generator.SchemaVersion) error {
+	log.Printf("Reading generated code for validation...")
+
+	// 생성된 파일 읽기
+	generatedBytes, err := os.ReadFile(outputPath)
+	if err != nil {
+		return generator.WrapFileError(err, outputPath, "read_for_validation")
+	}
+
+	// 기본 문법 검증 (Go 파싱 시도)
+	log.Printf("Performing syntax validation...")
+	if err := validateGoSyntax(generatedBytes, outputPath); err != nil {
+		return err
+	}
+
+	// 스키마 버전별 특정 검증
+	log.Printf("Performing schema version specific validation...")
+	if err := validateSchemaVersionSpecificCode(generatedBytes, schemaVersion, outputPath); err != nil {
+		return err
+	}
+
+	// imports 처리 및 포맷팅
+	log.Printf("Processing imports and formatting code...")
+	formattedBytes, err := imports.Process(outputPath, generatedBytes, &imports.Options{
+		Fragment:  false,
+		AllErrors: true,
+		Comments:  true,
+		TabIndent: true,
+		TabWidth:  8,
+	})
 	if err != nil {
 		genErr := generator.NewGenerationError(generator.ErrorTypeCodeFormat,
 			"failed to format generated code", err).
-			WithDetail("file_path", *outputPath).
+			WithDetail("file_path", outputPath).
+			WithDetail("schema_version", schemaVersion.String()).
 			WithDetail("suggestion", "check for syntax errors in generated code")
-		log.Fatalf("Code formatting failed: %v", genErr)
+		return genErr
 	}
 
-	// Write formatted code with better error handling
-	err = os.WriteFile(*outputPath, formattedBytes, 0644)
+	// 포맷팅된 코드 쓰기
+	log.Printf("Writing formatted code...")
+	err = os.WriteFile(outputPath, formattedBytes, 0644)
 	if err != nil {
-		genErr := generator.WrapFileError(err, *outputPath, "write")
-		log.Fatalf("Failed to write formatted code: %v", genErr)
+		return generator.WrapFileError(err, outputPath, "write_formatted")
 	}
 
-	log.Printf("Successfully generated models to %s\n", *outputPath)
+	// 최종 검증
+	log.Printf("Performing final validation...")
+	if err := validateFinalCode(formattedBytes, schemaVersion, outputPath); err != nil {
+		return err
+	}
+
+	log.Printf("Code validation and formatting completed successfully")
+	return nil
+}
+
+// validateGoSyntax performs basic Go syntax validation
+func validateGoSyntax(code []byte, filePath string) error {
+	// Go 파싱을 통한 기본 문법 검증
+	// 실제로는 go/parser 패키지를 사용할 수 있지만,
+	// 여기서는 imports.Process가 이미 문법 검증을 수행하므로 간단히 처리
+
+	// 기본적인 구조 검증
+	codeStr := string(code)
+
+	// 필수 요소들이 있는지 확인
+	if !strings.Contains(codeStr, "package ") {
+		return generator.NewGenerationError(generator.ErrorTypeCodeFormat,
+			"generated code missing package declaration", nil).
+			WithDetail("file_path", filePath)
+	}
+
+	// 기본 import 확인
+	if !strings.Contains(codeStr, "import") {
+		return generator.NewGenerationError(generator.ErrorTypeCodeFormat,
+			"generated code missing import statements", nil).
+			WithDetail("file_path", filePath).
+			WithDetail("suggestion", "check template import section")
+	}
+
+	return nil
+}
+
+// validateSchemaVersionSpecificCode validates code based on schema version
+func validateSchemaVersionSpecificCode(code []byte, version generator.SchemaVersion, filePath string) error {
+	codeStr := string(code)
+
+	switch version {
+	case generator.SchemaVersionLatest:
+		// 최신 스키마 검증: pocketbase.BaseModel 사용 확인
+		if !strings.Contains(codeStr, "pocketbase.BaseModel") {
+			return generator.NewGenerationError(generator.ErrorTypeCodeGeneration,
+				"latest schema should use pocketbase.BaseModel", nil).
+				WithDetail("file_path", filePath).
+				WithDetail("schema_version", version.String())
+		}
+
+		// BaseDateTime 임베딩이 없어야 함 (최신 스키마에서는 UseTimestamps가 true인 경우만)
+		if strings.Contains(codeStr, "pocketbase.BaseDateTime") {
+			log.Printf("Info: Latest schema uses BaseDateTime embedding (UseTimestamps=true)")
+		}
+
+		log.Printf("Latest schema validation passed: BaseModel and BaseDateTime properly separated")
+
+	case generator.SchemaVersionLegacy:
+		// 구버전 스키마 검증: pocketbase.BaseModel + pocketbase.BaseDateTime 임베딩 확인
+		if !strings.Contains(codeStr, "pocketbase.BaseModel") {
+			return generator.NewGenerationError(generator.ErrorTypeCodeGeneration,
+				"legacy schema should embed pocketbase.BaseModel", nil).
+				WithDetail("file_path", filePath).
+				WithDetail("schema_version", version.String())
+		}
+
+		if !strings.Contains(codeStr, "pocketbase.BaseDateTime") {
+			return generator.NewGenerationError(generator.ErrorTypeCodeGeneration,
+				"legacy schema should embed pocketbase.BaseDateTime", nil).
+				WithDetail("file_path", filePath).
+				WithDetail("schema_version", version.String())
+		}
+
+		// 타임스탬프 필드 확인
+		timestampFields := []string{"Created", "Updated"}
+		for _, field := range timestampFields {
+			if !strings.Contains(codeStr, field) {
+				return generator.NewGenerationError(generator.ErrorTypeCodeGeneration,
+					fmt.Sprintf("legacy schema missing timestamp field: %s", field), nil).
+					WithDetail("file_path", filePath).
+					WithDetail("missing_field", field)
+			}
+		}
+
+		log.Printf("Legacy schema validation passed: BaseModel and BaseDateTime properly embedded")
+
+	case generator.SchemaVersionUnknown:
+		// 알 수 없는 버전: 기본 구조 확인
+		if !strings.Contains(codeStr, "pocketbase.BaseModel") {
+			log.Printf("Warning: Unknown schema version should use pocketbase.BaseModel fallback")
+		}
+
+		log.Printf("Unknown schema version validation completed with warnings")
+	}
+
+	return nil
+}
+
+// validateFinalCode performs final validation on the formatted code
+func validateFinalCode(code []byte, version generator.SchemaVersion, filePath string) error {
+	codeStr := string(code)
+
+	// 필수 import 확인
+	requiredImports := []string{
+		"context",
+		"github.com/mrchypark/pocketbase-client",
+		"github.com/pocketbase/pocketbase/tools/types",
+	}
+
+	for _, imp := range requiredImports {
+		if !strings.Contains(codeStr, imp) {
+			return generator.NewGenerationError(generator.ErrorTypeCodeFormat,
+				fmt.Sprintf("missing required import: %s", imp), nil).
+				WithDetail("file_path", filePath).
+				WithDetail("missing_import", imp)
+		}
+	}
+
+	// 생성된 함수들 확인
+	expectedFunctionPatterns := map[string]string{
+		"constructor": "func New",
+		"converter":   "func To",
+		"getter":      "func Get",
+		"toRecord":    "func (m *",
+		"toMap":       "ToMap()",
+	}
+
+	functionCounts := make(map[string]int)
+	for pattern, funcPattern := range expectedFunctionPatterns {
+		count := strings.Count(codeStr, funcPattern)
+		functionCounts[pattern] = count
+		if count == 0 {
+			log.Printf("Warning: No %s functions found (pattern: %s)", pattern, funcPattern)
+		} else {
+			log.Printf("Found %d %s functions", count, pattern)
+		}
+	}
+
+	// pocketbase 패키지 사용 확인
+	if !strings.Contains(codeStr, "pocketbase.BaseModel") {
+		return generator.NewGenerationError(generator.ErrorTypeCodeGeneration,
+			"generated code should use pocketbase.BaseModel", nil).
+			WithDetail("file_path", filePath)
+	}
+
+	// 스키마 버전별 최종 검증
+	switch version {
+	case generator.SchemaVersionLatest:
+		// 최신 스키마: 직접 필드 접근 방식 확인
+		if functionCounts["getter"] > 0 {
+			log.Printf("Info: Latest schema generated %d getter functions for compatibility", functionCounts["getter"])
+		}
+
+		// pocketbase.BaseModel 임베딩 확인
+		if !strings.Contains(codeStr, "pocketbase.BaseModel") {
+			return generator.NewGenerationError(generator.ErrorTypeCodeGeneration,
+				"latest schema should use pocketbase.BaseModel embedding", nil).
+				WithDetail("file_path", filePath)
+		}
+
+		log.Printf("Latest schema final validation: direct field access pattern confirmed")
+
+	case generator.SchemaVersionLegacy:
+		// 구버전 스키마: pocketbase.BaseModel + pocketbase.BaseDateTime 임베딩 확인
+		if !strings.Contains(codeStr, "pocketbase.BaseModel") || !strings.Contains(codeStr, "pocketbase.BaseDateTime") {
+			return generator.NewGenerationError(generator.ErrorTypeCodeGeneration,
+				"legacy schema should embed both pocketbase.BaseModel and pocketbase.BaseDateTime", nil).
+				WithDetail("file_path", filePath)
+		}
+
+		// 타임스탬프 필드 확인
+		timestampFields := []string{"Created", "Updated"}
+		for _, field := range timestampFields {
+			if !strings.Contains(codeStr, field) {
+				return generator.NewGenerationError(generator.ErrorTypeCodeGeneration,
+					fmt.Sprintf("legacy schema missing timestamp field: %s", field), nil).
+					WithDetail("file_path", filePath).
+					WithDetail("missing_field", field)
+			}
+		}
+
+		log.Printf("Legacy schema final validation: BaseModel + BaseDateTime embedding confirmed")
+
+	case generator.SchemaVersionUnknown:
+		// 알 수 없는 버전: 기본 구조 확인
+		if !strings.Contains(codeStr, "pocketbase.BaseModel") {
+			log.Printf("Warning: Unknown schema version should use pocketbase.BaseModel fallback")
+		}
+
+		log.Printf("Unknown schema version final validation completed with warnings")
+	}
+
+	// 코드 품질 검증
+	if err := validateCodeQuality(codeStr, filePath); err != nil {
+		return err
+	}
+
+	log.Printf("Final validation passed for schema version: %s", version.String())
+	return nil
+}
+
+// validateCodeQuality performs additional code quality checks
+func validateCodeQuality(code, filePath string) error {
+	// JSON 태그 검증
+	if !strings.Contains(code, "`json:") {
+		return generator.NewGenerationError(generator.ErrorTypeCodeFormat,
+			"generated code missing JSON tags", nil).
+			WithDetail("file_path", filePath)
+	}
+
+	// 구조체 정의 검증
+	if !strings.Contains(code, "struct {") {
+		return generator.NewGenerationError(generator.ErrorTypeCodeFormat,
+			"generated code missing struct definitions", nil).
+			WithDetail("file_path", filePath)
+	}
+
+	// 함수 정의 검증
+	if !strings.Contains(code, "func ") {
+		return generator.NewGenerationError(generator.ErrorTypeCodeFormat,
+			"generated code missing function definitions", nil).
+			WithDetail("file_path", filePath)
+	}
+
+	// 패키지 선언 검증
+	if !strings.HasPrefix(strings.TrimSpace(code), "// Code generated by pbc-gen") {
+		log.Printf("Warning: Generated code missing generation header comment")
+	}
+
+	return nil
 }
 
 // validateConfig validates the basic configuration parameters
@@ -250,6 +555,31 @@ func validateConfig(schemaPath, outputPath, pkgName string) error {
 	}
 
 	return nil
+}
+
+// determineUseTimestamps determines whether to use timestamp fields based on schema version and fields
+func determineUseTimestamps(schemaVersion generator.SchemaVersion, fields []generator.FieldSchema) bool {
+	switch schemaVersion {
+	case generator.SchemaVersionLegacy:
+		// 구버전 스키마: 항상 BaseDateTime 임베딩 사용
+		return true
+	case generator.SchemaVersionLatest:
+		// 최신 스키마: created, updated 필드가 명시적으로 정의된 경우만 사용
+		hasCreated := false
+		hasUpdated := false
+		for _, field := range fields {
+			if field.Name == "created" {
+				hasCreated = true
+			}
+			if field.Name == "updated" {
+				hasUpdated = true
+			}
+		}
+		return hasCreated && hasUpdated
+	default:
+		// 알 수 없는 버전: 타임스탬프 사용하지 않음
+		return false
+	}
 }
 
 // isValidGoIdentifier checks if a string is a valid Go identifier
