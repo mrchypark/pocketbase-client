@@ -366,9 +366,8 @@ func validateFinalCode(code []byte, version generator.SchemaVersion, filePath st
 	// 생성된 함수들 확인
 	expectedFunctionPatterns := map[string]string{
 		"constructor": "func New",
-		"converter":   "func To",
+		"service":     "Service struct",
 		"getter":      "func Get",
-		"toRecord":    "func (m *",
 		"toMap":       "ToMap()",
 	}
 

@@ -292,169 +292,9 @@ func New{{$collection.StructName}}() *{{$collection.StructName}} {
 	{{- end}}
 }
 
-// To{{$collection.StructName}} creates a {{$collection.StructName}} instance from a pocketbase.Record.
-func To{{$collection.StructName}}(r *pocketbase.Record) *{{$collection.StructName}} {
-	{{- if eq $collection.SchemaVersion 1}}
-	// Legacy schema conversion
-	result := &{{$collection.StructName}}{
-		BaseModel: pocketbase.BaseModel{
-			ID:             r.ID,
-			CollectionID:   r.CollectionID,
-			CollectionName: r.CollectionName,
-		},
-		BaseDateTime: pocketbase.BaseDateTime{
-			Created: r.GetDateTime("created"),
-			Updated: r.GetDateTime("updated"),
-		},
-	}
-	{{- range .Fields}}
-	{{- if eq .GetterMethod "GetString"}}
-	result.{{.GoName}} = r.{{.GetterMethod}}("{{.JSONName}}")
-	{{- else if eq .GetterMethod "GetStringPointer"}}
-	result.{{.GoName}} = r.{{.GetterMethod}}("{{.JSONName}}")
-	{{- else if eq .GetterMethod "GetBool"}}
-	result.{{.GoName}} = r.{{.GetterMethod}}("{{.JSONName}}")
-	{{- else if eq .GetterMethod "GetBoolPointer"}}
-	result.{{.GoName}} = r.{{.GetterMethod}}("{{.JSONName}}")
-	{{- else if eq .GetterMethod "GetFloat"}}
-	result.{{.GoName}} = r.{{.GetterMethod}}("{{.JSONName}}")
-	{{- else if eq .GetterMethod "GetFloatPointer"}}
-	result.{{.GoName}} = r.{{.GetterMethod}}("{{.JSONName}}")
-	{{- else if eq .GetterMethod "GetDateTime"}}
-	result.{{.GoName}} = r.{{.GetterMethod}}("{{.JSONName}}")
-	{{- else if eq .GetterMethod "GetDateTimePointer"}}
-	result.{{.GoName}} = r.{{.GetterMethod}}("{{.JSONName}}")
-	{{- else if eq .GetterMethod "GetStringSlice"}}
-	result.{{.GoName}} = r.{{.GetterMethod}}("{{.JSONName}}")
-	{{- else if eq .GetterMethod "GetRawMessage"}}
-	result.{{.GoName}} = r.{{.GetterMethod}}("{{.JSONName}}")
-	{{- else}}
-	// Generic getter for unknown types
-	if val := r.Get("{{.JSONName}}"); val != nil {
-		if typedVal, ok := val.({{.GoType}}); ok {
-			result.{{.GoName}} = typedVal
-		}
-	}
-	{{- end}}
-	{{- end}}
-	return result
-	{{- else if eq $collection.SchemaVersion 2}}
-	// Latest schema conversion
-	result := &{{$collection.StructName}}{
-		BaseModel: pocketbase.BaseModel{
-			ID:             r.ID,
-			CollectionID:   r.CollectionID,
-			CollectionName: r.CollectionName,
-		},
-		{{- if $collection.UseTimestamps}}
-		Created: r.GetDateTimePointer("created"),
-		Updated: r.GetDateTimePointer("updated"),
-		{{- end}}
-	}
-	{{- range .Fields}}
-	{{- if eq .GetterMethod "GetString"}}
-	result.{{.GoName}} = r.{{.GetterMethod}}("{{.JSONName}}")
-	{{- else if eq .GetterMethod "GetStringPointer"}}
-	result.{{.GoName}} = r.{{.GetterMethod}}("{{.JSONName}}")
-	{{- else if eq .GetterMethod "GetBool"}}
-	result.{{.GoName}} = r.{{.GetterMethod}}("{{.JSONName}}")
-	{{- else if eq .GetterMethod "GetBoolPointer"}}
-	result.{{.GoName}} = r.{{.GetterMethod}}("{{.JSONName}}")
-	{{- else if eq .GetterMethod "GetFloat"}}
-	result.{{.GoName}} = r.{{.GetterMethod}}("{{.JSONName}}")
-	{{- else if eq .GetterMethod "GetFloatPointer"}}
-	result.{{.GoName}} = r.{{.GetterMethod}}("{{.JSONName}}")
-	{{- else if eq .GetterMethod "GetDateTime"}}
-	result.{{.GoName}} = r.{{.GetterMethod}}("{{.JSONName}}")
-	{{- else if eq .GetterMethod "GetDateTimePointer"}}
-	result.{{.GoName}} = r.{{.GetterMethod}}("{{.JSONName}}")
-	{{- else if eq .GetterMethod "GetStringSlice"}}
-	result.{{.GoName}} = r.{{.GetterMethod}}("{{.JSONName}}")
-	{{- else if eq .GetterMethod "GetRawMessage"}}
-	result.{{.GoName}} = r.{{.GetterMethod}}("{{.JSONName}}")
-	{{- else}}
-	// Generic getter for unknown types
-	if val := r.Get("{{.JSONName}}"); val != nil {
-		if typedVal, ok := val.({{.GoType}}); ok {
-			result.{{.GoName}} = typedVal
-		}
-	}
-	{{- end}}
-	{{- end}}
-	return result
-	{{- else}}
-	// Unknown schema version: fallback to BaseModel only
-	result := &{{$collection.StructName}}{
-		BaseModel: pocketbase.BaseModel{
-			ID:             r.ID,
-			CollectionID:   r.CollectionID,
-			CollectionName: r.CollectionName,
-		},
-	}
-	{{- range .Fields}}
-	{{- if eq .GetterMethod "GetString"}}
-	result.{{.GoName}} = r.{{.GetterMethod}}("{{.JSONName}}")
-	{{- else if eq .GetterMethod "GetStringPointer"}}
-	result.{{.GoName}} = r.{{.GetterMethod}}("{{.JSONName}}")
-	{{- else if eq .GetterMethod "GetBool"}}
-	result.{{.GoName}} = r.{{.GetterMethod}}("{{.JSONName}}")
-	{{- else if eq .GetterMethod "GetBoolPointer"}}
-	result.{{.GoName}} = r.{{.GetterMethod}}("{{.JSONName}}")
-	{{- else if eq .GetterMethod "GetFloat"}}
-	result.{{.GoName}} = r.{{.GetterMethod}}("{{.JSONName}}")
-	{{- else if eq .GetterMethod "GetFloatPointer"}}
-	result.{{.GoName}} = r.{{.GetterMethod}}("{{.JSONName}}")
-	{{- else if eq .GetterMethod "GetDateTime"}}
-	result.{{.GoName}} = r.{{.GetterMethod}}("{{.JSONName}}")
-	{{- else if eq .GetterMethod "GetDateTimePointer"}}
-	result.{{.GoName}} = r.{{.GetterMethod}}("{{.JSONName}}")
-	{{- else if eq .GetterMethod "GetStringSlice"}}
-	result.{{.GoName}} = r.{{.GetterMethod}}("{{.JSONName}}")
-	{{- else if eq .GetterMethod "GetRawMessage"}}
-	result.{{.GoName}} = r.{{.GetterMethod}}("{{.JSONName}}")
-	{{- else}}
-	// Generic getter for unknown types
-	if val := r.Get("{{.JSONName}}"); val != nil {
-		if typedVal, ok := val.({{.GoType}}); ok {
-			result.{{.GoName}} = typedVal
-		}
-	}
-	{{- end}}
-	{{- end}}
-	return result
-	{{- end}}
-}
 
-// ToRecord converts {{$collection.StructName}} to a pocketbase.Record for API operations.
-func (m *{{$collection.StructName}}) ToRecord() *pocketbase.Record {
-	record := &pocketbase.Record{}
-	record.ID = m.ID
-	record.CollectionID = m.CollectionID
-	record.CollectionName = m.CollectionName
-	
-	{{- if eq $collection.SchemaVersion 1}}
-	// Legacy schema: include timestamp fields
-	record.Set("created", m.Created)
-	record.Set("updated", m.Updated)
-	{{- else if eq $collection.SchemaVersion 2}}
-	{{- if $collection.UseTimestamps}}
-	// Latest schema with explicit timestamps
-	if m.Created != nil {
-		record.Set("created", *m.Created)
-	}
-	if m.Updated != nil {
-		record.Set("updated", *m.Updated)
-	}
-	{{- end}}
-	{{- end}}
-	
-	// Set field data
-	{{- range .Fields}}
-	record.Set("{{.JSONName}}", m.{{.GoName}})
-	{{- end}}
-	
-	return record
-}
+
+
 
 
 // ToMap converts the struct to a map[string]any for creating/updating records.
@@ -589,13 +429,24 @@ func (m *{{$collection.StructName}}) Set{{.GoName}}(value {{.GoType}}) {
 {{end}}
 
 // ==============
-//  Typed Helpers
+//  Type-Safe Services
 // ==============
 {{range .Collections}}
+{{$collection := .}}
 
-// Get{{.StructName}} fetches a single {{.StructName}} record by its ID.
-func Get{{.StructName}}(client *pocketbase.Client, id string, opts *pocketbase.GetOneOptions) (*{{.StructName}}, error) {
-	path := fmt.Sprintf("/api/collections/{{.CollectionName}}/records/%s", url.PathEscape(id))
+// {{$collection.StructName}}Service provides type-safe operations for {{$collection.CollectionName}} collection.
+type {{$collection.StructName}}Service struct {
+	client *pocketbase.Client
+}
+
+// New{{$collection.StructName}}Service creates a new {{$collection.StructName}}Service.
+func New{{$collection.StructName}}Service(client *pocketbase.Client) *{{$collection.StructName}}Service {
+	return &{{$collection.StructName}}Service{client: client}
+}
+
+// GetOne fetches a single {{$collection.StructName}} record by its ID.
+func (s *{{$collection.StructName}}Service) GetOne(ctx context.Context, id string, opts *pocketbase.GetOneOptions) (*{{$collection.StructName}}, error) {
+	path := fmt.Sprintf("/api/collections/{{$collection.CollectionName}}/records/%s", url.PathEscape(id))
 	q := url.Values{}
 	if opts != nil {
 		if opts.Expand != "" {
@@ -609,16 +460,16 @@ func Get{{.StructName}}(client *pocketbase.Client, id string, opts *pocketbase.G
 		path += "?" + qs
 	}
 
-	var record {{.StructName}}
-	if err := client.Send(context.Background(), "GET", path, nil, &record); err != nil {
-		return nil, fmt.Errorf("pocketbase: fetch {{.CollectionName}}: %w", err)
+	var record {{$collection.StructName}}
+	if err := s.client.Send(ctx, "GET", path, nil, &record); err != nil {
+		return nil, fmt.Errorf("pocketbase: fetch {{$collection.CollectionName}}: %w", err)
 	}
 	return &record, nil
 }
 
-// Get{{.StructName}}List fetches a list of {{.StructName}} records.
-func Get{{.StructName}}List(client *pocketbase.Client, opts *pocketbase.ListOptions) (*{{.StructName}}Collection, error) {
-	path := "/api/collections/{{.CollectionName}}/records"
+// GetList fetches a list of {{$collection.StructName}} records.
+func (s *{{$collection.StructName}}Service) GetList(ctx context.Context, opts *pocketbase.ListOptions) (*{{$collection.StructName}}Collection, error) {
+	path := "/api/collections/{{$collection.CollectionName}}/records"
 	q := url.Values{}
 	if opts != nil {
 		if opts.Page > 0 {
@@ -647,10 +498,87 @@ func Get{{.StructName}}List(client *pocketbase.Client, opts *pocketbase.ListOpti
 		path += "?" + qs
 	}
 
-	var result {{.StructName}}Collection
-	if err := client.Send(context.Background(), "GET", path, nil, &result); err != nil {
-		return nil, fmt.Errorf("pocketbase: fetch {{.CollectionName}} list: %w", err)
+	var result {{$collection.StructName}}Collection
+	if err := s.client.Send(ctx, "GET", path, nil, &result); err != nil {
+		return nil, fmt.Errorf("pocketbase: fetch {{$collection.CollectionName}} list: %w", err)
 	}
 	return &result, nil
 }
+
+// Create creates a new {{$collection.StructName}} record.
+func (s *{{$collection.StructName}}Service) Create(ctx context.Context, record *{{$collection.StructName}}, opts *pocketbase.WriteOptions) (*{{$collection.StructName}}, error) {
+	path := "/api/collections/{{$collection.CollectionName}}/records"
+	q := url.Values{}
+	if opts != nil {
+		if opts.Expand != "" {
+			q.Set("expand", opts.Expand)
+		}
+		if opts.Fields != "" {
+			q.Set("fields", opts.Fields)
+		}
+	}
+	if qs := q.Encode(); qs != "" {
+		path += "?" + qs
+	}
+
+	var result {{$collection.StructName}}
+	if err := s.client.Send(ctx, "POST", path, record, &result); err != nil {
+		return nil, fmt.Errorf("pocketbase: create {{$collection.CollectionName}}: %w", err)
+	}
+	return &result, nil
+}
+
+// Update updates an existing {{$collection.StructName}} record.
+func (s *{{$collection.StructName}}Service) Update(ctx context.Context, id string, record *{{$collection.StructName}}, opts *pocketbase.WriteOptions) (*{{$collection.StructName}}, error) {
+	path := fmt.Sprintf("/api/collections/{{$collection.CollectionName}}/records/%s", url.PathEscape(id))
+	q := url.Values{}
+	if opts != nil {
+		if opts.Expand != "" {
+			q.Set("expand", opts.Expand)
+		}
+		if opts.Fields != "" {
+			q.Set("fields", opts.Fields)
+		}
+	}
+	if qs := q.Encode(); qs != "" {
+		path += "?" + qs
+	}
+
+	var result {{$collection.StructName}}
+	if err := s.client.Send(ctx, "PATCH", path, record, &result); err != nil {
+		return nil, fmt.Errorf("pocketbase: update {{$collection.CollectionName}}: %w", err)
+	}
+	return &result, nil
+}
+
+// Delete deletes a {{$collection.StructName}} record by its ID.
+func (s *{{$collection.StructName}}Service) Delete(ctx context.Context, id string) error {
+	path := fmt.Sprintf("/api/collections/{{$collection.CollectionName}}/records/%s", url.PathEscape(id))
+	if err := s.client.Send(ctx, "DELETE", path, nil, nil); err != nil {
+		return fmt.Errorf("pocketbase: delete {{$collection.CollectionName}}: %w", err)
+	}
+	return nil
+}
+
+{{end}}
+
+// ==============
+//  Convenience Functions (Backward Compatibility)
+// ==============
+{{range .Collections}}
+
+// Get{{.StructName}} fetches a single {{.StructName}} record by its ID.
+// Deprecated: Use {{.StructName}}Service.GetOne instead.
+func Get{{.StructName}}(client *pocketbase.Client, id string, opts *pocketbase.GetOneOptions) (*{{.StructName}}, error) {
+	service := New{{.StructName}}Service(client)
+	return service.GetOne(context.Background(), id, opts)
+}
+
+// Get{{.StructName}}List fetches a list of {{.StructName}} records.
+// Deprecated: Use {{.StructName}}Service.GetList instead.
+func Get{{.StructName}}List(client *pocketbase.Client, opts *pocketbase.ListOptions) (*{{.StructName}}Collection, error) {
+	service := New{{.StructName}}Service(client)
+	return service.GetList(context.Background(), opts)
+}
+
 {{end}}
