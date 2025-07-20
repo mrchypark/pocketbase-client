@@ -1,0 +1,98 @@
+[
+	{
+		"id": "users_collection",
+		"name": "users",
+		"type": "base",
+		"system": false,
+		"schema": [
+			{
+				"id": "name_field",
+				"name": "name",
+				"type": "text",
+				"required": true,
+				"system": false,
+				"options": {}
+			},
+			{
+				"id": "role_field",
+				"name": "role",
+				"type": "select",
+				"required": true,
+				"system": false,
+				"options": {
+					"maxSelect": 1,
+					"values": ["admin", "user", "moderator"]
+				}
+			},
+			{
+				"id": "avatar_field",
+				"name": "avatar",
+				"type": "file",
+				"required": false,
+				"system": false,
+				"options": {
+					"maxSelect": 1,
+					"maxSize": 5242880,
+					"mimeTypes": ["image/jpeg", "image/png"],
+					"thumbs": ["100x100", "200x200"]
+				}
+			}
+		]
+	},
+	{
+		"id": "posts_collection",
+		"name": "posts",
+		"type": "base",
+		"system": false,
+		"schema": [
+			{
+				"id": "title_field",
+				"name": "title",
+				"type": "text",
+				"required": true,
+				"system": false,
+				"options": {}
+			},
+			{
+				"id": "author_field",
+				"name": "author",
+				"type": "relation",
+				"required": true,
+				"system": false,
+				"options": {
+					"collectionId": "users_collection",
+					"cascadeDelete": false,
+					"maxSelect": 1
+				}
+			},
+			{
+				"id": "tags_field",
+				"name": "tags",
+				"type": "relation",
+				"required": false,
+				"system": false,
+				"options": {
+					"collectionId": "tags_collection",
+					"cascadeDelete": false,
+					"maxSelect": 10
+				}
+			}
+		]
+	},
+	{
+		"id": "tags_collection",
+		"name": "tags",
+		"type": "base",
+		"system": false,
+		"schema": [
+			{
+				"id": "name_field",
+				"name": "name",
+				"type": "text",
+				"required": true,
+				"system": false,
+				"options": {}
+			}
+		]
+	}
+]

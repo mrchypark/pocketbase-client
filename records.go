@@ -46,7 +46,7 @@ var _ RecordServiceAPI = (*RecordService)(nil)
 func (s *RecordService) GetList(ctx context.Context, collection string, opts *ListOptions) (*ListResult, error) {
 	path := fmt.Sprintf("/api/collections/%s/records", url.PathEscape(collection))
 	q := url.Values{}
-	applyListOptions(q, opts)
+	ApplyListOptions(q, opts)
 	if qs := q.Encode(); qs != "" {
 		path += "?" + qs
 	}

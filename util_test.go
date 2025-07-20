@@ -97,7 +97,7 @@ func TestApplyListOptions(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			q := make(url.Values)
-			applyListOptions(q, tt.opts)
+			ApplyListOptions(q, tt.opts)
 
 			if len(q) != len(tt.want) {
 				t.Errorf("applyListOptions() got %v, want %v (length mismatch)", q, tt.want)

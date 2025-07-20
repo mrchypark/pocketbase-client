@@ -63,7 +63,7 @@ var _ CollectionServiceAPI = (*CollectionService)(nil)
 func (s *CollectionService) GetList(ctx context.Context, opts *ListOptions) (*CollectionListResult, error) {
 	path := "/api/collections"
 	q := url.Values{}
-	applyListOptions(q, opts)
+	ApplyListOptions(q, opts)
 	if qs := q.Encode(); qs != "" {
 		path += "?" + qs
 	}

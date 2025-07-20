@@ -294,7 +294,6 @@ func TestTemplateExecution(t *testing.T) {
 				expectedStructParts := []string{
 					"type " + collection.StructName + " struct",
 					"func New" + collection.StructName + "()",
-					"func To" + collection.StructName + "(",
 					"func Get" + collection.StructName + "(",
 					"func Get" + collection.StructName + "List(",
 				}

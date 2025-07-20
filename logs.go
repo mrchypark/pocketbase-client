@@ -25,7 +25,7 @@ var _ LogServiceAPI = (*LogService)(nil)
 func (s *LogService) GetRequestsList(ctx context.Context, opts *ListOptions) (*ListResult, error) {
 	path := "/api/logs/requests"
 	q := url.Values{}
-	applyListOptions(q, opts)
+	ApplyListOptions(q, opts)
 	if qs := q.Encode(); qs != "" {
 		path += "?" + qs
 	}

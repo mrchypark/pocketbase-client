@@ -64,7 +64,7 @@ func (r {{$relation.TypeName}}) ID() string {
 }
 
 // Load fetches the related {{$relation.TargetTypeName}} record
-func (r {{$relation.TypeName}}) Load(ctx context.Context, client pocketbase.RecordServiceAPI) (*{{$relation.TargetTypeName}}, error) {
+func (r {{$relation.TypeName}}) Load(ctx context.Context, client *pocketbase.Client) (*{{$relation.TargetTypeName}}, error) {
 	if r.id == "" {
 		return nil, nil
 	}
@@ -341,7 +341,7 @@ func (m *{{$collection.StructName}}) ToMap() map[string]any {
 	if m.{{.GoName}} != 0 {
 		data["{{.JSONName}}"] = m.{{.GoName}}
 	}
-	{{- else if eq .GoType "[]string"}}
+	{{- else if or (eq .GoType "[]string") (eq .GoType "[]interface{}") (eq .GoType "json.RawMessage")}}
 	if len(m.{{.GoName}}) > 0 {
 		data["{{.JSONName}}"] = m.{{.GoName}}
 	}
@@ -471,29 +471,7 @@ func (s *{{$collection.StructName}}Service) GetOne(ctx context.Context, id strin
 func (s *{{$collection.StructName}}Service) GetList(ctx context.Context, opts *pocketbase.ListOptions) (*{{$collection.StructName}}Collection, error) {
 	path := "/api/collections/{{$collection.CollectionName}}/records"
 	q := url.Values{}
-	if opts != nil {
-		if opts.Page > 0 {
-			q.Set("page", fmt.Sprintf("%d", opts.Page))
-		}
-		if opts.PerPage > 0 {
-			q.Set("perPage", fmt.Sprintf("%d", opts.PerPage))
-		}
-		if opts.Sort != "" {
-			q.Set("sort", opts.Sort)
-		}
-		if opts.Filter != "" {
-			q.Set("filter", opts.Filter)
-		}
-		if opts.Expand != "" {
-			q.Set("expand", opts.Expand)
-		}
-		if opts.Fields != "" {
-			q.Set("fields", opts.Fields)
-		}
-		if opts.SkipTotal {
-			q.Set("skipTotal", "1")
-		}
-	}
+	pocketbase.ApplyListOptions(q, opts)
 	if qs := q.Encode(); qs != "" {
 		path += "?" + qs
 	}

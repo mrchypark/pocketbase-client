@@ -5,8 +5,8 @@ import (
 	"strconv"
 )
 
-// applyListOptions applies the given ListOptions to query parameters.
-func applyListOptions(q url.Values, opts *ListOptions) {
+// ApplyListOptions applies the given ListOptions to query parameters.
+func ApplyListOptions(q url.Values, opts *ListOptions) {
 	if opts == nil {
 		return
 	}

@@ -28,7 +28,7 @@ var _ AdminServiceAPI = (*AdminService)(nil)
 func (s *AdminService) GetList(ctx context.Context, opts *ListOptions) (*ListResult, error) {
 	path := "/api/admins"
 	q := url.Values{}
-	applyListOptions(q, opts)
+	ApplyListOptions(q, opts)
 	if qs := q.Encode(); qs != "" {
 		path += "?" + qs
 	}
