@@ -1,3 +1,8 @@
+// Package main provides the pbc-gen command-line tool for generating
+// type-safe Go models from PocketBase schema files.
+//
+// pbc-gen automatically detects schema versions (latest/legacy) and generates
+// appropriate Go structs with proper BaseModel/BaseDateTime embedding.
 package main
 
 import (
@@ -25,33 +30,85 @@ func main() {
 	schemaPath := flag.String("schema", "./pb_schema.json", "Input file path (pb_schema.json)")
 	outputPath := flag.String("path", "./models.gen.go", "Output file path")
 	pkgName := flag.String("pkgname", "models", "Package name for the generated file")
-	jsonLib := flag.String("jsonlib", "encoding/json", "JSON library to use (e.g., github.com/goccy/go-json)")
+	jsonLib := flag.String("jsonlib", "github.com/goccy/go-json", "JSON library to use (e.g., github.com/goccy/go-json)")
 
 	// 새로운 enhanced 기능 플래그들
 	generateEnums := flag.Bool("enums", true, "Generate enum constants for select fields")
 	generateRelations := flag.Bool("relations", true, "Generate enhanced relation types")
 	generateFiles := flag.Bool("files", true, "Generate enhanced file types")
 
+	// 스키마 버전 관련 플래그들
+	forceVersion := flag.String("force-version", "", "Force schema version (latest|legacy)")
+	validateSchema := flag.Bool("validate-schema", false, "Validate schema format before processing")
+	verbose := flag.Bool("verbose", false, "Enable verbose logging")
+
+	// 도움말 플래그
+	showHelp := flag.Bool("help", false, "Show help message")
+	showVersion := flag.Bool("version", false, "Show version information")
+
 	flag.Parse()
+
+	// 도움말 표시
+	if *showHelp {
+		printHelp()
+		return
+	}
+
+	// 버전 정보 표시
+	if *showVersion {
+		printVersion()
+		return
+	}
+
+	// Verbose 로깅 설정
+	if *verbose {
+		log.SetFlags(log.LstdFlags | log.Lshortfile)
+		log.Printf("Verbose logging enabled")
+	}
 
 	log.Printf("Generating Go models from schema: %s\n", *schemaPath)
 
-	// 스키마 파일 읽기 및 버전 감지
-	schemaData, err := os.ReadFile(*schemaPath)
+	// 스키마 로드 및 버전 감지 (통합된 프로세스)
+	schemaResult, err := generator.LoadSchema(*schemaPath)
 	if err != nil {
-		genErr := generator.WrapFileError(err, *schemaPath, "read")
-		log.Fatalf("Schema file reading failed: %v", genErr)
+		genErr := generator.WrapSchemaError(err, *schemaPath, "load")
+		log.Fatalf("Schema loading failed: %v", genErr)
 	}
 
-	// 스키마 버전 감지
-	detector := generator.NewSchemaVersionDetector()
-	schemaVersion, err := detector.DetectVersion(schemaData)
-	if err != nil {
-		genErr := generator.WrapSchemaError(err, *schemaPath, "version_detection")
-		log.Fatalf("Schema version detection failed: %v", genErr)
+	schemas := schemaResult.Schemas
+	schemaVersion := schemaResult.SchemaVersion
+
+	// 스키마 버전 강제 지정 처리
+	if *forceVersion != "" {
+		forcedVersion, err := parseSchemaVersion(*forceVersion)
+		if err != nil {
+			log.Fatalf("Invalid force-version value: %v", err)
+		}
+
+		if *verbose {
+			log.Printf("Forcing schema version from %s to %s", schemaVersion.String(), forcedVersion.String())
+		}
+
+		// 스키마 검증이 활성화된 경우 버전 불일치 검사
+		if *validateSchema && schemaVersion != forcedVersion {
+			log.Printf("Warning: Forced version (%s) differs from detected version (%s)",
+				forcedVersion.String(), schemaVersion.String())
+		}
+
+		schemaVersion = forcedVersion
 	}
 
-	log.Printf("Detected schema version: %s", schemaVersion.String())
+	log.Printf("Using schema version: %s", schemaVersion.String())
+
+	// 스키마 검증 수행
+	if *validateSchema {
+		if err := validateSchemaFormat(schemas, schemaVersion, *schemaPath); err != nil {
+			log.Fatalf("Schema validation failed: %v", err)
+		}
+		if *verbose {
+			log.Printf("Schema validation passed")
+		}
+	}
 
 	// 스키마 버전에 따른 추가 로깅
 	switch schemaVersion {
@@ -63,69 +120,19 @@ func main() {
 		log.Printf("Warning: Unknown schema version detected, using fallback Record embedding")
 	}
 
-	schemas, err := generator.LoadSchema(*schemaPath)
-	if err != nil {
-		genErr := generator.WrapSchemaError(err, *schemaPath, "load")
-		log.Fatalf("Schema loading failed: %v", genErr)
-	}
-
 	// Validate basic configuration
 	if err := validateConfig(*schemaPath, *outputPath, *pkgName); err != nil {
 		log.Fatalf("Configuration validation failed: %v", err)
 	}
 
-	// 기본 TemplateData 생성
-	baseTplData := generator.TemplateData{
-		PackageName:   *pkgName,
-		JSONLibrary:   *jsonLib,
-		Collections:   make([]generator.CollectionData, 0, len(schemas)),
-		SchemaVersion: schemaVersion,
-	}
+	// BuildTemplateData 함수 사용하여 기본 TemplateData 생성
+	baseTplData := generator.BuildTemplateData(schemas, *pkgName, schemaVersion)
+	baseTplData.JSONLibrary = *jsonLib
 
-	for _, s := range schemas {
-		if s.Type == "view" && len(s.Fields) == 0 {
-			log.Printf("Collection '%s' is a view, generating an empty struct.", s.Name)
-		}
-
-		useTimestamps := determineUseTimestamps(schemaVersion, s.Fields)
+	// 컬렉션 처리 로깅
+	for _, collection := range baseTplData.Collections {
 		log.Printf("Processing collection '%s': schema_version=%s, use_timestamps=%t, fields=%d",
-			s.Name, schemaVersion.String(), useTimestamps, len(s.Fields))
-
-		collectionData := generator.CollectionData{
-			CollectionName: s.Name,
-			StructName:     generator.ToPascalCase(s.Name),
-			Fields:         make([]generator.FieldData, 0, len(s.Fields)),
-			SchemaVersion:  schemaVersion,
-			UseTimestamps:  useTimestamps,
-		}
-
-		for _, field := range s.Fields {
-			if field.System {
-				continue
-			}
-			// --- ✨ Modified part ---
-			// Receive all 3 return values as goType, _, getter.
-			// Comment is currently not used, so ignore with '_'.
-			goType, _, getter := generator.MapPbTypeToGoType(field, !field.Required)
-
-			// 포인터 타입인지 확인하고 기본 타입 추출
-			isPointer := strings.HasPrefix(goType, "*")
-			baseType := goType
-			if isPointer {
-				baseType = strings.TrimPrefix(goType, "*")
-			}
-
-			collectionData.Fields = append(collectionData.Fields, generator.FieldData{
-				JSONName:     field.Name,
-				GoName:       generator.ToPascalCase(field.Name),
-				GoType:       goType,
-				OmitEmpty:    !field.Required,
-				GetterMethod: getter, // Assign value to the newly added GetterMethod field.
-				IsPointer:    isPointer,
-				BaseType:     baseType,
-			})
-		}
-		baseTplData.Collections = append(baseTplData.Collections, collectionData)
+			collection.CollectionName, collection.SchemaVersion.String(), collection.UseTimestamps, len(collection.Fields))
 	}
 
 	// Enhanced 기능이 활성화된 경우 EnhancedTemplateData 생성
@@ -347,11 +354,15 @@ func validateSchemaVersionSpecificCode(code []byte, version generator.SchemaVers
 func validateFinalCode(code []byte, version generator.SchemaVersion, filePath string) error {
 	codeStr := string(code)
 
-	// 필수 import 확인
+	// 필수 import 확인 (스키마 버전에 따라 다름)
 	requiredImports := []string{
 		"context",
 		"github.com/mrchypark/pocketbase-client",
-		"github.com/pocketbase/pocketbase/tools/types",
+	}
+
+	// Legacy 스키마에서만 types 패키지 필요
+	if version == generator.SchemaVersionLegacy {
+		requiredImports = append(requiredImports, "github.com/pocketbase/pocketbase/tools/types")
 	}
 
 	for _, imp := range requiredImports {
@@ -601,4 +612,169 @@ func isValidGoIdentifier(name string) bool {
 	}
 
 	return true
+}
+
+// printHelp displays the help message
+func printHelp() {
+	fmt.Println("pbc-gen - PocketBase Go Client Code Generator")
+	fmt.Println()
+	fmt.Println("USAGE:")
+	fmt.Println("  pbc-gen [OPTIONS]")
+	fmt.Println()
+	fmt.Println("OPTIONS:")
+	fmt.Println("  -schema string")
+	fmt.Println("        Input schema file path (default: ./pb_schema.json)")
+	fmt.Println("  -path string")
+	fmt.Println("        Output file path (default: ./models.gen.go)")
+	fmt.Println("  -pkgname string")
+	fmt.Println("        Package name for generated code (default: models)")
+	fmt.Println("  -jsonlib string")
+	fmt.Println("        JSON library to use (default: encoding/json)")
+	fmt.Println()
+	fmt.Println("ENHANCED FEATURES:")
+	fmt.Println("  -enums")
+	fmt.Println("        Generate enum constants for select fields (default: true)")
+	fmt.Println("  -relations")
+	fmt.Println("        Generate enhanced relation types (default: true)")
+	fmt.Println("  -files")
+	fmt.Println("        Generate enhanced file types (default: true)")
+	fmt.Println()
+	fmt.Println("SCHEMA VERSION OPTIONS:")
+	fmt.Println("  -force-version string")
+	fmt.Println("        Force schema version (latest|legacy)")
+	fmt.Println("  -validate-schema")
+	fmt.Println("        Validate schema format before processing")
+	fmt.Println("  -verbose")
+	fmt.Println("        Enable verbose logging")
+	fmt.Println()
+	fmt.Println("HELP:")
+	fmt.Println("  -help")
+	fmt.Println("        Show this help message")
+	fmt.Println("  -version")
+	fmt.Println("        Show version information")
+	fmt.Println()
+	fmt.Println("EXAMPLES:")
+	fmt.Println("  # Basic usage")
+	fmt.Println("  pbc-gen -schema ./pb_schema.json -path ./models.gen.go")
+	fmt.Println()
+	fmt.Println("  # Force legacy schema version")
+	fmt.Println("  pbc-gen -force-version legacy -validate-schema")
+	fmt.Println()
+	fmt.Println("  # Verbose output with validation")
+	fmt.Println("  pbc-gen -verbose -validate-schema")
+	fmt.Println()
+	fmt.Println("  # Disable enhanced features")
+	fmt.Println("  pbc-gen -enums=false -relations=false -files=false")
+}
+
+// printVersion displays version information
+func printVersion() {
+	fmt.Println("pbc-gen version 1.0.0")
+	fmt.Println("PocketBase Go Client Code Generator")
+	fmt.Println("Built with Go", strings.TrimPrefix(fmt.Sprintf("%v", os.Args), "["))
+	fmt.Println()
+	fmt.Println("Features:")
+	fmt.Println("  - Schema version detection (latest/legacy)")
+	fmt.Println("  - Type-safe model generation")
+	fmt.Println("  - Enhanced enum, relation, and file types")
+	fmt.Println("  - Flexible BaseModel/BaseDateTime embedding")
+}
+
+// parseSchemaVersion parses a string into SchemaVersion
+func parseSchemaVersion(version string) (generator.SchemaVersion, error) {
+	switch strings.ToLower(version) {
+	case "latest":
+		return generator.SchemaVersionLatest, nil
+	case "legacy":
+		return generator.SchemaVersionLegacy, nil
+	default:
+		return generator.SchemaVersionUnknown, fmt.Errorf("invalid schema version: %s (must be 'latest' or 'legacy')", version)
+	}
+}
+
+// validateSchemaFormat validates the schema format for the given version
+func validateSchemaFormat(schemas []generator.CollectionSchema, expectedVersion generator.SchemaVersion, schemaPath string) error {
+	detector := generator.NewSchemaVersionDetector()
+
+	// 스키마 파일 다시 읽기 (검증용)
+	schemaData, err := os.ReadFile(schemaPath)
+	if err != nil {
+		return generator.WrapFileError(err, schemaPath, "read_for_validation")
+	}
+
+	// 스키마 검증
+	if err := detector.ValidateSchema(schemaData, expectedVersion); err != nil {
+		return generator.WrapSchemaError(err, schemaPath, "validation")
+	}
+
+	// 추가 검증: 컬렉션별 필드 구조 확인
+	for _, schema := range schemas {
+		if err := validateCollectionSchema(schema, expectedVersion); err != nil {
+			return generator.NewGenerationError(generator.ErrorTypeSchemaValidate,
+				fmt.Sprintf("collection '%s' validation failed", schema.Name), err).
+				WithDetail("collection", schema.Name).
+				WithDetail("schema_version", expectedVersion.String())
+		}
+	}
+
+	return nil
+}
+
+// validateCollectionSchema validates a single collection schema
+func validateCollectionSchema(schema generator.CollectionSchema, expectedVersion generator.SchemaVersion) error {
+	// 시스템 컬렉션은 검증 생략
+	if schema.System {
+		return nil
+	}
+
+	switch expectedVersion {
+	case generator.SchemaVersionLatest:
+		// 최신 스키마: fields 배열이 있어야 함
+		if len(schema.Fields) == 0 {
+			return fmt.Errorf("latest schema should have fields array")
+		}
+
+	case generator.SchemaVersionLegacy:
+		// 구버전 스키마: 기본 필드들이 자동으로 추가되어야 함
+		// 실제로는 Fields 배열에 파싱되므로 검증 로직은 동일
+		// view 타입 컬렉션은 필드가 없을 수 있음
+		if len(schema.Fields) == 0 && schema.Type != "view" {
+			return fmt.Errorf("legacy schema should have schema/fields array")
+		}
+
+	case generator.SchemaVersionUnknown:
+		return fmt.Errorf("cannot validate unknown schema version")
+	}
+
+	// 필드 타입 검증
+	for _, field := range schema.Fields {
+		if field.Type == "" {
+			return fmt.Errorf("field '%s' missing type", field.Name)
+		}
+
+		// 지원되는 필드 타입 확인 (더 관대하게)
+		if !isValidFieldType(field.Type) {
+			// 경고만 출력하고 계속 진행
+			log.Printf("Warning: field '%s' has potentially unsupported type: %s", field.Name, field.Type)
+		}
+	}
+
+	return nil
+}
+
+// isValidFieldType checks if a field type is supported
+func isValidFieldType(fieldType string) bool {
+	validTypes := []string{
+		"text", "email", "url", "number", "bool", "select", "json",
+		"file", "relation", "user", "date", "autodate", "password",
+		"editor", "datetime", "time", "uuid", "slug", "color",
+	}
+
+	for _, validType := range validTypes {
+		if fieldType == validType {
+			return true
+		}
+	}
+
+	return false
 }

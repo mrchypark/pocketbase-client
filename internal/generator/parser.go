@@ -7,8 +7,15 @@ import (
 	"github.com/goccy/go-json"
 )
 
+// LoadSchemaResult contains the result of loading and parsing a schema file
+type LoadSchemaResult struct {
+	Schemas       []CollectionSchema
+	SchemaVersion SchemaVersion
+}
+
 // LoadSchema reads a JSON file from the given path and unmarshals it into a slice of CollectionSchema.
-func LoadSchema(filePath string) ([]CollectionSchema, error) {
+// It also detects the schema version and sets it on each collection.
+func LoadSchema(filePath string) (*LoadSchemaResult, error) {
 	// Validate file path
 	if filePath == "" {
 		return nil, NewGenerationError(ErrorTypeInvalidPath,
@@ -39,6 +46,16 @@ func LoadSchema(filePath string) ([]CollectionSchema, error) {
 			WithDetail("suggestion", "ensure the schema file contains valid JSON data")
 	}
 
+	// Detect schema version first
+	detector := NewSchemaVersionDetector()
+	schemaVersion, err := detector.DetectVersion(data)
+	if err != nil {
+		return nil, NewGenerationError(ErrorTypeSchemaValidate,
+			"failed to detect schema version", err).
+			WithDetail("file_path", filePath).
+			WithDetail("suggestion", "ensure the schema file uses either 'fields' (latest) or 'schema' (legacy) format consistently")
+	}
+
 	// Parse JSON with better error context
 	var schemas []CollectionSchema
 	err = json.Unmarshal(data, &schemas)
@@ -57,11 +74,19 @@ func LoadSchema(filePath string) ([]CollectionSchema, error) {
 			WithDetail("suggestion", "ensure the schema contains at least one collection")
 	}
 
-	return schemas, nil
+	// Set schema version on each collection for later use
+	for i := range schemas {
+		schemas[i].SchemaVersion = schemaVersion
+	}
+
+	return &LoadSchemaResult{
+		Schemas:       schemas,
+		SchemaVersion: schemaVersion,
+	}, nil
 }
 
-// BuildTemplateData generates template data from parsed schemas.
-func BuildTemplateData(schemas []CollectionSchema, packageName string) TemplateData {
+// BuildTemplateData generates template data from parsed schemas with schema version information.
+func BuildTemplateData(schemas []CollectionSchema, packageName string, schemaVersion SchemaVersion) TemplateData {
 	var collections []CollectionData
 
 	for _, s := range schemas {
@@ -98,15 +123,22 @@ func BuildTemplateData(schemas []CollectionSchema, packageName string) TemplateD
 			})
 		}
 
+		// UseTimestamps 플래그 설정: 구버전 스키마에서는 BaseDateTime 임베딩 필요
+		useTimestamps := (schemaVersion == SchemaVersionLegacy)
+
 		collections = append(collections, CollectionData{
 			CollectionName: s.Name,
 			StructName:     ToPascalCase(s.Name),
 			Fields:         fields,
+			SchemaVersion:  schemaVersion,
+			UseTimestamps:  useTimestamps,
 		})
 	}
 
 	return TemplateData{
-		PackageName: packageName,
-		Collections: collections,
+		PackageName:   packageName,
+		JSONLibrary:   "github.com/goccy/go-json", // 기본 JSON 라이브러리 설정
+		Collections:   collections,
+		SchemaVersion: schemaVersion,
 	}
 }

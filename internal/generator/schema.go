@@ -157,6 +157,9 @@ type CollectionSchema struct {
 
 	Schema []FieldSchema `json:"schema"` // Keep `json:"schema"` tag
 	Fields []FieldSchema `json:"fields"` // Keep `json:"fields"` tag
+
+	// Schema version information (set during parsing)
+	SchemaVersion SchemaVersion `json:"-"` // Don't serialize this field
 }
 
 // UnmarshalJSON unmarshals the 'schema' or 'fields' array of CollectionSchema to cs.Fields.

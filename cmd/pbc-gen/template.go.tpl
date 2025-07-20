@@ -242,7 +242,7 @@ type {{$collection.StructName}} struct {
 	pocketbase.BaseModel
 	{{- end}}
 	{{- range .Fields}}
-	{{.GoName}} {{.GoType}} `json:"{{.JSONName}}"{{if .OmitEmpty}},omitempty{{end}}`
+	{{.GoName}} {{.GoType}} `json:"{{.JSONName}}{{if .OmitEmpty}},omitempty{{end}}"`
 	{{- end}}
 }
 
