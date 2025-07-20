@@ -11,9 +11,44 @@ import (
 	"github.com/pocketbase/pocketbase/tools/types"
 )
 
-// BaseModel provides common fields for all PocketBase models.
+// BaseModel provides basic identification fields for all PocketBase models.
+// This structure contains only the essential fields needed for model identification.
+// For timestamp fields (created, updated), use BaseDateTime struct separately.
+//
+// Note: This is a breaking change from the previous version where BaseModel
+// included Created and Updated fields. For backward compatibility in legacy schemas,
+// use BaseDateTime struct in addition to BaseModel.
 type BaseModel struct {
-	ID      string         `json:"id"`
+	ID             string `json:"id"`
+	CollectionID   string `json:"collectionId"`
+	CollectionName string `json:"collectionName"`
+}
+
+// BaseDateTime provides timestamp fields for PocketBase models.
+// This structure contains the standard created and updated timestamp fields
+// that are automatically managed by PocketBase.
+//
+// Usage:
+//   - For legacy schemas: Embed both BaseModel and BaseDateTime
+//   - For latest schemas: Embed only BaseModel, timestamps are explicit fields
+//
+// Example (legacy schema):
+//
+//	type Post struct {
+//	    BaseModel
+//	    BaseDateTime
+//	    Title string `json:"title"`
+//	}
+//
+// Example (latest schema):
+//
+//	type Post struct {
+//	    BaseModel
+//	    Title   string          `json:"title"`
+//	    Created *types.DateTime `json:"created,omitempty"`
+//	    Updated *types.DateTime `json:"updated,omitempty"`
+//	}
+type BaseDateTime struct {
 	Created types.DateTime `json:"created"`
 	Updated types.DateTime `json:"updated"`
 }
@@ -25,13 +60,22 @@ type Admin struct {
 	Email  string `json:"email"`
 }
 
-// Record represents a PocketBase record.
-// ✅ Modified: Remove Data field and use deserializedData directly.
+// Record represents a PocketBase record for dynamic usage.
+// This structure embeds BaseModel for basic identification fields and provides
+// getter/setter methods for flexible data access.
+//
+// Note: BaseDateTime is NOT embedded here to support the latest schema approach
+// where timestamp fields are handled explicitly. For legacy schema compatibility,
+// the generated structs will embed both BaseModel and BaseDateTime as needed.
+//
+// Usage:
+//
+//	record := &Record{}
+//	record.Set("title", "Hello World")
+//	title := record.GetString("title")
 type Record struct {
 	BaseModel
-	CollectionID   string               `json:"collectionId"`
-	CollectionName string               `json:"collectionName"`
-	Expand         map[string][]*Record `json:"expand,omitempty"`
+	Expand map[string][]*Record `json:"expand,omitempty"`
 
 	// Map to store data. From now on, this field is the only data source.
 	deserializedData map[string]any
@@ -97,15 +141,9 @@ func (r *Record) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	// Assign common fields directly to Record struct.
+	// Assign BaseModel fields directly to Record struct.
 	if id, ok := allData["id"].(string); ok {
 		r.ID = id
-	}
-	if created, ok := allData["created"].(string); ok {
-		r.Created, _ = types.ParseDateTime(created)
-	}
-	if updated, ok := allData["updated"].(string); ok {
-		r.Updated, _ = types.ParseDateTime(updated)
 	}
 	if colID, ok := allData["collectionId"].(string); ok {
 		r.CollectionID = colID
@@ -123,13 +161,14 @@ func (r *Record) UnmarshalJSON(data []byte) error {
 		}
 	}
 
-	// Remove common fields and expand from map.
+	// Remove BaseModel fields and expand from map.
 	delete(allData, "id")
-	delete(allData, "created")
-	delete(allData, "updated")
 	delete(allData, "collectionId")
 	delete(allData, "collectionName")
 	delete(allData, "expand")
+
+	// Note: created and updated fields are now handled as regular data fields
+	// They will be stored in deserializedData and can be accessed via getter methods
 
 	// Store remaining data in deserializedData.
 	r.deserializedData = allData
@@ -155,17 +194,21 @@ func (r *Record) Set(key string, value any) {
 
 // MarshalJSON serializes the Record to JSON using deserializedData directly.
 func (r *Record) MarshalJSON() ([]byte, error) {
-	combinedData := make(map[string]any, len(r.deserializedData)+6)
+	combinedData := make(map[string]any, len(r.deserializedData)+4)
 	maps.Copy(combinedData, r.deserializedData)
 
+	// Add BaseModel fields
 	combinedData["id"] = r.ID
 	combinedData["collectionId"] = r.CollectionID
 	combinedData["collectionName"] = r.CollectionName
-	combinedData["created"] = r.Created
-	combinedData["updated"] = r.Updated
+
+	// Add expand if present
 	if r.Expand != nil {
 		combinedData["expand"] = r.Expand
 	}
+
+	// Note: created and updated are now part of deserializedData
+	// They will be included automatically through maps.Copy above
 
 	return json.Marshal(combinedData)
 }

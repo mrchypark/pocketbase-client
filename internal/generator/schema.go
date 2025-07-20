@@ -5,27 +5,6 @@ import (
 	"fmt" // Required for error message formatting
 )
 
-// SchemaVersion represents the version of PocketBase schema format
-type SchemaVersion int
-
-const (
-	SchemaVersionUnknown SchemaVersion = iota
-	SchemaVersionLegacy                // schema 키 사용
-	SchemaVersionLatest                // fields 키 사용
-)
-
-// String returns the string representation of SchemaVersion
-func (sv SchemaVersion) String() string {
-	switch sv {
-	case SchemaVersionLegacy:
-		return "legacy"
-	case SchemaVersionLatest:
-		return "latest"
-	default:
-		return "unknown"
-	}
-}
-
 // SchemaVersionError represents errors that occur during schema version detection
 type SchemaVersionError struct {
 	Message string

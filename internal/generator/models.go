@@ -1,11 +1,33 @@
 package generator
 
+// SchemaVersion represents the version of PocketBase schema format
+type SchemaVersion int
+
+const (
+	SchemaVersionUnknown SchemaVersion = iota
+	SchemaVersionLegacy                // schema 키 사용 (구버전)
+	SchemaVersionLatest                // fields 키 사용 (최신)
+)
+
+// String returns the string representation of SchemaVersion
+func (v SchemaVersion) String() string {
+	switch v {
+	case SchemaVersionLegacy:
+		return "legacy"
+	case SchemaVersionLatest:
+		return "latest"
+	default:
+		return "unknown"
+	}
+}
+
 // TemplateData represents the data structure used for code generation templates.
 // It contains all the information needed to generate Go code from PocketBase schemas.
 type TemplateData struct {
-	PackageName string // Go package name for generated code
-	JSONLibrary string // JSON library import path (e.g., "encoding/json")
-	Collections []CollectionData
+	PackageName   string // Go package name for generated code
+	JSONLibrary   string // JSON library import path (e.g., "encoding/json")
+	Collections   []CollectionData
+	SchemaVersion SchemaVersion // 스키마 버전 정보
 
 	// Enhanced 기능을 위한 필드들 (기본값은 빈 슬라이스)
 	Enums         []EnumData         `json:"enums,omitempty"`
@@ -19,6 +41,8 @@ type CollectionData struct {
 	CollectionName string // PocketBase collection name (e.g., 'posts')
 	StructName     string // Generated Go struct name (e.g., 'Post')
 	Fields         []FieldData
+	SchemaVersion  SchemaVersion // 이 컬렉션의 스키마 버전
+	UseTimestamps  bool          // BaseDateTime 임베딩 여부 (구버전 스키마용)
 }
 
 // FieldData represents a single field within a collection and its

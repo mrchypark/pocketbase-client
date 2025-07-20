@@ -1829,7 +1829,9 @@ func TestPaginationIntegration(t *testing.T) {
 
 			// 순서 확인 (created 필드로 정렬했으므로)
 			for i := 1; i < len(allRecords); i++ {
-				if allRecords[i].Created.Before(allRecords[i-1].Created) {
+				currentCreated := allRecords[i].GetDateTime("created")
+				previousCreated := allRecords[i-1].GetDateTime("created")
+				if currentCreated.Before(previousCreated) {
 					t.Errorf("Records not properly sorted at index %d", i)
 					break
 				}
@@ -1877,7 +1879,9 @@ func TestPaginationIntegration(t *testing.T) {
 
 			// 첫 번째와 마지막 레코드 순서 확인
 			if firstRecord != nil && lastRecord != nil && recordCount > 1 {
-				if lastRecord.Created.Before(firstRecord.Created) {
+				lastCreated := lastRecord.GetDateTime("created")
+				firstCreated := firstRecord.GetDateTime("created")
+				if lastCreated.Before(firstCreated) {
 					t.Error("Records not properly sorted (last record is older than first)")
 				}
 			}
@@ -2137,17 +2141,17 @@ func TestBackwardCompatibility(t *testing.T) {
 				Items: []*Record{
 					{
 						BaseModel: BaseModel{
-							ID: "test1",
+							ID:             "test1",
+							CollectionID:   "posts_col",
+							CollectionName: "posts",
 						},
-						CollectionID:   "posts_col",
-						CollectionName: "posts",
 					},
 					{
 						BaseModel: BaseModel{
-							ID: "test2",
+							ID:             "test2",
+							CollectionID:   "posts_col",
+							CollectionName: "posts",
 						},
-						CollectionID:   "posts_col",
-						CollectionName: "posts",
 					},
 				},
 			}
