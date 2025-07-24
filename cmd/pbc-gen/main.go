@@ -13,6 +13,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"text/template"
 
@@ -25,6 +26,13 @@ import (
 //
 //go:embed template.go.tpl
 var templateFile string
+
+// Version information - set by build flags
+var (
+	version = "dev"
+	commit  = "unknown"
+	date    = "unknown"
+)
 
 func main() {
 	schemaPath := flag.String("schema", "./pb_schema.json", "Input file path (pb_schema.json)")
@@ -40,10 +48,6 @@ func main() {
 	// 제네릭 클라이언트 사용 플래그 (기본값: true)
 	useGeneric := flag.Bool("generic", true, "Use generic client approach (default)")
 	useLegacy := flag.Bool("legacy", false, "Use legacy client approach (generates individual service classes)")
-
-	// 출력 플래그 추가
-	outputPath := flag.String("output", "./models.gen.go", "Output file path (alias for -path)")
-	packageName := flag.String("package", "models", "Package name for generated code (alias for -pkgname)")
 
 	// 스키마 버전 관련 플래그들
 	forceVersion := flag.String("force-version", "", "Force schema version (latest|legacy)")
@@ -183,11 +187,6 @@ func main() {
 	// 플래그 충돌 검사
 	if *useLegacy && *useGeneric {
 		log.Fatalf("Cannot use both -legacy and -generic flags. Use -legacy=true to disable generic mode.")
-	}
-
-	// legacy 플래그가 true면 generic을 false로 설정
-	if *useLegacy {
-		*useGeneric = false
 	}
 
 	// 통합된 템플릿 사용
@@ -712,9 +711,15 @@ func printHelp() {
 
 // printVersion displays version information
 func printVersion() {
-	fmt.Println("pbc-gen version 1.0.0")
+	fmt.Printf("pbc-gen version %s\n", version)
+	if commit != "unknown" {
+		fmt.Printf("Commit: %s\n", commit)
+	}
+	if date != "unknown" {
+		fmt.Printf("Built: %s\n", date)
+	}
+	fmt.Println("Built with Go", runtime.Version())
 	fmt.Println("PocketBase Go Client Code Generator")
-	fmt.Println("Built with Go", strings.TrimPrefix(fmt.Sprintf("%v", os.Args), "["))
 	fmt.Println()
 	fmt.Println("Features:")
 	fmt.Println("  - Schema version detection (latest/legacy)")

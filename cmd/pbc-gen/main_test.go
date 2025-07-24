@@ -846,7 +846,7 @@ func TestCompilation() {
 	}
 
 	// go build 실행 (syntax check만)
-	cmd = exec.Command("go", "build", "-o", "/dev/null", ".")
+	cmd = exec.Command("go", "build", "-o", os.DevNull, ".")
 	cmd.Dir = tempModuleDir
 
 	var stderr bytes.Buffer

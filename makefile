@@ -44,7 +44,23 @@ pb_clean:
 pb_snapshot pb_snap pb_ss: ./database/pocketbase
 	./database/pocketbase migrate collections
 
+# Version information
+VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
+COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+DATE := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+# Build flags for version injection
+LDFLAGS := -X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.date=$(DATE)
+
 .PHONY: gen
 gen:
 	go run ./cmd/pbc-gen
+
+.PHONY: build-pbc-gen
+build-pbc-gen:
+	go build -ldflags "$(LDFLAGS)" -o pbc-gen ./cmd/pbc-gen
+
+.PHONY: install-pbc-gen
+install-pbc-gen:
+	go install -ldflags "$(LDFLAGS)" ./cmd/pbc-gen
 

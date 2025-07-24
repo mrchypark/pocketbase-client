@@ -128,7 +128,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to fetch single AllTypes record: %v", err)
 	}
-	fmt.Printf("Fetched AllTypes record (ID: %s) TextRequired: '%s'\n", fetchedAllTypes.ID)
+	fmt.Printf("Fetched AllTypes record (ID: %s)\n", fetchedAllTypes.ID)
 
 	// --- Delete created records (cleanup) ---
 	fmt.Printf("\n--- Cleaning up created AllTypes record (ID: %s) ---\n", createdAllTypeRecord.ID)
