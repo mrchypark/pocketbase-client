@@ -249,7 +249,7 @@ func (s *{{$collection.StructName}}Service) Get{{.GoName}}ValueOr(record *{{$col
 
 // Get{{.GoName}} gets {{.JSONName}} field value using {{.GetterMethod}}
 func (s *{{$collection.StructName}}Service) Get{{.GoName}}(record *{{$collection.StructName}}) {{.GoType}} {
-	{{if eq .GetterMethod "Get[string]" "Get[float64]" "Get[bool]" "Get[types.DateTime]" "Get[json.RawMessage]" "Get[[]string]" "Get[interface{}]"}}
+	{{if eq .GetterMethod "Get[string]" "Get[float64]" "Get[bool]" "Get[types.DateTime]" "Get[json.RawMessage]" "Get[[]string]" "Get[any]"}}
 	// Generic getter method would be: record.{{.GetterMethod}}(ctx, "{{.JSONName}}")
 	// For now, return direct field access
 	return record.{{.GoName}}

@@ -341,7 +341,7 @@ func (m *{{$collection.StructName}}) ToMap() map[string]any {
 	if m.{{$field.GoName}} != 0 {
 		data["{{$field.JSONName}}"] = m.{{$field.GoName}}
 	}
-	{{- else if or (eq $field.GoType "[]string") (eq $field.GoType "[]interface{}") (eq $field.GoType "json.RawMessage")}}
+	{{- else if or (eq $field.GoType "[]string") (eq $field.GoType "[]any") (eq $field.GoType "json.RawMessage")}}
 	if len(m.{{$field.GoName}}) > 0 {
 		data["{{$field.JSONName}}"] = m.{{$field.GoName}}
 	}

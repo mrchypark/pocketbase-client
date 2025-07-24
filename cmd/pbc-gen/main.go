@@ -535,7 +535,7 @@ func validateConfig(schemaPath, outputPath, pkgName string) error {
 				Path:       "schema",
 				Suggestion: "ensure the schema file exists and is accessible",
 				Severity:   generator.SeverityError,
-				Context:    map[string]interface{}{"path": schemaPath},
+				Context:    map[string]any{"path": schemaPath},
 			})
 		}
 	}
@@ -554,7 +554,7 @@ func validateConfig(schemaPath, outputPath, pkgName string) error {
 					Path:       "output",
 					Suggestion: "directory will be created automatically",
 					Severity:   generator.SeverityWarning,
-					Context:    map[string]interface{}{"directory": outputDir},
+					Context:    map[string]any{"directory": outputDir},
 				})
 			}
 		}
@@ -566,7 +566,7 @@ func validateConfig(schemaPath, outputPath, pkgName string) error {
 				Message:  "output file already exists and will be overwritten",
 				Path:     "output",
 				Severity: generator.SeverityWarning,
-				Context:  map[string]interface{}{"path": outputPath},
+				Context:  map[string]any{"path": outputPath},
 			})
 		}
 	}
@@ -581,7 +581,7 @@ func validateConfig(schemaPath, outputPath, pkgName string) error {
 			Path:       "package",
 			Suggestion: "use a valid Go package name (letters, digits, underscore)",
 			Severity:   generator.SeverityError,
-			Context:    map[string]interface{}{"name": pkgName},
+			Context:    map[string]any{"name": pkgName},
 		})
 	}
 

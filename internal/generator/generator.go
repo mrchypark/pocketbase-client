@@ -277,7 +277,7 @@ func (g *CodeGenerator) GenerateStructs() (string, error) {
 }
 
 // prepareTemplateData는 템플릿 실행용 데이터를 준비합니다.
-func (g *CodeGenerator) prepareTemplateData() interface{} {
+func (g *CodeGenerator) prepareTemplateData() any {
 	// 스키마 버전 정보를 포함한 템플릿 데이터 반환
 	enhancedData := EnhancedTemplateData{
 		TemplateData: *g.templateData,

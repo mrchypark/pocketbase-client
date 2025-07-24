@@ -22,7 +22,7 @@ func main() {
 	fmt.Println("--- Creating sample records ---")
 	sampleTitles := []string{"Apple", "Banana", "Cherry", "Date", "Elderberry"}
 	for _, title := range sampleTitles {
-		_, err := client.Records.Create(context.Background(), "posts", map[string]interface{}{
+		_, err := client.Records.Create(context.Background(), "posts", map[string]any{
 			"title":        title,
 			"content":      "Some content here.",
 			"is_published": true,

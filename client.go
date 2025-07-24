@@ -130,12 +130,12 @@ func (c *Client) newRequest(ctx context.Context, method, path string, body io.Re
 }
 
 // Send is a wrapper used by external service implementations like RecordService.
-func (c *Client) Send(ctx context.Context, method, path string, body, responseData interface{}) error {
+func (c *Client) Send(ctx context.Context, method, path string, body, responseData any) error {
 	return c.send(ctx, method, path, body, responseData)
 }
 
 // SendWithOptions sends a request with additional options.
-func (c *Client) SendWithOptions(ctx context.Context, method, path string, body, responseData interface{}, opts ...RequestOption) error {
+func (c *Client) SendWithOptions(ctx context.Context, method, path string, body, responseData any, opts ...RequestOption) error {
 	return c.send(ctx, method, path, body, responseData, opts...)
 }
 
@@ -167,7 +167,7 @@ func (c *Client) sendStream(ctx context.Context, method, path string, body io.Re
 }
 
 // send is the central handler for all API requests.
-func (c *Client) send(ctx context.Context, method, path string, body, responseData interface{}, opts ...RequestOption) error {
+func (c *Client) send(ctx context.Context, method, path string, body, responseData any, opts ...RequestOption) error {
 	var reqBody io.Reader
 	if body != nil {
 		b, err := json.Marshal(body)
@@ -179,7 +179,7 @@ func (c *Client) send(ctx context.Context, method, path string, body, responseDa
 	return c.do(ctx, method, path, reqBody, "application/json", responseData, opts...)
 }
 
-func (c *Client) do(ctx context.Context, method, path string, body io.Reader, contentType string, responseData interface{}, opts ...RequestOption) error {
+func (c *Client) do(ctx context.Context, method, path string, body io.Reader, contentType string, responseData any, opts ...RequestOption) error {
 	var ropts requestOptions
 	for _, opt := range opts {
 		opt(&ropts)
@@ -293,9 +293,9 @@ func (c *Client) UseAuthResponse(res *AuthResponse) *Client {
 }
 
 // HealthCheck checks the health status of the PocketBase server.
-func (c *Client) HealthCheck(ctx context.Context) (map[string]interface{}, error) {
+func (c *Client) HealthCheck(ctx context.Context) (map[string]any, error) {
 	path := "/api/health"
-	var result map[string]interface{}
+	var result map[string]any
 	if err := c.send(ctx, http.MethodGet, path, nil, &result); err != nil {
 		return nil, err
 	}
@@ -346,7 +346,7 @@ func mapAndWrapError(apiErr *APIError, statusCode int, rawBody string) error {
 			baseErr = ErrUnknown
 		}
 		// Create a new APIError containing the raw response body for context.
-		apiErr = &APIError{Code: statusCode, Message: http.StatusText(statusCode), Data: map[string]interface{}{"raw_body": rawBody}}
+		apiErr = &APIError{Code: statusCode, Message: http.StatusText(statusCode), Data: map[string]any{"raw_body": rawBody}}
 	} else {
 		// Determine the base error from the APIError message content.
 		msg := strings.ToLower(apiErr.Message)

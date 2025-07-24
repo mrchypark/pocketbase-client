@@ -8,9 +8,9 @@ import (
 
 // APIError represents a structured error returned from the PocketBase API.
 type APIError struct {
-	Code    int                    `json:"code"`
-	Message string                 `json:"message"`
-	Data    map[string]interface{} `json:"data"`
+	Code    int            `json:"code"`
+	Message string         `json:"message"`
+	Data    map[string]any `json:"data"`
 }
 
 func (e *APIError) Error() string {

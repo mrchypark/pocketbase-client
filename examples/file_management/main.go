@@ -57,7 +57,7 @@ func uploadFileExample(ctx context.Context, client *pocketbase.Client) error {
 	fileContent := strings.NewReader("This is test file content.")
 
 	// First create a record (assuming posts collection exists)
-	recordData := map[string]interface{}{
+	recordData := map[string]any{
 		"title":   "File Upload Test",
 		"content": "This is a post with an attached file.",
 	}
@@ -110,7 +110,7 @@ func downloadFileExample(ctx context.Context, client *pocketbase.Client) error {
 	switch v := imageField.(type) {
 	case string:
 		filename = v
-	case []interface{}:
+	case []any:
 		if len(v) > 0 {
 			if str, ok := v[0].(string); ok {
 				filename = str
@@ -201,7 +201,7 @@ func deleteFileExample(ctx context.Context, client *pocketbase.Client) error {
 	switch v := imageField.(type) {
 	case string:
 		filename = v
-	case []interface{}:
+	case []any:
 		if len(v) > 0 {
 			if str, ok := v[0].(string); ok {
 				filename = str

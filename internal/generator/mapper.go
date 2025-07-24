@@ -97,16 +97,16 @@ func MapPbTypeToGoTypeWithGeneric(field FieldSchema, omitEmpty bool, useGeneric 
 			}
 		}
 	default:
-		goType = "interface{}"
+		goType = "any"
 		if useGeneric {
-			getterMethod = "Get[interface{}]"
+			getterMethod = "Get[any]"
 		} else {
 			getterMethod = "Get"
 		}
 	}
 
-	// Finally decide whether to apply pointer type (exclude if already pointer, slice, json.RawMessage, or interface{})
-	if omitEmpty && !useGeneric && !strings.HasPrefix(goType, "[]") && goType != "json.RawMessage" && goType != "interface{}" && !strings.HasPrefix(goType, "*") {
+	// Finally decide whether to apply pointer type (exclude if already pointer, slice, json.RawMessage, or any)
+	if omitEmpty && !useGeneric && !strings.HasPrefix(goType, "[]") && goType != "json.RawMessage" && goType != "any" && !strings.HasPrefix(goType, "*") {
 		goType = "*" + goType
 	}
 

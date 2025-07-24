@@ -27,10 +27,10 @@ type ListResultLazy struct {
 // --- Test helpers for pagination ---
 
 // generateTestRecords creates test records for pagination testing
-func generateTestRecords(count int, prefix string) []map[string]interface{} {
-	records := make([]map[string]interface{}, count)
+func generateTestRecords(count int, prefix string) []map[string]any {
+	records := make([]map[string]any, count)
 	for i := 0; i < count; i++ {
-		records[i] = map[string]interface{}{
+		records[i] = map[string]any{
 			"id":             fmt.Sprintf("%s_%d", prefix, i),
 			"collectionId":   "test_col",
 			"collectionName": "test",
@@ -73,12 +73,12 @@ func createPaginationMockServer(t *testing.T, totalRecords int, pageSize int) (*
 		}
 
 		// Generate records for this page
-		var items []map[string]interface{}
+		var items []map[string]any
 		if startIdx < totalRecords {
 			items = generateTestRecords(endIdx-startIdx, fmt.Sprintf("rec%d", startIdx))
 		}
 
-		response := map[string]interface{}{
+		response := map[string]any{
 			"page":       page,
 			"perPage":    perPage,
 			"totalItems": totalRecords,
@@ -102,7 +102,7 @@ func createErrorMockServer(t *testing.T, successfulRequests int, errorCode int, 
 
 		if requestCount <= successfulRequests {
 			// Return successful response
-			response := map[string]interface{}{
+			response := map[string]any{
 				"page":       requestCount,
 				"perPage":    100,
 				"totalItems": 300, // 3페이지가 있다고 설정
@@ -148,9 +148,9 @@ func assertRecordsEqual(t *testing.T, expected, actual []*Record) {
 
 // generateBenchListResponse generates large record list JSON for benchmark tests.
 func generateBenchListResponse(numRecords int) []byte {
-	items := make([]map[string]interface{}, numRecords)
+	items := make([]map[string]any, numRecords)
 	for i := 0; i < numRecords; i++ {
-		items[i] = map[string]interface{}{
+		items[i] = map[string]any{
 			"id":             fmt.Sprintf("rec_%d", i),
 			"collectionId":   "posts_col",
 			"collectionName": "posts",
@@ -161,7 +161,7 @@ func generateBenchListResponse(numRecords int) []byte {
 			"view_count":     i * 10,
 		}
 	}
-	response := map[string]interface{}{
+	response := map[string]any{
 		"page":       1,
 		"perPage":    numRecords,
 		"totalItems": numRecords,
@@ -461,12 +461,12 @@ func BenchmarkPaginationWithFilters(b *testing.B) {
 			endIdx = totalRecords
 		}
 
-		var items []map[string]interface{}
+		var items []map[string]any
 		if startIdx < totalRecords {
 			items = generateTestRecords(endIdx-startIdx, fmt.Sprintf("rec%d", startIdx))
 		}
 
-		response := map[string]interface{}{
+		response := map[string]any{
 			"page":       page,
 			"perPage":    perPage,
 			"totalItems": totalRecords,
@@ -542,7 +542,7 @@ func BenchmarkPaginationErrorHandling(b *testing.B) {
 			fmt.Sscanf(pageStr, "%d", &page)
 		}
 
-		response := map[string]interface{}{
+		response := map[string]any{
 			"page":       page,
 			"perPage":    100,
 			"totalItems": 500,
@@ -883,7 +883,7 @@ func TestRecordServiceGetAll(t *testing.T) {
 			requestCount++
 			if requestCount == 1 {
 				// 첫 번째 요청은 성공
-				response := map[string]interface{}{
+				response := map[string]any{
 					"page":       1,
 					"perPage":    100,
 					"totalItems": 200,
@@ -894,7 +894,7 @@ func TestRecordServiceGetAll(t *testing.T) {
 			} else {
 				// 두 번째 요청에서는 지연을 주어 컨텍스트 취소가 발생하도록 함
 				time.Sleep(100 * time.Millisecond)
-				response := map[string]interface{}{
+				response := map[string]any{
 					"page":       2,
 					"perPage":    100,
 					"totalItems": 200,
@@ -984,7 +984,7 @@ func TestRecordServiceGetAll(t *testing.T) {
 				t.Errorf("expected expand='author', got '%s'", r.URL.Query().Get("expand"))
 			}
 
-			response := map[string]interface{}{
+			response := map[string]any{
 				"page":       1,
 				"perPage":    100,
 				"totalItems": 1,
@@ -1224,7 +1224,7 @@ func TestRecordIterator_Next(t *testing.T) {
 
 	t.Run("컨텍스트 취소", func(t *testing.T) {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			response := map[string]interface{}{
+			response := map[string]any{
 				"page":       1,
 				"perPage":    100,
 				"totalItems": 200,
@@ -1397,7 +1397,7 @@ func TestRecordIterator_Error(t *testing.T) {
 	t.Run("컨텍스트 취소 에러", func(t *testing.T) {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// 응답을 지연시켜 컨텍스트 취소가 발생하도록 함
-			response := map[string]interface{}{
+			response := map[string]any{
 				"page":       1,
 				"perPage":    100,
 				"totalItems": 100,
@@ -2230,7 +2230,7 @@ func TestBackwardCompatibility(t *testing.T) {
 				t.Error("Expected perPage parameter to be set")
 			}
 
-			response := map[string]interface{}{
+			response := map[string]any{
 				"page":       1,
 				"perPage":    100,
 				"totalItems": 50,

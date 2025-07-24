@@ -47,7 +47,7 @@ func (d *SchemaVersionDetector) DetectVersion(schemaData []byte) (SchemaVersion,
 		}
 	}
 
-	var collections []map[string]interface{}
+	var collections []map[string]any
 	if err := json.Unmarshal(schemaData, &collections); err != nil {
 		return SchemaVersionUnknown, &SchemaVersionError{
 			Message: "failed to parse schema JSON",
@@ -67,7 +67,7 @@ func (d *SchemaVersionDetector) DetectVersion(schemaData []byte) (SchemaVersion,
 }
 
 // detectSchemaVersion performs the actual version detection logic
-func (d *SchemaVersionDetector) detectSchemaVersion(collections []map[string]interface{}) (SchemaVersion, error) {
+func (d *SchemaVersionDetector) detectSchemaVersion(collections []map[string]any) (SchemaVersion, error) {
 	var detectedVersion SchemaVersion
 	var hasFields, hasSchema bool
 

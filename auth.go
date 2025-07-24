@@ -53,7 +53,7 @@ type PasswordAuth struct {
 
 type authToken struct {
 	token    string
-	model    interface{}
+	model    any
 	tokenExp time.Time
 }
 
@@ -75,7 +75,7 @@ func (a *PasswordAuth) Token(client *Client) (string, error) {
 	}
 
 	// If token is missing or expired, execute refresh only once with singleflight
-	_, err, _ := a.refreshSingle.Do("refresh", func() (interface{}, error) {
+	_, err, _ := a.refreshSingle.Do("refresh", func() (any, error) {
 		return nil, a.refreshToken(client)
 	})
 	if err != nil {

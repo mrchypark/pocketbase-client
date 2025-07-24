@@ -124,13 +124,13 @@ func TestMapPbTypeToGoType(t *testing.T) {
 			name:       "unknown type, not omitEmpty",
 			field:      FieldSchema{Type: "unknown"},
 			omitEmpty:  false,
-			wantGoType: "interface{}",
+			wantGoType: "any",
 		},
 		{
 			name:       "unknown type, omitEmpty",
 			field:      FieldSchema{Type: "unknown"},
 			omitEmpty:  true,
-			wantGoType: "interface{}", // interface{} should not be a pointer
+			wantGoType: "any", // any should not be a pointer
 		},
 	}
 

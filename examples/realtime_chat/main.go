@@ -82,7 +82,7 @@ func main() {
 
 		// Create a new record in the 'chat' collection.
 		// This will trigger the real-time event for all subscribed clients.
-		message := map[string]interface{}{
+		message := map[string]any{
 			"user": username,
 			"text": text,
 		}

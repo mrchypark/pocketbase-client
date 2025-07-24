@@ -225,7 +225,7 @@ func TestErrorHelpers(t *testing.T) {
 	})
 
 	t.Run("CreateConfigError", func(t *testing.T) {
-		details := map[string]interface{}{
+		details := map[string]any{
 			"config_key": "config_value",
 			"number":     42,
 		}

@@ -13,16 +13,16 @@ func (m *mockRecordService) GetList(ctx context.Context, collection string, opts
 func (m *mockRecordService) GetOne(ctx context.Context, collection, recordID string, opts *GetOneOptions) (*Record, error) {
 	return &Record{}, nil
 }
-func (m *mockRecordService) Create(ctx context.Context, collection string, body interface{}) (*Record, error) {
+func (m *mockRecordService) Create(ctx context.Context, collection string, body any) (*Record, error) {
 	return &Record{}, nil
 }
-func (m *mockRecordService) CreateWithOptions(ctx context.Context, collection string, body interface{}, opts *WriteOptions) (*Record, error) {
+func (m *mockRecordService) CreateWithOptions(ctx context.Context, collection string, body any, opts *WriteOptions) (*Record, error) {
 	return &Record{}, nil
 }
-func (m *mockRecordService) Update(ctx context.Context, collection, recordID string, body interface{}) (*Record, error) {
+func (m *mockRecordService) Update(ctx context.Context, collection, recordID string, body any) (*Record, error) {
 	return &Record{}, nil
 }
-func (m *mockRecordService) UpdateWithOptions(ctx context.Context, collection, recordID string, body interface{}, opts *WriteOptions) (*Record, error) {
+func (m *mockRecordService) UpdateWithOptions(ctx context.Context, collection, recordID string, body any, opts *WriteOptions) (*Record, error) {
 	return &Record{}, nil
 }
 func (m *mockRecordService) Delete(ctx context.Context, collection, recordID string) error {

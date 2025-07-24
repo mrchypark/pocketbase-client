@@ -66,7 +66,7 @@ func createMockPocketBaseServer() *httptest.Server {
 		w.Header().Set("Content-Type", "application/json")
 
 		// Simulate large response
-		response := map[string]interface{}{
+		response := map[string]any{
 			"page":       1,
 			"perPage":    30,
 			"totalItems": 1000,
@@ -84,7 +84,7 @@ func createMockPocketBaseServer() *httptest.Server {
 	mux.HandleFunc("/api/collections/posts/records", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
-		response := map[string]interface{}{
+		response := map[string]any{
 			"page":       1,
 			"perPage":    100,
 			"totalItems": 10000,
@@ -101,15 +101,15 @@ func createMockPocketBaseServer() *httptest.Server {
 }
 
 // generateMockCollections generates mock collection data
-func generateMockCollections(count int) []map[string]interface{} {
-	collections := make([]map[string]interface{}, count)
+func generateMockCollections(count int) []map[string]any {
+	collections := make([]map[string]any, count)
 	for i := 0; i < count; i++ {
-		collections[i] = map[string]interface{}{
+		collections[i] = map[string]any{
 			"id":      fmt.Sprintf("collection_%d", i+1),
 			"name":    fmt.Sprintf("Collection %d", i+1),
 			"type":    "base",
 			"system":  false,
-			"schema":  []interface{}{},
+			"schema":  []any{},
 			"created": "2023-01-01T00:00:00.000Z",
 			"updated": "2023-01-01T00:00:00.000Z",
 		}
@@ -118,10 +118,10 @@ func generateMockCollections(count int) []map[string]interface{} {
 }
 
 // generateMockRecords generates mock record data
-func generateMockRecords(count int) []map[string]interface{} {
-	records := make([]map[string]interface{}, count)
+func generateMockRecords(count int) []map[string]any {
+	records := make([]map[string]any, count)
 	for i := 0; i < count; i++ {
-		records[i] = map[string]interface{}{
+		records[i] = map[string]any{
 			"id":      fmt.Sprintf("record_%d", i+1),
 			"title":   fmt.Sprintf("Post %d", i+1),
 			"content": fmt.Sprintf("This is the content of post %d", i+1),
@@ -174,12 +174,12 @@ func testBasicStreaming(ctx context.Context, client *pb.Client) error {
 	fmt.Printf("   Streamed data size: %d bytes\n", buf.Len())
 
 	// Parse JSON to verify data
-	var response map[string]interface{}
+	var response map[string]any
 	if err := json.Unmarshal(buf.Bytes(), &response); err != nil {
 		return fmt.Errorf("JSON parsing failed: %w", err)
 	}
 
-	if items, ok := response["items"].([]interface{}); ok {
+	if items, ok := response["items"].([]any); ok {
 		fmt.Printf("   Collection count: %d\n", len(items))
 	}
 

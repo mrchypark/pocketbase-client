@@ -50,7 +50,7 @@ func main() {
 	}
 
 	// 6. Update the record
-	updateData := map[string]interface{}{
+	updateData := map[string]any{
 		"title": "My Updated Post Title",
 	}
 	updatedRecord, err := client.Records.Update(ctx, "posts", createdRecord.ID, updateData)

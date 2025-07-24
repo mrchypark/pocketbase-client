@@ -60,7 +60,7 @@ func main() {
 
 	// --- 4. Update a record ---
 	fmt.Println("--- Updating a record ---")
-	updateData := map[string]interface{}{
+	updateData := map[string]any{
 		"title": "My Updated Post Title",
 	}
 	updatedRecord, err := client.Records.Update(context.Background(), "posts", recordID, updateData)

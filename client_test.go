@@ -51,9 +51,9 @@ func TestAuthenticateWithPassword(t *testing.T) {
 		if r.URL.Path != "/api/collections/users/auth-with-password" {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
-		resp := map[string]interface{}{
+		resp := map[string]any{
 			"token": token,
-			"record": map[string]interface{}{
+			"record": map[string]any{
 				"id":             "1",
 				"collectionId":   "users",
 				"collectionName": "users",

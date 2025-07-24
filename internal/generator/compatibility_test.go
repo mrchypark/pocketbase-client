@@ -379,7 +379,7 @@ type {{.StructName}} struct {
 }
 
 // generateCodeWithData는 주어진 데이터로 코드를 생성하는 헬퍼 함수입니다
-func generateCodeWithData(t *testing.T, data interface{}) string {
+func generateCodeWithData(t *testing.T, data any) string {
 	basicTemplate := `package {{.PackageName}}
 
 {{range .Collections}}
