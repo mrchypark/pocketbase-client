@@ -6,10 +6,105 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/mrchypark/pocketbase-client"
 	"github.com/pocketbase/pocketbase/tools/types"
 )
+
+// ==============
+//  File Types
+// ==============
+
+// FileReference represents a file reference
+type FileReference struct {
+	filename   string
+	recordID   string
+	collection string
+	fieldName  string
+}
+
+// Filename returns the filename
+func (f FileReference) Filename() string {
+	return f.filename
+}
+
+// URL generates the file URL
+func (f FileReference) URL(baseURL string) string {
+	if f.filename == "" {
+		return ""
+	}
+	return fmt.Sprintf("%s/api/files/%s/%s/%s", baseURL, f.collection, f.recordID, f.filename)
+}
+
+// ThumbURL generates thumbnail URL
+func (f FileReference) ThumbURL(baseURL, thumb string) string {
+	if f.filename == "" {
+		return ""
+	}
+	return fmt.Sprintf("%s/api/files/%s/%s/%s?thumb=%s", baseURL, f.collection, f.recordID, f.filename, thumb)
+}
+
+// IsEmpty returns true if the file reference is empty
+func (f FileReference) IsEmpty() bool {
+	return f.filename == ""
+}
+
+// NewFileReference creates a new FileReference
+func NewFileReference(filename, recordID, collection, fieldName string) FileReference {
+	return FileReference{
+		filename:   filename,
+		recordID:   recordID,
+		collection: collection,
+		fieldName:  fieldName,
+	}
+}
+
+// FileReferences represents multiple file references
+type FileReferences []FileReference
+
+// Filenames returns all filenames
+func (f FileReferences) Filenames() []string {
+	names := make([]string, len(f))
+	for i, file := range f {
+		names[i] = file.Filename()
+	}
+	return names
+}
+
+// URLs generates URLs for all files
+func (f FileReferences) URLs(baseURL string) []string {
+	urls := make([]string, len(f))
+	for i, file := range f {
+		urls[i] = file.URL(baseURL)
+	}
+	return urls
+}
+
+// ThumbURLs generates thumbnail URLs for all files
+func (f FileReferences) ThumbURLs(baseURL, thumb string) []string {
+	urls := make([]string, len(f))
+	for i, file := range f {
+		urls[i] = file.ThumbURL(baseURL, thumb)
+	}
+	return urls
+}
+
+// IsEmpty returns true if there are no file references
+func (f FileReferences) IsEmpty() bool {
+	return len(f) == 0
+}
+
+// Filter returns non-empty file references
+func (f FileReferences) Filter() FileReferences {
+	var filtered FileReferences
+	for _, file := range f {
+		if !file.IsEmpty() {
+			filtered = append(filtered, file)
+		}
+	}
+	return filtered
+}
 
 // ==============
 //  Collection Types
@@ -39,7 +134,7 @@ func ToAllTypes(r *pocketbase.Record) *AllTypes {
 // ToMap converts the struct to a map[string]any for creating/updating records.
 // It omits empty or zero-value fields to support PATCH operations.
 func (m *AllTypes) ToMap() map[string]any {
-	data := make(map[string]interface{})
+	data := make(map[string]any)
 
 	// non-zero, non-empty, and non-nil values will be added to the map.
 	// For required fields, we always include them.
@@ -133,6 +228,14 @@ func (m *AllTypes) TextOptional() *string {
 	return m.GetStringPointer("text_optional")
 }
 
+// TextOptionalValueOr returns the value of the 'text_optional' field or the provided default value if nil.
+func (m *AllTypes) TextOptionalValueOr(defaultValue string) string {
+	if val := m.TextOptional(); val != nil {
+		return *val
+	}
+	return defaultValue
+}
+
 // SetTextOptional sets the value of the 'text_optional' field.
 func (m *AllTypes) SetTextOptional(value *string) {
 	m.Set("text_optional", value)
@@ -151,6 +254,14 @@ func (m *AllTypes) SetNumberRequired(value float64) {
 // NumberOptional returns the value of the 'number_optional' field.
 func (m *AllTypes) NumberOptional() *float64 {
 	return m.GetFloatPointer("number_optional")
+}
+
+// NumberOptionalValueOr returns the value of the 'number_optional' field or the provided default value if nil.
+func (m *AllTypes) NumberOptionalValueOr(defaultValue float64) float64 {
+	if val := m.NumberOptional(); val != nil {
+		return *val
+	}
+	return defaultValue
 }
 
 // SetNumberOptional sets the value of the 'number_optional' field.
@@ -173,6 +284,14 @@ func (m *AllTypes) BoolOptional() *bool {
 	return m.GetBoolPointer("bool_optional")
 }
 
+// BoolOptionalValueOr returns the value of the 'bool_optional' field or the provided default value if nil.
+func (m *AllTypes) BoolOptionalValueOr(defaultValue bool) bool {
+	if val := m.BoolOptional(); val != nil {
+		return *val
+	}
+	return defaultValue
+}
+
 // SetBoolOptional sets the value of the 'bool_optional' field.
 func (m *AllTypes) SetBoolOptional(value *bool) {
 	m.Set("bool_optional", value)
@@ -191,6 +310,14 @@ func (m *AllTypes) SetEmailRequired(value string) {
 // EmailOptional returns the value of the 'email_optional' field.
 func (m *AllTypes) EmailOptional() *string {
 	return m.GetStringPointer("email_optional")
+}
+
+// EmailOptionalValueOr returns the value of the 'email_optional' field or the provided default value if nil.
+func (m *AllTypes) EmailOptionalValueOr(defaultValue string) string {
+	if val := m.EmailOptional(); val != nil {
+		return *val
+	}
+	return defaultValue
 }
 
 // SetEmailOptional sets the value of the 'email_optional' field.
@@ -213,6 +340,14 @@ func (m *AllTypes) URLOptional() *string {
 	return m.GetStringPointer("url_optional")
 }
 
+// URLOptionalValueOr returns the value of the 'url_optional' field or the provided default value if nil.
+func (m *AllTypes) URLOptionalValueOr(defaultValue string) string {
+	if val := m.URLOptional(); val != nil {
+		return *val
+	}
+	return defaultValue
+}
+
 // SetURLOptional sets the value of the 'url_optional' field.
 func (m *AllTypes) SetURLOptional(value *string) {
 	m.Set("url_optional", value)
@@ -233,6 +368,14 @@ func (m *AllTypes) DateOptional() *types.DateTime {
 	return m.GetDateTimePointer("date_optional")
 }
 
+// DateOptionalValueOr returns the value of the 'date_optional' field or the provided default value if nil.
+func (m *AllTypes) DateOptionalValueOr(defaultValue types.DateTime) types.DateTime {
+	if val := m.DateOptional(); val != nil {
+		return *val
+	}
+	return defaultValue
+}
+
 // SetDateOptional sets the value of the 'date_optional' field.
 func (m *AllTypes) SetDateOptional(value *types.DateTime) {
 	m.Set("date_optional", value)
@@ -251,6 +394,14 @@ func (m *AllTypes) SetSelectSingleRequired(value string) {
 // SelectSingleOptional returns the value of the 'select_single_optional' field.
 func (m *AllTypes) SelectSingleOptional() *string {
 	return m.GetStringPointer("select_single_optional")
+}
+
+// SelectSingleOptionalValueOr returns the value of the 'select_single_optional' field or the provided default value if nil.
+func (m *AllTypes) SelectSingleOptionalValueOr(defaultValue string) string {
+	if val := m.SelectSingleOptional(); val != nil {
+		return *val
+	}
+	return defaultValue
 }
 
 // SetSelectSingleOptional sets the value of the 'select_single_optional' field.
@@ -303,6 +454,14 @@ func (m *AllTypes) FileSingle() *string {
 	return m.GetStringPointer("file_single")
 }
 
+// FileSingleValueOr returns the value of the 'file_single' field or the provided default value if nil.
+func (m *AllTypes) FileSingleValueOr(defaultValue string) string {
+	if val := m.FileSingle(); val != nil {
+		return *val
+	}
+	return defaultValue
+}
+
 // SetFileSingle sets the value of the 'file_single' field.
 func (m *AllTypes) SetFileSingle(value *string) {
 	m.Set("file_single", value)
@@ -321,6 +480,14 @@ func (m *AllTypes) SetFileMulti(value []string) {
 // RelationSingle returns the value of the 'relation_single' field.
 func (m *AllTypes) RelationSingle() *string {
 	return m.GetStringPointer("relation_single")
+}
+
+// RelationSingleValueOr returns the value of the 'relation_single' field or the provided default value if nil.
+func (m *AllTypes) RelationSingleValueOr(defaultValue string) string {
+	if val := m.RelationSingle(); val != nil {
+		return *val
+	}
+	return defaultValue
 }
 
 // SetRelationSingle sets the value of the 'relation_single' field.
@@ -343,6 +510,14 @@ func (m *AllTypes) Created() *types.DateTime {
 	return m.GetDateTimePointer("created")
 }
 
+// CreatedValueOr returns the value of the 'created' field or the provided default value if nil.
+func (m *AllTypes) CreatedValueOr(defaultValue types.DateTime) types.DateTime {
+	if val := m.Created(); val != nil {
+		return *val
+	}
+	return defaultValue
+}
+
 // SetCreated sets the value of the 'created' field.
 func (m *AllTypes) SetCreated(value *types.DateTime) {
 	m.Set("created", value)
@@ -351,6 +526,14 @@ func (m *AllTypes) SetCreated(value *types.DateTime) {
 // Updated returns the value of the 'updated' field.
 func (m *AllTypes) Updated() *types.DateTime {
 	return m.GetDateTimePointer("updated")
+}
+
+// UpdatedValueOr returns the value of the 'updated' field or the provided default value if nil.
+func (m *AllTypes) UpdatedValueOr(defaultValue types.DateTime) types.DateTime {
+	if val := m.Updated(); val != nil {
+		return *val
+	}
+	return defaultValue
 }
 
 // SetUpdated sets the value of the 'updated' field.
@@ -382,7 +565,7 @@ func ToRelatedCollection(r *pocketbase.Record) *RelatedCollection {
 // ToMap converts the struct to a map[string]any for creating/updating records.
 // It omits empty or zero-value fields to support PATCH operations.
 func (m *RelatedCollection) ToMap() map[string]any {
-	data := make(map[string]interface{})
+	data := make(map[string]any)
 
 	// non-zero, non-empty, and non-nil values will be added to the map.
 	// For required fields, we always include them.
