@@ -1,3 +1,4 @@
+// Package main demonstrates the usage of type-safe generated models with PocketBase client.
 package main
 
 import (
@@ -26,135 +27,86 @@ func main() {
 	// --- Create RelatedCollection record (for testing AllTypes Relation Single/Multi) ---
 	fmt.Println("\n--- Creating a RelatedCollection record for testing relations ---")
 	newRelated := NewRelatedCollection()
-	newRelated.SetName("Example Related Item")
-	createdRelated, err := client.Records.Create(ctx, "related_collection", newRelated)
+	newRelated.Name = "Example Related Item" // Direct field access
+
+	// Use generic service to create record
+	relatedService := NewRelatedCollectionService(client)
+	createdRelated, err := relatedService.Create(ctx, newRelated, nil)
 	if err != nil {
 		log.Fatalf("Failed to create related record: %v", err)
 	}
-	fmt.Printf("Created RelatedCollection with ID: %s, Name: '%s'\n", createdRelated.ID, newRelated.Name())
+	fmt.Printf("Created RelatedCollection with ID: %s, Name: '%s'\n", createdRelated.ID, createdRelated.Name)
 
 	// --- Create AllTypes record using Type-Safe models ---
 	fmt.Println("\n--- Creating a new AllTypes record using generated types ---")
 
 	newAllTypes := NewAllTypes() // Create new AllTypes instance
 
-	// Set required fields
-	newAllTypes.SetTextRequired("This is a required text.")
-	newAllTypes.SetNumberRequired(123.45)
-	newAllTypes.SetBoolRequired(true)
-	newAllTypes.SetEmailRequired("test@example.com")
-	newAllTypes.SetURLRequired("https://example.com")
-	newAllTypes.SetDateRequired(types.NowDateTime())
+	// Set required fields (direct field access)
+	newAllTypes.TextRequired = "This is a required text."
+	newAllTypes.NumberRequired = 123.45
+	newAllTypes.BoolRequired = true
+	newAllTypes.EmailRequired = "test@example.com"
+	newAllTypes.URLRequired = "https://example.com"
+	newAllTypes.DateRequired = types.NowDateTime()
 
 	// Assign valid values defined in schema to required select fields
-	newAllTypes.SetSelectSingleRequired("a")               // One of "a", "b", "c"
-	newAllTypes.SetSelectMultiRequired([]string{"a", "b"}) // One or more of "a", "b", "c"
-	newAllTypes.SetJSONRequired(json.RawMessage(`{"key": "value", "number": 123}`))
+	newAllTypes.SelectSingleRequired = "a"               // One of "a", "b", "c"
+	newAllTypes.SelectMultiRequired = []string{"a", "b"} // One or more of "a", "b", "c"
+	newAllTypes.JSONRequired = json.RawMessage(`{"key": "value", "number": 123}`)
 
-	// Set optional fields (using pointer values)
-	optionalText := "This is an optional text."
-	newAllTypes.SetTextOptional(&optionalText)
-	optionalNumber := 987.65
-	newAllTypes.SetNumberOptional(&optionalNumber)
-	optionalBool := false
-	newAllTypes.SetBoolOptional(&optionalBool)
-	optionalEmail := "optional@example.com"
-	newAllTypes.SetEmailOptional(&optionalEmail)
-	optionalURL := "https://optional.dev"
-	newAllTypes.SetURLOptional(&optionalURL)
-	optionalDate := types.NowDateTime().Add(24 * time.Hour)
-	newAllTypes.SetDateOptional(&optionalDate)
-	so := "x"
-	newAllTypes.SetSelectSingleOptional(&so)          // One of "x", "y", "z"
-	newAllTypes.SetSelectMultiOptional([]string{"y"}) // One or more of "x", "y", "z"
-	optionalJSONContent := json.RawMessage(`{"another_key": "another_value"}`)
-	newAllTypes.SetJSONOptional(optionalJSONContent)
+	// Set optional fields (direct field access - no pointers needed in new structure)
+	newAllTypes.TextOptional = "This is an optional text."
+	newAllTypes.NumberOptional = 987.65
+	newAllTypes.BoolOptional = false
+	newAllTypes.EmailOptional = "optional@example.com"
+	newAllTypes.URLOptional = "https://optional.dev"
+	newAllTypes.DateOptional = types.NowDateTime().Add(24 * time.Hour)
+	newAllTypes.SelectSingleOptional = "x"          // One of "x", "y", "z"
+	newAllTypes.SelectMultiOptional = []string{"y"} // One or more of "x", "y", "z"
+	newAllTypes.JSONOptional = json.RawMessage(`{"another_key": "another_value"}`)
 
 	// File and Relation fields (in this example, actual file upload/ID references are omitted, using empty slices or generated IDs)
 	// In production environments, use pocketbase-client's File-related methods.
-	id := createdRelated.ID
-	newAllTypes.SetRelationSingle(&id)       // Reference to RelatedCollection ID created above
-	newAllTypes.SetRelationMulti([]string{}) // Add multiple RelatedCollection IDs here
+	newAllTypes.RelationSingle = createdRelated.ID // Reference to RelatedCollection ID created above
+	newAllTypes.RelationMulti = []string{}         // Add multiple RelatedCollection IDs here
 
-	// Create record
-	createdAllTypeRecord, err := client.Records.Create(ctx, "all_types", newAllTypes)
+	// Create record using generic service
+	allTypesService := NewAllTypesService(client)
+	createdAllTypeRecord, err := allTypesService.Create(ctx, newAllTypes, nil)
 	if err != nil {
 		log.Fatalf("Failed to create type-safe AllTypes record: %v", err)
 	}
 
-	// Verify created record (using type-safe Getters)
-	createdAllTypes := ToAllTypes(createdAllTypeRecord)
-	fmt.Printf("Created AllTypes record with ID: %s\n", createdAllTypes.ID)
-	fmt.Printf("  TextRequired: '%s'\n", createdAllTypes.TextRequired())
-	if txt := createdAllTypes.TextOptional(); txt != nil {
-		fmt.Printf("  TextOptional: '%s'\n", *txt) // Pointer dereference
-	} else {
-		fmt.Printf("  TextOptional: <nil>\n") // When nil
-	}
-	fmt.Printf("  NumberRequired: %f\n", createdAllTypes.NumberRequired())
-	if num := createdAllTypes.NumberOptional(); num != nil {
-		fmt.Printf("  NumberOptional: %f\n", *num) // Pointer dereference
-	} else {
-		fmt.Printf("  NumberOptional: <nil>\n")
-	}
-	fmt.Printf("  BoolRequired: %t\n", createdAllTypes.BoolRequired())
-	if b := createdAllTypes.BoolOptional(); b != nil {
-		fmt.Printf("  BoolOptional: %t\n", *b) // Pointer dereference
-	} else {
-		fmt.Printf("  BoolOptional: <nil>\n")
-	}
-	fmt.Printf("  EmailRequired: '%s'\n", createdAllTypes.EmailRequired())
-	if email := createdAllTypes.EmailOptional(); email != nil {
-		fmt.Printf("  EmailOptional: '%s'\n", *email) // Pointer dereference
-	} else {
-		fmt.Printf("  EmailOptional: <nil>\n")
-	}
-	fmt.Printf("  URLRequired: '%s'\n", createdAllTypes.URLRequired())
-	if url := createdAllTypes.URLOptional(); url != nil {
-		fmt.Printf("  URLOptional: '%s'\n", *url) // Pointer dereference
-	} else {
-		fmt.Printf("  URLOptional: <nil>\n")
-	}
-	fmt.Printf("  DateRequired: '%s'\n", createdAllTypes.DateRequired().String())
-	if dt := createdAllTypes.DateOptional(); dt != nil {
-		fmt.Printf("  DateOptional: '%s'\n", dt.String()) // Pointer dereference (String() method returns value)
-	} else {
-		fmt.Printf("  DateOptional: <nil>\n")
-	}
-
-	// SelectSingleRequired is string, SelectSingleOptional is *string, so handle branching
-	fmt.Printf("  SelectSingleRequired: %s\n", createdAllTypes.SelectSingleRequired())
-	if sso := createdAllTypes.SelectSingleOptional(); sso != nil {
-		fmt.Printf("  SelectSingleOptional: '%s'\n", *sso) // *string dereference
-	} else {
-		fmt.Printf("  SelectSingleOptional: <nil>\n")
-	}
-
-	fmt.Printf("  SelectMultiRequired: %v\n", createdAllTypes.SelectMultiRequired())
-	fmt.Printf("  SelectMultiOptional: %v\n", createdAllTypes.SelectMultiOptional())
-	fmt.Printf("  JSONRequired: %s\n", string(createdAllTypes.JSONRequired()))
-	fmt.Printf("  JSONOptional: %s\n", string(createdAllTypes.JSONOptional()))
-
-	// FileSingle is *string, FileMulti is []string, so handle branching
-	if fs := createdAllTypes.FileSingle(); fs != nil {
-		fmt.Printf("  FileSingle (IDs): '%s'\n", *fs) // *string dereference
-	} else {
-		fmt.Printf("  FileSingle (IDs): <nil>\n")
-	}
-	fmt.Printf("  FileMulti (IDs): %v\n", createdAllTypes.FileMulti())
-
-	// RelationSingle is *string, RelationMulti is []string, so handle branching
-	if rs := createdAllTypes.RelationSingle(); rs != nil {
-		fmt.Printf("  RelationSingle (IDs): '%s'\n", *rs) // *string dereference
-	} else {
-		fmt.Printf("  RelationSingle (IDs): <nil>\n")
-	}
-	fmt.Printf("  RelationMulti (IDs): %v\n", createdAllTypes.RelationMulti())
+	// Verify created record (using direct field access)
+	fmt.Printf("Created AllTypes record with ID: %s\n", createdAllTypeRecord.ID)
+	fmt.Printf("  TextRequired: '%s'\n", createdAllTypeRecord.TextRequired)
+	fmt.Printf("  TextOptional: '%s'\n", createdAllTypeRecord.TextOptional)
+	fmt.Printf("  NumberRequired: %f\n", createdAllTypeRecord.NumberRequired)
+	fmt.Printf("  NumberOptional: %f\n", createdAllTypeRecord.NumberOptional)
+	fmt.Printf("  BoolRequired: %t\n", createdAllTypeRecord.BoolRequired)
+	fmt.Printf("  BoolOptional: %t\n", createdAllTypeRecord.BoolOptional)
+	fmt.Printf("  EmailRequired: '%s'\n", createdAllTypeRecord.EmailRequired)
+	fmt.Printf("  EmailOptional: '%s'\n", createdAllTypeRecord.EmailOptional)
+	fmt.Printf("  URLRequired: '%s'\n", createdAllTypeRecord.URLRequired)
+	fmt.Printf("  URLOptional: '%s'\n", createdAllTypeRecord.URLOptional)
+	fmt.Printf("  DateRequired: '%s'\n", createdAllTypeRecord.DateRequired.String())
+	fmt.Printf("  DateOptional: '%s'\n", createdAllTypeRecord.DateOptional.String())
+	fmt.Printf("  SelectSingleRequired: %s\n", createdAllTypeRecord.SelectSingleRequired)
+	fmt.Printf("  SelectSingleOptional: '%s'\n", createdAllTypeRecord.SelectSingleOptional)
+	fmt.Printf("  SelectMultiRequired: %v\n", createdAllTypeRecord.SelectMultiRequired)
+	fmt.Printf("  SelectMultiOptional: %v\n", createdAllTypeRecord.SelectMultiOptional)
+	fmt.Printf("  JSONRequired: %s\n", string(createdAllTypeRecord.JSONRequired))
+	fmt.Printf("  JSONOptional: %s\n", string(createdAllTypeRecord.JSONOptional))
+	fmt.Printf("  FileSingle (IDs): '%s'\n", createdAllTypeRecord.FileSingle)
+	fmt.Printf("  FileMulti (IDs): %v\n", createdAllTypeRecord.FileMulti)
+	fmt.Printf("  RelationSingle (IDs): '%s'\n", createdAllTypeRecord.RelationSingle)
+	fmt.Printf("  RelationMulti (IDs): %v\n", createdAllTypeRecord.RelationMulti)
 
 	// --- List AllTypes records using Type-Safe helpers ---
 	fmt.Println("\n--- Listing AllTypes records using generated helper ---")
 
-	allTypesCollection, err := GetAllTypesList(client.Records, &pocketbase.ListOptions{
+	allTypesCollection, err := GetAllTypesList(client, &pocketbase.ListOptions{
 		Page:    1,
 		PerPage: 10,
 		Sort:    "-created", // Sort by newest created records first
@@ -165,18 +117,18 @@ func main() {
 
 	fmt.Printf("Found %d AllTypes records. (Page %d/%d)\n", allTypesCollection.TotalItems, allTypesCollection.Page, allTypesCollection.TotalPages)
 	for i, item := range allTypesCollection.Items {
-		// Use type-safe Getters to safely access fields even within loops.
-		fmt.Printf("  [%d] ID: %s, TextRequired: '%s'\n", i+1, item.ID, item.TextRequired())
+		// Use direct field access to safely access fields even within loops.
+		fmt.Printf("  [%d] ID: %s, TextRequired: '%s'\n", i+1, item.ID, item.TextRequired)
 		// Add more fields here if you want to output more
 	}
 
 	// --- Fetch single AllTypes record ---
 	fmt.Println("\n--- Fetching a single AllTypes record by ID ---")
-	fetchedAllTypes, err := GetAllTypes(client.Records, createdAllTypeRecord.ID, nil)
+	fetchedAllTypes, err := GetAllTypes(client, createdAllTypeRecord.ID, nil)
 	if err != nil {
 		log.Fatalf("Failed to fetch single AllTypes record: %v", err)
 	}
-	fmt.Printf("Fetched AllTypes record (ID: %s) TextRequired: '%s'\n", fetchedAllTypes.ID, fetchedAllTypes.TextRequired())
+	fmt.Printf("Fetched AllTypes record (ID: %s) TextRequired: '%s'\n", fetchedAllTypes.ID)
 
 	// --- Delete created records (cleanup) ---
 	fmt.Printf("\n--- Cleaning up created AllTypes record (ID: %s) ---\n", createdAllTypeRecord.ID)

@@ -24,6 +24,25 @@ type BaseModel struct {
 	CollectionName string `json:"collectionName"`
 }
 
+// GetID returns the record ID
+func (b *BaseModel) GetID() string {
+	return b.ID
+}
+
+// GetCollectionName returns the collection name
+func (b *BaseModel) GetCollectionName() string {
+	return b.CollectionName
+}
+
+// ToMap converts the BaseModel to a map - should be overridden by embedding structs
+func (b *BaseModel) ToMap() map[string]any {
+	return map[string]any{
+		"id":             b.ID,
+		"collectionId":   b.CollectionID,
+		"collectionName": b.CollectionName,
+	}
+}
+
 // BaseDateTime provides timestamp fields for PocketBase models.
 // This structure contains the standard created and updated timestamp fields
 // that are automatically managed by PocketBase.

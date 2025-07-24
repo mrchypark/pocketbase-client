@@ -37,6 +37,14 @@ func main() {
 	generateRelations := flag.Bool("relations", true, "Generate enhanced relation types")
 	generateFiles := flag.Bool("files", true, "Generate enhanced file types")
 
+	// 제네릭 클라이언트 사용 플래그 (기본값: true)
+	useGeneric := flag.Bool("generic", true, "Use generic client approach (default)")
+	useLegacy := flag.Bool("legacy", false, "Use legacy client approach (generates individual service classes)")
+
+	// 출력 플래그 추가
+	outputPath := flag.String("output", "./models.gen.go", "Output file path (alias for -path)")
+	packageName := flag.String("package", "models", "Package name for generated code (alias for -pkgname)")
+
 	// 스키마 버전 관련 플래그들
 	forceVersion := flag.String("force-version", "", "Force schema version (latest|legacy)")
 	validateSchema := flag.Bool("validate-schema", false, "Validate schema format before processing")
@@ -47,6 +55,11 @@ func main() {
 	showVersion := flag.Bool("version", false, "Show version information")
 
 	flag.Parse()
+
+	// legacy 플래그가 설정되면 generic을 false로 변경
+	if *useLegacy {
+		*useGeneric = false
+	}
 
 	// 도움말 표시
 	if *showHelp {
@@ -126,7 +139,7 @@ func main() {
 	}
 
 	// BuildTemplateData 함수 사용하여 기본 TemplateData 생성
-	baseTplData := generator.BuildTemplateData(schemas, *pkgName, schemaVersion)
+	baseTplData := generator.BuildTemplateData(schemas, *pkgName, schemaVersion, *useGeneric)
 	baseTplData.JSONLibrary = *jsonLib
 
 	// 컬렉션 처리 로깅
@@ -167,10 +180,28 @@ func main() {
 		tplData = baseTplData
 	}
 
+	// 플래그 충돌 검사
+	if *useLegacy && *useGeneric {
+		log.Fatalf("Cannot use both -legacy and -generic flags. Use -legacy=true to disable generic mode.")
+	}
+
+	// legacy 플래그가 true면 generic을 false로 설정
+	if *useLegacy {
+		*useGeneric = false
+	}
+
+	// 통합된 템플릿 사용
+	templateName := "models"
+	if *useGeneric {
+		log.Printf("Using generic client mode (default)")
+	} else {
+		log.Printf("Using legacy client mode")
+	}
+
 	// Parse template with better error handling
-	tpl, err := template.New("models").Parse(templateFile)
+	tpl, err := template.New(templateName).Parse(templateFile)
 	if err != nil {
-		genErr := generator.WrapTemplateError(err, "models", "parse")
+		genErr := generator.WrapTemplateError(err, templateName, "parse")
 		log.Fatalf("Template parsing failed: %v", genErr)
 	}
 
@@ -197,7 +228,7 @@ func main() {
 	// 생성된 코드 검증 및 포맷팅
 	log.Printf("Validating and formatting generated code...")
 
-	if err := validateAndFormatCode(*outputPath, schemaVersion); err != nil {
+	if err := validateAndFormatCode(*outputPath, schemaVersion, *useGeneric); err != nil {
 		log.Fatalf("Code validation and formatting failed: %v", err)
 	}
 
@@ -205,7 +236,7 @@ func main() {
 }
 
 // validateAndFormatCode validates the generated Go code and applies formatting
-func validateAndFormatCode(outputPath string, schemaVersion generator.SchemaVersion) error {
+func validateAndFormatCode(outputPath string, schemaVersion generator.SchemaVersion, useGeneric bool) error {
 	log.Printf("Reading generated code for validation...")
 
 	// 생성된 파일 읽기
@@ -253,7 +284,7 @@ func validateAndFormatCode(outputPath string, schemaVersion generator.SchemaVers
 
 	// 최종 검증
 	log.Printf("Performing final validation...")
-	if err := validateFinalCode(formattedBytes, schemaVersion, outputPath); err != nil {
+	if err := validateFinalCode(formattedBytes, schemaVersion, outputPath, useGeneric); err != nil {
 		return err
 	}
 
@@ -351,13 +382,17 @@ func validateSchemaVersionSpecificCode(code []byte, version generator.SchemaVers
 }
 
 // validateFinalCode performs final validation on the formatted code
-func validateFinalCode(code []byte, version generator.SchemaVersion, filePath string) error {
+func validateFinalCode(code []byte, version generator.SchemaVersion, filePath string, useGeneric bool) error {
 	codeStr := string(code)
 
-	// 필수 import 확인 (스키마 버전에 따라 다름)
+	// 필수 import 확인 (템플릿 타입에 따라 다름)
 	requiredImports := []string{
-		"context",
 		"github.com/mrchypark/pocketbase-client",
+	}
+
+	// 제네릭이 아닌 경우에만 context 필요
+	if !useGeneric {
+		requiredImports = append(requiredImports, "context")
 	}
 
 	// Legacy 스키마에서만 types 패키지 필요
@@ -378,7 +413,6 @@ func validateFinalCode(code []byte, version generator.SchemaVersion, filePath st
 	expectedFunctionPatterns := map[string]string{
 		"constructor": "func New",
 		"service":     "Service struct",
-		"getter":      "func Get",
 		"toMap":       "ToMap()",
 	}
 
@@ -631,6 +665,12 @@ func printHelp() {
 	fmt.Println("  -jsonlib string")
 	fmt.Println("        JSON library to use (default: encoding/json)")
 	fmt.Println()
+	fmt.Println("CLIENT MODE:")
+	fmt.Println("  -generic")
+	fmt.Println("        Use generic client approach (default: true)")
+	fmt.Println("  -legacy")
+	fmt.Println("        Use legacy client approach with individual service classes (default: false)")
+	fmt.Println()
 	fmt.Println("ENHANCED FEATURES:")
 	fmt.Println("  -enums")
 	fmt.Println("        Generate enum constants for select fields (default: true)")
@@ -654,10 +694,13 @@ func printHelp() {
 	fmt.Println("        Show version information")
 	fmt.Println()
 	fmt.Println("EXAMPLES:")
-	fmt.Println("  # Basic usage")
+	fmt.Println("  # Basic usage (generic client - default)")
 	fmt.Println("  pbc-gen -schema ./pb_schema.json -path ./models.gen.go")
 	fmt.Println()
-	fmt.Println("  # Force legacy schema version")
+	fmt.Println("  # Use legacy client approach")
+	fmt.Println("  pbc-gen -legacy -schema ./pb_schema.json -path ./models.gen.go")
+	fmt.Println()
+	fmt.Println("  # Force legacy schema version with validation")
 	fmt.Println("  pbc-gen -force-version legacy -validate-schema")
 	fmt.Println()
 	fmt.Println("  # Verbose output with validation")

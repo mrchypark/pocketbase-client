@@ -28,6 +28,7 @@ type TemplateData struct {
 	JSONLibrary   string // JSON library import path (e.g., "encoding/json")
 	Collections   []CollectionData
 	SchemaVersion SchemaVersion // 스키마 버전 정보
+	UseGeneric    bool          // 제네릭 클라이언트 사용 여부
 
 	// Enhanced 기능을 위한 필드들 (기본값은 빈 슬라이스)
 	Enums         []EnumData         `json:"enums,omitempty"`
@@ -38,6 +39,7 @@ type TemplateData struct {
 // CollectionData represents a single PocketBase collection and its metadata
 // for code generation purposes.
 type CollectionData struct {
+	CollectionID   string // PocketBase collection ID (e.g., '2ovgy2ppc53x0i1')
 	CollectionName string // PocketBase collection name (e.g., 'posts')
 	StructName     string // Generated Go struct name (e.g., 'Post')
 	Fields         []FieldData

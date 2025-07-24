@@ -2,6 +2,7 @@ package generator
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"text/template"
 )
@@ -200,6 +201,81 @@ func (g *CodeGenerator) GenerateCode(templateContent string) (string, error) {
 	return builder.String(), nil
 }
 
+// GenerateGenericServices generates service code using the existing template
+func (g *CodeGenerator) GenerateGenericServices() (string, error) {
+	// 기존 템플릿 파일 읽기
+	templatePath := "cmd/pbc-gen/template.go.tpl"
+	templateContent, err := os.ReadFile(templatePath)
+	if err != nil {
+		// 템플릿 파일이 없으면 내장 템플릿 사용
+		return g.generateWithBuiltinTemplate()
+	}
+
+	// 기존 템플릿 사용
+	tpl, err := template.New("services").Parse(string(templateContent))
+	if err != nil {
+		return "", fmt.Errorf("template parsing failed: %w", err)
+	}
+
+	// 템플릿 데이터 준비
+	templateData := g.prepareTemplateData()
+
+	// 템플릿 실행
+	var builder strings.Builder
+	err = tpl.Execute(&builder, templateData)
+	if err != nil {
+		return "", fmt.Errorf("template execution failed: %w", err)
+	}
+
+	return builder.String(), nil
+}
+
+// generateWithBuiltinTemplate generates code using built-in template as fallback
+func (g *CodeGenerator) generateWithBuiltinTemplate() (string, error) {
+	// 내장 제네릭 서비스 템플릿 사용
+	tpl, err := template.New("services").Parse(GenericServiceTemplate)
+	if err != nil {
+		return "", fmt.Errorf("builtin template parsing failed: %w", err)
+	}
+
+	// 템플릿 데이터 준비
+	templateData := g.prepareTemplateData()
+
+	// 템플릿 실행
+	var builder strings.Builder
+	err = tpl.Execute(&builder, templateData)
+	if err != nil {
+		return "", fmt.Errorf("builtin template execution failed: %w", err)
+	}
+
+	return builder.String(), nil
+}
+
+// GenerateStructs generates struct definitions using struct template
+func (g *CodeGenerator) GenerateStructs() (string, error) {
+	// 구조체 템플릿 사용
+	funcMap := template.FuncMap{
+		"ToLower": strings.ToLower,
+	}
+
+	tpl, err := template.New("structs").Funcs(funcMap).Parse(StructTemplate)
+	if err != nil {
+		return "", fmt.Errorf("struct template parsing failed: %w", err)
+	}
+
+	// 템플릿 데이터 준비
+	templateData := g.prepareTemplateData()
+
+	// 템플릿 실행
+	var builder strings.Builder
+	err = tpl.Execute(&builder, templateData)
+	if err != nil {
+		return "", fmt.Errorf("struct template execution failed: %w", err)
+	}
+
+	return builder.String(), nil
+}
+
 // prepareTemplateData는 템플릿 실행용 데이터를 준비합니다.
 func (g *CodeGenerator) prepareTemplateData() interface{} {
 	// 스키마 버전 정보를 포함한 템플릿 데이터 반환
@@ -212,7 +288,7 @@ func (g *CodeGenerator) prepareTemplateData() interface{} {
 		enhancedData.Collections[i].SchemaVersion = g.schemaVersion
 
 		// 필드 처리기를 사용하여 필드 처리 및 UseTimestamps 설정
-		processor := CreateFieldProcessor(g.schemaVersion)
+		processor := CreateFieldProcessorWithGeneric(g.schemaVersion, g.templateData.UseGeneric)
 		enhancedData.Collections[i].UseTimestamps = processor.ShouldEmbedBaseDateTime()
 	}
 
@@ -248,6 +324,42 @@ func (g *CodeGenerator) GenerateStructsOnly() (string, error) {
 	return builder.String(), nil
 }
 
+// GenerateWithServices는 구조체와 서비스 코드를 모두 생성합니다.
+func (g *CodeGenerator) GenerateWithServices() (string, error) {
+	var builder strings.Builder
+
+	// 패키지 선언
+	builder.WriteString(fmt.Sprintf("package %s\n\n", g.templateData.PackageName))
+
+	// 필요한 import 추가
+	imports := g.getRequiredImportsWithServices()
+	if len(imports) > 0 {
+		builder.WriteString("import (\n")
+		for _, imp := range imports {
+			builder.WriteString(fmt.Sprintf("\t\"%s\"\n", imp))
+		}
+		builder.WriteString(")\n\n")
+	}
+
+	// 각 컬렉션에 대한 구조체 생성
+	for _, collection := range g.templateData.Collections {
+		structCode, err := g.GenerateStruct(collection)
+		if err != nil {
+			return "", fmt.Errorf("failed to generate struct for %s: %w", collection.CollectionName, err)
+		}
+		builder.WriteString(structCode)
+	}
+
+	// 제네릭 사용 시 서비스 코드 생성
+	if g.templateData.UseGeneric {
+		serviceGenerator := NewServiceGenerator()
+		serviceCode := serviceGenerator.GenerateAllServices(g.templateData.Collections, true)
+		builder.WriteString(serviceCode)
+	}
+
+	return builder.String(), nil
+}
+
 // getRequiredImports는 필요한 import 목록을 반환합니다.
 func (g *CodeGenerator) getRequiredImports() []string {
 	processor := CreateFieldProcessor(g.schemaVersion)
@@ -262,6 +374,38 @@ func (g *CodeGenerator) getRequiredImports() []string {
 	uniqueImports := make(map[string]bool)
 	var result []string
 	for _, imp := range imports {
+		if !uniqueImports[imp] {
+			uniqueImports[imp] = true
+			result = append(result, imp)
+		}
+	}
+
+	return result
+}
+
+// getRequiredImportsWithServices는 서비스 포함 시 필요한 import 목록을 반환합니다.
+func (g *CodeGenerator) getRequiredImportsWithServices() []string {
+	imports := g.getRequiredImports()
+
+	// 서비스 관련 import 추가
+	serviceImports := []string{
+		"context",
+		"strings",
+		"github.com/pocketbase/pocketbase",
+	}
+
+	// 제네릭 사용 시 추가 import
+	if g.templateData.UseGeneric {
+		serviceImports = append(serviceImports, "fmt")
+	}
+
+	// 모든 import 합치기
+	allImports := append(imports, serviceImports...)
+
+	// 중복 제거
+	uniqueImports := make(map[string]bool)
+	var result []string
+	for _, imp := range allImports {
 		if !uniqueImports[imp] {
 			uniqueImports[imp] = true
 			result = append(result, imp)

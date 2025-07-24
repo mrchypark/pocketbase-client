@@ -259,7 +259,7 @@ func New{{$collection.StructName}}() *{{$collection.StructName}} {
 	return &{{$collection.StructName}}{
 		BaseModel: pocketbase.BaseModel{
 			ID:             "",
-			CollectionID:   "",
+			CollectionID:   "{{$collection.CollectionID}}",
 			CollectionName: "{{$collection.CollectionName}}",
 		},
 		BaseDateTime: pocketbase.BaseDateTime{
@@ -272,7 +272,7 @@ func New{{$collection.StructName}}() *{{$collection.StructName}} {
 	return &{{$collection.StructName}}{
 		BaseModel: pocketbase.BaseModel{
 			ID:             "",
-			CollectionID:   "",
+			CollectionID:   "{{$collection.CollectionID}}",
 			CollectionName: "{{$collection.CollectionName}}",
 		},
 		{{- if $collection.UseTimestamps}}
@@ -285,7 +285,7 @@ func New{{$collection.StructName}}() *{{$collection.StructName}} {
 	return &{{$collection.StructName}}{
 		BaseModel: pocketbase.BaseModel{
 			ID:             "",
-			CollectionID:   "",
+			CollectionID:   "{{$collection.CollectionID}}",
 			CollectionName: "{{$collection.CollectionName}}",
 		},
 	}
@@ -323,39 +323,41 @@ func (m *{{$collection.StructName}}) ToMap() map[string]any {
 	{{- end}}
 	
 	// Field data
-	{{- range .Fields}}
-	{{- if .OmitEmpty}}
-	{{- if .IsPointer}}
-	if m.{{.GoName}} != nil {
-		data["{{.JSONName}}"] = m.{{.GoName}}
+	{{- range $i, $field := .Fields}}
+	{{- if $field.OmitEmpty}}
+	{{- if $field.IsPointer}}
+	if m.{{$field.GoName}} != nil {
+		data["{{$field.JSONName}}"] = m.{{$field.GoName}}
 	}
 	{{- else}}
-	{{- if eq .GoType "string"}}
-	if m.{{.GoName}} != "" {
-		data["{{.JSONName}}"] = m.{{.GoName}}
+	{{- if eq $field.GoType "string"}}
+	if m.{{$field.GoName}} != "" {
+		data["{{$field.JSONName}}"] = m.{{$field.GoName}}
 	}
-	{{- else if eq .GoType "bool"}}
+	{{- else if eq $field.GoType "bool"}}
 	// Always include boolean fields
-	data["{{.JSONName}}"] = m.{{.GoName}}
-	{{- else if eq .GoType "float64"}}
-	if m.{{.GoName}} != 0 {
-		data["{{.JSONName}}"] = m.{{.GoName}}
+	data["{{$field.JSONName}}"] = m.{{$field.GoName}}
+	{{- else if eq $field.GoType "float64"}}
+	if m.{{$field.GoName}} != 0 {
+		data["{{$field.JSONName}}"] = m.{{$field.GoName}}
 	}
-	{{- else if or (eq .GoType "[]string") (eq .GoType "[]interface{}") (eq .GoType "json.RawMessage")}}
-	if len(m.{{.GoName}}) > 0 {
-		data["{{.JSONName}}"] = m.{{.GoName}}
+	{{- else if or (eq $field.GoType "[]string") (eq $field.GoType "[]interface{}") (eq $field.GoType "json.RawMessage")}}
+	if len(m.{{$field.GoName}}) > 0 {
+		data["{{$field.JSONName}}"] = m.{{$field.GoName}}
 	}
 	{{- else}}
-	// Generic zero-value check
-	var zero {{.GoType}}
-	if m.{{.GoName}} != zero {
-		data["{{.JSONName}}"] = m.{{.GoName}}
+	// Generic zero-value check for {{$field.GoName}}
+	{
+		var zero{{$i}} {{$field.GoType}}
+		if m.{{$field.GoName}} != zero{{$i}} {
+			data["{{$field.JSONName}}"] = m.{{$field.GoName}}
+		}
 	}
 	{{- end}}
 	{{- end}}
 	{{- else}}
 	// For required fields, we always include them.
-	data["{{.JSONName}}"] = m.{{.GoName}}
+	data["{{$field.JSONName}}"] = m.{{$field.GoName}}
 	{{- end}}
     {{- end}}
 
@@ -365,43 +367,6 @@ func (m *{{$collection.StructName}}) ToMap() map[string]any {
 {{- if or (eq $collection.SchemaVersion 1) (eq $collection.SchemaVersion 2)}}
 // For type-safe structs (latest/legacy schema), fields are accessed directly.
 // No getter/setter methods are generated as fields are public.
-
-// GetID returns the ID field value
-func (m *{{$collection.StructName}}) GetID() string {
-	return m.ID
-}
-
-// GetCollectionID returns the CollectionID field value
-func (m *{{$collection.StructName}}) GetCollectionID() string {
-	return m.CollectionID
-}
-
-// GetCollectionName returns the CollectionName field value
-func (m *{{$collection.StructName}}) GetCollectionName() string {
-	return m.CollectionName
-}
-
-{{- if eq $collection.SchemaVersion 1}}
-// GetCreated returns the Created field value (legacy schema)
-func (m *{{$collection.StructName}}) GetCreated() types.DateTime {
-	return m.Created
-}
-
-// GetUpdated returns the Updated field value (legacy schema)
-func (m *{{$collection.StructName}}) GetUpdated() types.DateTime {
-	return m.Updated
-}
-{{- else if and (eq $collection.SchemaVersion 2) $collection.UseTimestamps}}
-// GetCreated returns the Created field value (latest schema with timestamps)
-func (m *{{$collection.StructName}}) GetCreated() *types.DateTime {
-	return m.Created
-}
-
-// GetUpdated returns the Updated field value (latest schema with timestamps)
-func (m *{{$collection.StructName}}) GetUpdated() *types.DateTime {
-	return m.Updated
-}
-{{- end}}
 {{- else}}
 // For unknown schema version, generate getter/setter methods for compatibility
 {{range .Fields}}
@@ -428,8 +393,26 @@ func (m *{{$collection.StructName}}) Set{{.GoName}}(value {{.GoType}}) {
 {{- end}}
 {{end}}
 
+{{if .UseGeneric}}
 // ==============
-//  Type-Safe Services
+//  Service Constructors (Generic)
+// ==============
+{{range .Collections}}
+{{$collection := .}}
+
+// New{{$collection.StructName}}Service creates a new generic service for {{$collection.CollectionName}} collection.
+func New{{$collection.StructName}}Service(client *pocketbase.Client) *pocketbase.Service[*{{$collection.StructName}}] {
+	return pocketbase.NewService[*{{$collection.StructName}}](
+		client,
+		"{{$collection.CollectionName}}",
+		New{{$collection.StructName}},
+	)
+}
+
+{{end}}
+{{else}}
+// ==============
+//  Type-Safe Services (Legacy)
 // ==============
 {{range .Collections}}
 {{$collection := .}}
@@ -539,24 +522,44 @@ func (s *{{$collection.StructName}}Service) Delete(ctx context.Context, id strin
 }
 
 {{end}}
+{{end}}
 
 // ==============
 //  Convenience Functions (Backward Compatibility)
 // ==============
 {{range .Collections}}
+{{$collection := .}}
 
-// Get{{.StructName}} fetches a single {{.StructName}} record by its ID.
-// Deprecated: Use {{.StructName}}Service.GetOne instead.
-func Get{{.StructName}}(client *pocketbase.Client, id string, opts *pocketbase.GetOneOptions) (*{{.StructName}}, error) {
-	service := New{{.StructName}}Service(client)
+// Get{{$collection.StructName}} fetches a single {{$collection.StructName}} record by its ID.
+// Deprecated: Use {{$collection.StructName}}Service.GetOne instead.
+func Get{{$collection.StructName}}(client *pocketbase.Client, id string, opts *pocketbase.GetOneOptions) (*{{$collection.StructName}}, error) {
+	{{if $.UseGeneric}}
+	service := New{{$collection.StructName}}Service(client)
 	return service.GetOne(context.Background(), id, opts)
+	{{else}}
+	service := New{{$collection.StructName}}Service(client)
+	return service.GetOne(context.Background(), id, opts)
+	{{end}}
 }
 
-// Get{{.StructName}}List fetches a list of {{.StructName}} records.
-// Deprecated: Use {{.StructName}}Service.GetList instead.
-func Get{{.StructName}}List(client *pocketbase.Client, opts *pocketbase.ListOptions) (*{{.StructName}}Collection, error) {
-	service := New{{.StructName}}Service(client)
+// Get{{$collection.StructName}}List fetches a list of {{$collection.StructName}} records.
+// Deprecated: Use {{$collection.StructName}}Service.GetList instead.
+func Get{{$collection.StructName}}List(client *pocketbase.Client, opts *pocketbase.ListOptions) (*{{$collection.StructName}}Collection, error) {
+	{{if $.UseGeneric}}
+	service := New{{$collection.StructName}}Service(client)
+	result, err := service.GetList(context.Background(), opts)
+	if err != nil {
+		return nil, err
+	}
+	// Convert generic result to legacy collection format
+	return &{{$collection.StructName}}Collection{
+		ListResult: result.ListResult,
+		Items:      result.Items,
+	}, nil
+	{{else}}
+	service := New{{$collection.StructName}}Service(client)
 	return service.GetList(context.Background(), opts)
+	{{end}}
 }
 
 {{end}}

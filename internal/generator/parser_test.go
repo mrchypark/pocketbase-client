@@ -176,7 +176,7 @@ func TestBuildTemplateData(t *testing.T) {
 	}
 
 	pkgName := "testpkg"
-	tplData := BuildTemplateData(schemas, pkgName, SchemaVersionLatest)
+	tplData := BuildTemplateData(schemas, pkgName, SchemaVersionLatest, false)
 
 	if tplData.PackageName != pkgName {
 		t.Errorf("Expected package name %q, got %q", pkgName, tplData.PackageName)

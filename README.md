@@ -30,6 +30,25 @@ go get github.com/mrchypark/pocketbase-client
 
 `pbc-gen` is a command-line tool that generates type-safe Go models from your PocketBase `pb_schema.json` file. This ensures your Go application's data structures are always in sync with your PocketBase collections.
 
+### 🆕 Generic Client (Recommended)
+
+The new **Generic Client** approach uses Go generics to provide better type safety and simpler code generation:
+
+- **Type Safety**: Compile-time type checking with full IDE support
+- **Simplified Code**: Only generates structs and constructor functions
+- **Consistent API**: Same methods for all collections
+- **Better Performance**: Reduced code duplication and memory usage
+
+```bash
+# Generate with Generic Client (default)
+go run ./cmd/pbc-gen -schema ./pb_schema.json -path ./models.gen.go -generic=true
+
+# Use legacy approach
+go run ./cmd/pbc-gen -schema ./pb_schema.json -path ./models.gen.go -generic=false
+```
+
+**📖 For detailed information about the Generic Client, see [GENERIC_CLIENT.md](GENERIC_CLIENT.md)**
+
 ### install
 
 ```sh
@@ -107,7 +126,65 @@ type User struct {
 
 ## 🚀 Quick Start
 
-Here's a quick example to get you started. This snippet authenticates as an admin and fetches a list of records from the `posts` collection.
+### Generic Client (Recommended)
+
+Here's a quick example using the new Generic Client approach with generated models:
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "log"
+
+    pocketbase "github.com/mrchypark/pocketbase-client"
+    "your-project/models" // Generated models
+)
+
+func main() {
+    client := pocketbase.NewClient("http://127.0.0.1:8090")
+
+    // Authenticate as an admin
+    _, err := client.AuthenticateAsAdmin(context.Background(), "admin@example.com", "password")
+    if err != nil {
+        log.Fatalf("Failed to authenticate: %v", err)
+    }
+    fmt.Println("Authenticated successfully!")
+
+    // Create a type-safe service
+    postsService := models.NewPostsService(client)
+
+    // Create a new post with type safety
+    newPost := models.NewPosts()
+    newPost.Title = "Hello, World!"
+    newPost.Content = "This is a test post."
+
+    created, err := postsService.Create(context.Background(), newPost, nil)
+    if err != nil {
+        log.Fatalf("Failed to create post: %v", err)
+    }
+    fmt.Printf("Created post: %s\n", created.GetID())
+
+    // Fetch posts with type safety
+    list, err := postsService.GetList(context.Background(), &pocketbase.ListOptions{
+        Page:    1,
+        PerPage: 10,
+    })
+    if err != nil {
+        log.Fatalf("Failed to get posts: %v", err)
+    }
+
+    fmt.Printf("Retrieved %d posts:\n", len(list.Items))
+    for _, post := range list.Items {
+        fmt.Printf("- ID: %s, Title: %s\n", post.GetID(), post.Title)
+    }
+}
+```
+
+### Legacy Client
+
+Here's the same example using the traditional approach:
 
 ```go
 package main
@@ -141,7 +218,7 @@ func main() {
 
     fmt.Printf("Retrieved %d records:\n", len(list.Items))
     for _, record := range list.Items {
-        fmt.Printf("- ID: %s, Title: %v\n", record.ID, record.Data["title"])
+        fmt.Printf("- ID: %s, Title: %v\n", record.ID, record.Get("title"))
     }
 }
 ```

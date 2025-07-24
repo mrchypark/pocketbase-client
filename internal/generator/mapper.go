@@ -6,7 +6,13 @@ import (
 
 // MapPbTypeToGoType maps PocketBase field types to Go types and their corresponding getter methods.
 // It returns the Go type, a comment (currently unused), and the getter method name.
+// When useGeneric is true, it uses generic Get[T] method instead of specific getters.
 func MapPbTypeToGoType(field FieldSchema, omitEmpty bool) (string, string, string) {
+	return MapPbTypeToGoTypeWithGeneric(field, omitEmpty, false)
+}
+
+// MapPbTypeToGoTypeWithGeneric maps PocketBase field types with optional generic support.
+func MapPbTypeToGoTypeWithGeneric(field FieldSchema, omitEmpty bool, useGeneric bool) (string, string, string) {
 	var goType, comment, getterMethod string
 
 	// Pre-determine whether it's a multi-select field based on MaxSelect option
@@ -26,49 +32,81 @@ func MapPbTypeToGoType(field FieldSchema, omitEmpty bool) (string, string, strin
 	switch field.Type {
 	case "text", "email", "url", "editor":
 		goType = "string"
-		getterMethod = "GetString"
-		if omitEmpty {
-			getterMethod = "GetStringPointer"
-		}
-	case "number":
-		goType = "float64"
-		getterMethod = "GetFloat"
-		if omitEmpty {
-			getterMethod = "GetFloatPointer"
-		}
-	case "bool":
-		goType = "bool"
-		getterMethod = "GetBool"
-		if omitEmpty {
-			getterMethod = "GetBoolPointer"
-		}
-	case "date", "autodate":
-		goType = "types.DateTime"
-		getterMethod = "GetDateTime"
-		if omitEmpty {
-			getterMethod = "GetDateTimePointer"
-		}
-	case "json":
-		goType = "json.RawMessage"
-		getterMethod = "GetRawMessage"
-	case "relation", "file", "select":
-		if isMulti {
-			goType = "[]string"
-			getterMethod = "GetStringSlice"
-		} else { // Single selection/file/relation
-			goType = "string"
+		if useGeneric {
+			getterMethod = "Get[string]"
+		} else {
 			getterMethod = "GetString"
 			if omitEmpty {
 				getterMethod = "GetStringPointer"
 			}
 		}
+	case "number":
+		goType = "float64"
+		if useGeneric {
+			getterMethod = "Get[float64]"
+		} else {
+			getterMethod = "GetFloat"
+			if omitEmpty {
+				getterMethod = "GetFloatPointer"
+			}
+		}
+	case "bool":
+		goType = "bool"
+		if useGeneric {
+			getterMethod = "Get[bool]"
+		} else {
+			getterMethod = "GetBool"
+			if omitEmpty {
+				getterMethod = "GetBoolPointer"
+			}
+		}
+	case "date", "autodate":
+		goType = "types.DateTime"
+		if useGeneric {
+			getterMethod = "Get[types.DateTime]"
+		} else {
+			getterMethod = "GetDateTime"
+			if omitEmpty {
+				getterMethod = "GetDateTimePointer"
+			}
+		}
+	case "json":
+		goType = "json.RawMessage"
+		if useGeneric {
+			getterMethod = "Get[json.RawMessage]"
+		} else {
+			getterMethod = "GetRawMessage"
+		}
+	case "relation", "file", "select":
+		if isMulti {
+			goType = "[]string"
+			if useGeneric {
+				getterMethod = "Get[[]string]"
+			} else {
+				getterMethod = "GetStringSlice"
+			}
+		} else { // Single selection/file/relation
+			goType = "string"
+			if useGeneric {
+				getterMethod = "Get[string]"
+			} else {
+				getterMethod = "GetString"
+				if omitEmpty {
+					getterMethod = "GetStringPointer"
+				}
+			}
+		}
 	default:
 		goType = "interface{}"
-		getterMethod = "Get"
+		if useGeneric {
+			getterMethod = "Get[interface{}]"
+		} else {
+			getterMethod = "Get"
+		}
 	}
 
 	// Finally decide whether to apply pointer type (exclude if already pointer, slice, json.RawMessage, or interface{})
-	if omitEmpty && !strings.HasPrefix(goType, "[]") && goType != "json.RawMessage" && goType != "interface{}" && !strings.HasPrefix(goType, "*") {
+	if omitEmpty && !useGeneric && !strings.HasPrefix(goType, "[]") && goType != "json.RawMessage" && goType != "interface{}" && !strings.HasPrefix(goType, "*") {
 		goType = "*" + goType
 	}
 

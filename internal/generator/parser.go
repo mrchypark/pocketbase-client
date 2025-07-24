@@ -86,7 +86,7 @@ func LoadSchema(filePath string) (*LoadSchemaResult, error) {
 }
 
 // BuildTemplateData generates template data from parsed schemas with schema version information.
-func BuildTemplateData(schemas []CollectionSchema, packageName string, schemaVersion SchemaVersion) TemplateData {
+func BuildTemplateData(schemas []CollectionSchema, packageName string, schemaVersion SchemaVersion, useGeneric bool) TemplateData {
 	var collections []CollectionData
 
 	for _, s := range schemas {
@@ -96,37 +96,49 @@ func BuildTemplateData(schemas []CollectionSchema, packageName string, schemaVer
 		}
 
 		var fields []FieldData
-		// cs.Fields is always populated thanks to custom UnmarshalJSON logic.
-		for _, f := range s.Fields {
-			// System fields or hidden fields can be skipped as needed.
-			if f.System || f.Hidden {
-				continue
+		// 제네릭 지원 여부에 따라 필드 처리기 선택
+		processor := CreateFieldProcessorWithGeneric(schemaVersion, useGeneric)
+		processedFields, err := processor.ProcessFields(s.Fields, s.Name)
+		if err != nil {
+			// 에러 발생 시 기존 방식으로 fallback
+			for _, f := range s.Fields {
+				// System fields or hidden fields can be skipped as needed.
+				if f.System || f.Hidden {
+					continue
+				}
+
+				goType, _, getterMethod := MapPbTypeToGoTypeWithGeneric(f, !f.Required, useGeneric)
+
+				// 포인터 타입인지 확인하고 기본 타입 추출
+				isPointer := strings.HasPrefix(goType, "*")
+				baseType := goType
+				if isPointer {
+					baseType = strings.TrimPrefix(goType, "*")
+				}
+
+				processedFields = append(processedFields, FieldData{
+					JSONName:     f.Name,
+					GoName:       ToPascalCase(f.Name),
+					GoType:       goType,
+					OmitEmpty:    !f.Required, // Use 'required' field directly
+					GetterMethod: getterMethod,
+					IsPointer:    isPointer,
+					BaseType:     baseType,
+				})
 			}
+		}
 
-			goType, _, getterMethod := MapPbTypeToGoType(f, !f.Required)
-
-			// 포인터 타입인지 확인하고 기본 타입 추출
-			isPointer := strings.HasPrefix(goType, "*")
-			baseType := goType
-			if isPointer {
-				baseType = strings.TrimPrefix(goType, "*")
-			}
-
-			fields = append(fields, FieldData{
-				JSONName:     f.Name,
-				GoName:       ToPascalCase(f.Name),
-				GoType:       goType,
-				OmitEmpty:    !f.Required, // Use 'required' field directly
-				GetterMethod: getterMethod,
-				IsPointer:    isPointer,
-				BaseType:     baseType,
-			})
+		// 시스템 필드나 숨겨진 필드 필터링
+		for _, field := range processedFields {
+			// 필요에 따라 시스템 필드나 숨겨진 필드를 건너뛸 수 있음
+			fields = append(fields, field)
 		}
 
 		// UseTimestamps 플래그 설정: 구버전 스키마에서는 BaseDateTime 임베딩 필요
 		useTimestamps := (schemaVersion == SchemaVersionLegacy)
 
 		collections = append(collections, CollectionData{
+			CollectionID:   s.ID,
 			CollectionName: s.Name,
 			StructName:     ToPascalCase(s.Name),
 			Fields:         fields,
@@ -140,5 +152,6 @@ func BuildTemplateData(schemas []CollectionSchema, packageName string, schemaVer
 		JSONLibrary:   "github.com/goccy/go-json", // 기본 JSON 라이브러리 설정
 		Collections:   collections,
 		SchemaVersion: schemaVersion,
+		UseGeneric:    useGeneric,
 	}
 }
