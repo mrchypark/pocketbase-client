@@ -600,31 +600,6 @@ func validateConfig(schemaPath, outputPath, pkgName string) error {
 	return nil
 }
 
-// determineUseTimestamps determines whether to use timestamp fields based on schema version and fields
-func determineUseTimestamps(schemaVersion generator.SchemaVersion, fields []generator.FieldSchema) bool {
-	switch schemaVersion {
-	case generator.SchemaVersionLegacy:
-		// 구버전 스키마: 항상 BaseDateTime 임베딩 사용
-		return true
-	case generator.SchemaVersionLatest:
-		// 최신 스키마: created, updated 필드가 명시적으로 정의된 경우만 사용
-		hasCreated := false
-		hasUpdated := false
-		for _, field := range fields {
-			if field.Name == "created" {
-				hasCreated = true
-			}
-			if field.Name == "updated" {
-				hasUpdated = true
-			}
-		}
-		return hasCreated && hasUpdated
-	default:
-		// 알 수 없는 버전: 타임스탬프 사용하지 않음
-		return false
-	}
-}
-
 // isValidGoIdentifier checks if a string is a valid Go identifier
 func isValidGoIdentifier(name string) bool {
 	if name == "" {
