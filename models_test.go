@@ -322,12 +322,14 @@ func TestBaseDateTime(t *testing.T) {
 			Updated: updated,
 		}
 
-		// Test field access
-		if baseTime.Created.String() != createdTime {
-			t.Errorf("Expected Created '%s', got '%s'", createdTime, baseTime.Created.String())
+		// Test field access - types.DateTime uses space format, not T format
+		expectedCreatedStr := "2025-07-20 10:30:00.123Z"
+		expectedUpdatedStr := "2025-07-20 11:45:00.456Z"
+		if baseTime.Created.String() != expectedCreatedStr {
+			t.Errorf("Expected Created '%s', got '%s'", expectedCreatedStr, baseTime.Created.String())
 		}
-		if baseTime.Updated.String() != updatedTime {
-			t.Errorf("Expected Updated '%s', got '%s'", updatedTime, baseTime.Updated.String())
+		if baseTime.Updated.String() != expectedUpdatedStr {
+			t.Errorf("Expected Updated '%s', got '%s'", expectedUpdatedStr, baseTime.Updated.String())
 		}
 	})
 
@@ -349,7 +351,8 @@ func TestBaseDateTime(t *testing.T) {
 			t.Fatalf("Failed to marshal BaseDateTime: %v", err)
 		}
 
-		expectedJSON := `{"created":"` + createdTime + `","updated":"` + updatedTime + `"}`
+		// types.DateTime uses space format in JSON, not T format
+		expectedJSON := `{"created":"2025-07-20 10:30:00.123Z","updated":"2025-07-20 11:45:00.456Z"}`
 		if string(jsonData) != expectedJSON {
 			t.Errorf("Expected JSON %s, got %s", expectedJSON, string(jsonData))
 		}
@@ -465,7 +468,7 @@ func TestStructEmbedding(t *testing.T) {
 		if post.Title != "Latest Post" {
 			t.Errorf("Expected Title 'Latest Post', got '%s'", post.Title)
 		}
-		if post.Created == nil || post.Created.String() != "2025-07-20T10:30:00.123Z" {
+		if post.Created == nil || post.Created.String() != "2025-07-20 10:30:00.123Z" {
 			t.Errorf("Expected Created timestamp, got %v", post.Created)
 		}
 
