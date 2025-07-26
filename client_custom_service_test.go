@@ -40,18 +40,6 @@ func (m *mockRecordService) NewDeleteRequest(collection, recordID string) (*Batc
 func (m *mockRecordService) NewUpsertRequest(collection string, body map[string]any) (*BatchRequest, error) {
 	return &BatchRequest{}, nil
 }
-func (m *mockRecordService) GetAll(ctx context.Context, collection string, opts *ListOptions) ([]*Record, error) {
-	return []*Record{}, nil
-}
-func (m *mockRecordService) GetAllWithBatchSize(ctx context.Context, collection string, opts *ListOptions, batchSize int) ([]*Record, error) {
-	return []*Record{}, nil
-}
-func (m *mockRecordService) Iterate(ctx context.Context, collection string, opts *ListOptions) *RecordIterator {
-	return &RecordIterator{}
-}
-func (m *mockRecordService) IterateWithBatchSize(ctx context.Context, collection string, opts *ListOptions, batchSize int) *RecordIterator {
-	return &RecordIterator{}
-}
 
 // TestClientAllowsCustomRecordService tests that a custom RecordService can be set on the client.
 func TestClientAllowsCustomRecordService(t *testing.T) {

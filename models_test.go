@@ -55,14 +55,6 @@ func (r *RecordLazy) UnmarshalJSON(data []byte) error {
 		_ = json.Unmarshal(rawID, &r.ID)
 		delete(alias.RawData, "id")
 	}
-	if rawCreated, ok := alias.RawData["created"]; ok {
-		_ = json.Unmarshal(rawCreated, &r.Created)
-		delete(alias.RawData, "created")
-	}
-	if rawUpdated, ok := alias.RawData["updated"]; ok {
-		_ = json.Unmarshal(rawUpdated, &r.Updated)
-		delete(alias.RawData, "updated")
-	}
 	if rawColID, ok := alias.RawData["collectionId"]; ok {
 		_ = json.Unmarshal(rawColID, &r.CollectionID)
 		delete(alias.RawData, "collectionId")
