@@ -8,7 +8,7 @@ import (
 func TestRelationGenerator_GenerateRelationTypes(t *testing.T) {
 	generator := NewRelationGenerator()
 
-	// 테스트용 데이터 준비
+	// Prepare test data
 	collections := []CollectionData{
 		{
 			CollectionName: "posts",
@@ -86,13 +86,13 @@ func TestRelationGenerator_GenerateRelationTypes(t *testing.T) {
 
 	result := generator.GenerateRelationTypes(collections, schemas)
 
-	// 예상 결과: 3개의 relation type (posts.author, posts.categories, comments.post)
+	// Expected result: 3 relation types (posts.author, posts.categories, comments.post)
 	expectedCount := 3
 	if len(result) != expectedCount {
 		t.Errorf("Expected %d relation types, got %d", expectedCount, len(result))
 	}
 
-	// posts.author relation 검증 (단일 관계)
+	// Verify posts.author relation (single relationship)
 	var authorRelation *RelationTypeData
 	for i := range result {
 		if result[i].TypeName == "UsersRelation" {
@@ -113,7 +113,7 @@ func TestRelationGenerator_GenerateRelationTypes(t *testing.T) {
 		t.Errorf("Expected target collection 'users', got '%s'", authorRelation.TargetCollection)
 	}
 
-	// posts.categories relation 검증 (다중 관계)
+	// Verify posts.categories relation (multiple relationship)
 	var categoriesRelation *RelationTypeData
 	for i := range result {
 		if result[i].TypeName == "CategoriesRelation" {
@@ -197,20 +197,20 @@ func TestRelationGenerator_GenerateRelationMethods(t *testing.T) {
 		}
 	}
 
-	// ID method 검증
+	// Verify ID method
 	idMethod := result[0]
 	if idMethod.ReturnType != "string" {
 		t.Errorf("Expected ID method return type 'string', got '%s'", idMethod.ReturnType)
 	}
 
-	// Load method 검증
+	// Verify Load method
 	loadMethod := result[1]
 	expectedLoadReturnType := "(*Categories, error)"
 	if loadMethod.ReturnType != expectedLoadReturnType {
 		t.Errorf("Expected Load method return type '%s', got '%s'", expectedLoadReturnType, loadMethod.ReturnType)
 	}
 
-	// IsEmpty method 검증
+	// Verify IsEmpty method
 	isEmptyMethod := result[2]
 	if isEmptyMethod.ReturnType != "bool" {
 		t.Errorf("Expected IsEmpty method return type 'bool', got '%s'", isEmptyMethod.ReturnType)
@@ -233,7 +233,7 @@ func TestRelationGenerator_GenerateRelationTypeCode(t *testing.T) {
 
 	result := generator.GenerateRelationTypeCode(relationType)
 
-	// 생성된 코드가 올바른 형식인지 확인
+	// Verify that generated code has correct format
 	expectedParts := []string{
 		"type UserRelation struct",
 		"id string",
@@ -321,7 +321,7 @@ func TestRelationGenerator_GenerateConstructorCode(t *testing.T) {
 func TestRelationGenerator_GenerateMultiRelationTypeCode(t *testing.T) {
 	generator := NewRelationGenerator()
 
-	// 단일 관계 테스트
+	// Single relation test
 	singleRelationType := RelationTypeData{
 		TypeName:         "UserRelation",
 		TargetCollection: "users",
@@ -336,7 +336,7 @@ func TestRelationGenerator_GenerateMultiRelationTypeCode(t *testing.T) {
 		t.Error("Single relation should generate normal relation type")
 	}
 
-	// 다중 관계 테스트
+	// Multiple relation test
 	multiRelationType := RelationTypeData{
 		TypeName:         "CategoryRelation",
 		TargetCollection: "categories",

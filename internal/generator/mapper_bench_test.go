@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-// BenchmarkMapPbTypeToGoType 타입 매핑 성능을 측정합니다
+// BenchmarkMapPbTypeToGoType measures type mapping performance
 func BenchmarkMapPbTypeToGoType(b *testing.B) {
 	testFields := []FieldSchema{
 		{Name: "text_field", Type: "text", Required: true},
@@ -63,7 +63,7 @@ func BenchmarkMapPbTypeToGoType(b *testing.B) {
 	}
 }
 
-// BenchmarkToPascalCase PascalCase 변환 성능을 측정합니다
+// BenchmarkToPascalCase measures PascalCase conversion performance
 func BenchmarkToPascalCase(b *testing.B) {
 	testStrings := []string{
 		"simple_field",
@@ -90,7 +90,7 @@ func BenchmarkToPascalCase(b *testing.B) {
 	}
 }
 
-// BenchmarkAnalyzeEnhancedField enhanced 필드 분석 성능을 측정합니다
+// BenchmarkAnalyzeEnhancedField measures enhanced field analysis performance
 func BenchmarkAnalyzeEnhancedField(b *testing.B) {
 	testCollections := []CollectionSchema{
 		{
@@ -153,7 +153,7 @@ func BenchmarkAnalyzeEnhancedField(b *testing.B) {
 	}
 }
 
-// BenchmarkToConstantName 상수명 생성 성능을 측정합니다
+// BenchmarkToConstantName measures constant name generation performance
 func BenchmarkToConstantName(b *testing.B) {
 	testCases := []struct {
 		collection string
@@ -181,7 +181,7 @@ func BenchmarkToConstantName(b *testing.B) {
 	}
 }
 
-// BenchmarkAnalyzeSelectField select 필드 분석 성능을 측정합니다
+// BenchmarkAnalyzeSelectField measures select field analysis performance
 func BenchmarkAnalyzeSelectField(b *testing.B) {
 	enhanced := EnhancedFieldInfo{
 		FieldSchema: FieldSchema{
@@ -200,7 +200,7 @@ func BenchmarkAnalyzeSelectField(b *testing.B) {
 	}
 }
 
-// BenchmarkAnalyzeRelationField relation 필드 분석 성능을 측정합니다
+// BenchmarkAnalyzeRelationField measures relation field analysis performance
 func BenchmarkAnalyzeRelationField(b *testing.B) {
 	enhanced := EnhancedFieldInfo{
 		FieldSchema: FieldSchema{
@@ -235,7 +235,7 @@ func BenchmarkAnalyzeRelationField(b *testing.B) {
 	}
 }
 
-// BenchmarkAnalyzeFileField file 필드 분석 성능을 측정합니다
+// BenchmarkAnalyzeFileField measures file field analysis performance
 func BenchmarkAnalyzeFileField(b *testing.B) {
 	enhanced := EnhancedFieldInfo{
 		FieldSchema: FieldSchema{

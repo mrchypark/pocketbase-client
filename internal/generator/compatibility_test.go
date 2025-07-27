@@ -9,14 +9,14 @@ import (
 	"text/template"
 )
 
-// intPtr는 int 값의 포인터를 반환하는 헬퍼 함수입니다
+// intPtr is a helper function that returns a pointer to an int value
 func intPtr(i int) *int {
 	return &i
 }
 
-// TestBackwardCompatibility는 기존 코드와의 호환성을 검증합니다
+// TestBackwardCompatibility verifies compatibility with existing code
 func TestBackwardCompatibility(t *testing.T) {
-	// 기존 방식의 스키마 처리 테스트
+	// Test schema processing using the existing approach
 	schemas := []CollectionSchema{
 		{
 			Name:   "users",
@@ -41,10 +41,10 @@ func TestBackwardCompatibility(t *testing.T) {
 		},
 	}
 
-	// 기존 방식으로 TemplateData 생성
+	// Generate TemplateData using the existing approach
 	legacyData := BuildTemplateData(schemas, "models")
 
-	// 새로운 방식으로 동일한 데이터 생성 (enhanced 기능 비활성화)
+	// Generate the same data using the new approach (enhanced features disabled)
 	enhancedData := EnhancedTemplateData{
 		TemplateData:      legacyData,
 		GenerateEnums:     false,
@@ -52,39 +52,39 @@ func TestBackwardCompatibility(t *testing.T) {
 		GenerateFiles:     false,
 	}
 
-	// 두 방식 모두로 코드 생성
+	// Generate code using both approaches
 	legacyCode := generateCodeWithData(t, legacyData)
 	enhancedCode := generateCodeWithData(t, enhancedData)
 
-	// 기본 구조체 정의가 동일한지 확인
+	// Verify that basic struct definitions are identical
 	if !strings.Contains(legacyCode, "type Users struct") {
-		t.Error("기존 방식에서 Users 구조체가 생성되지 않았습니다")
+		t.Error("Users struct was not generated in the existing approach")
 	}
 
 	if !strings.Contains(enhancedCode, "type Users struct") {
-		t.Error("새로운 방식에서 Users 구조체가 생성되지 않았습니다")
+		t.Error("Users struct was not generated in the new approach")
 	}
 
-	// 필드 타입이 동일한지 확인 (실제 생성된 타입에 맞춰 수정)
+	// Verify that field types are identical (adjusted to match actual generated types)
 	expectedFields := []string{
 		"Name string",
 		"Email string",
-		"Avatar []string", // file 타입은 []string으로 생성됨
+		"Avatar []string", // file type is generated as []string
 		"Title string",
-		"Content *string", // optional 필드는 *string으로 생성됨
+		"Content *string", // optional field is generated as *string
 		"Author string",
 	}
 
 	for _, field := range expectedFields {
 		if !strings.Contains(legacyCode, field) {
-			t.Errorf("기존 방식에서 필드 '%s'가 생성되지 않았습니다", field)
+			t.Errorf("Field '%s' was not generated in the existing approach", field)
 		}
 		if !strings.Contains(enhancedCode, field) {
-			t.Errorf("새로운 방식에서 필드 '%s'가 생성되지 않았습니다", field)
+			t.Errorf("Field '%s' was not generated in the new approach", field)
 		}
 	}
 
-	// Enhanced 기능이 비활성화되었을 때는 추가 타입이 생성되지 않아야 함
+	// Additional types should not be generated when Enhanced features are disabled
 	enhancedOnlyTypes := []string{
 		"UsersRelation",
 		"PostsRelation",
@@ -94,12 +94,12 @@ func TestBackwardCompatibility(t *testing.T) {
 
 	for _, enhancedType := range enhancedOnlyTypes {
 		if strings.Contains(enhancedCode, enhancedType) {
-			t.Errorf("Enhanced 기능이 비활성화되었는데 '%s'가 생성되었습니다", enhancedType)
+			t.Errorf("'%s' was generated even though Enhanced features are disabled", enhancedType)
 		}
 	}
 }
 
-// TestLegacyFieldTypeMapping은 기존 필드 타입 매핑이 유지되는지 테스트합니다
+// TestLegacyFieldTypeMapping tests that existing field type mapping is maintained
 func TestLegacyFieldTypeMapping(t *testing.T) {
 	tests := []struct {
 		name         string
@@ -108,37 +108,37 @@ func TestLegacyFieldTypeMapping(t *testing.T) {
 		optional     bool
 	}{
 		{
-			name:         "필수 텍스트 필드",
+			name:         "Required text field",
 			fieldSchema:  FieldSchema{Name: "title", Type: "text", Required: true},
 			expectedType: "string",
 			optional:     false,
 		},
 		{
-			name:         "선택적 텍스트 필드",
+			name:         "Optional text field",
 			fieldSchema:  FieldSchema{Name: "description", Type: "text", Required: false},
-			expectedType: "*string", // optional 필드는 포인터 타입으로 생성됨
+			expectedType: "*string", // optional field is generated as pointer type
 			optional:     true,
 		},
 		{
-			name:         "필수 이메일 필드",
+			name:         "Required email field",
 			fieldSchema:  FieldSchema{Name: "email", Type: "email", Required: true},
 			expectedType: "string",
 			optional:     false,
 		},
 		{
-			name:         "선택적 파일 필드",
+			name:         "Optional file field",
 			fieldSchema:  FieldSchema{Name: "avatar", Type: "file", Required: false},
-			expectedType: "[]string", // file 타입은 []string으로 생성됨
+			expectedType: "[]string", // file type is generated as []string
 			optional:     true,
 		},
 		{
-			name:         "필수 관계 필드",
+			name:         "Required relation field",
 			fieldSchema:  FieldSchema{Name: "author", Type: "relation", Required: true},
-			expectedType: "[]string", // relation 타입도 []string으로 생성됨
+			expectedType: "[]string", // relation type is also generated as []string
 			optional:     false,
 		},
 		{
-			name: "다중 선택 필드",
+			name: "Multiple selection field",
 			fieldSchema: FieldSchema{
 				Name:     "tags",
 				Type:     "select",
@@ -152,7 +152,7 @@ func TestLegacyFieldTypeMapping(t *testing.T) {
 			optional:     true,
 		},
 		{
-			name: "단일 선택 필드",
+			name: "Single selection field",
 			fieldSchema: FieldSchema{
 				Name:     "status",
 				Type:     "select",
@@ -172,15 +172,15 @@ func TestLegacyFieldTypeMapping(t *testing.T) {
 			goType, _, _ := MapPbTypeToGoType(tt.fieldSchema, tt.optional)
 
 			if goType != tt.expectedType {
-				t.Errorf("필드 타입 매핑 오류: 예상 %s, 실제 %s", tt.expectedType, goType)
+				t.Errorf("Field type mapping error: expected %s, actual %s", tt.expectedType, goType)
 			}
 		})
 	}
 }
 
-// TestExistingBehaviorPreservation은 기존 동작이 보존되는지 테스트합니다
+// TestExistingBehaviorPreservation tests whether existing behavior is preserved
 func TestExistingBehaviorPreservation(t *testing.T) {
-	// 기존 스키마 구조
+	// Existing schema structure
 	schema := CollectionSchema{
 		Name:   "legacy_test",
 		System: false,

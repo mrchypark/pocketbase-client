@@ -6,7 +6,7 @@ import (
 )
 
 func TestGenerationError(t *testing.T) {
-	t.Run("기본 에러 생성", func(t *testing.T) {
+	t.Run("Basic error creation", func(t *testing.T) {
 		err := NewGenerationError(ErrorTypeSchemaLoad, "test error", nil)
 
 		if err.Type != ErrorTypeSchemaLoad {
@@ -23,7 +23,7 @@ func TestGenerationError(t *testing.T) {
 		}
 	})
 
-	t.Run("세부 정보가 있는 에러", func(t *testing.T) {
+	t.Run("Error with details", func(t *testing.T) {
 		err := NewGenerationError(ErrorTypeFileRead, "failed to read", nil).
 			WithDetail("file_path", "/test/path").
 			WithDetail("operation", "read")
@@ -38,7 +38,7 @@ func TestGenerationError(t *testing.T) {
 		}
 	})
 
-	t.Run("원인 에러가 있는 경우", func(t *testing.T) {
+	t.Run("Error with cause", func(t *testing.T) {
 		cause := errors.New("original error")
 		err := NewGenerationError(ErrorTypeTemplateParse, "template failed", cause)
 
@@ -47,7 +47,7 @@ func TestGenerationError(t *testing.T) {
 		}
 	})
 
-	t.Run("에러 타입 비교", func(t *testing.T) {
+	t.Run("Error type comparison", func(t *testing.T) {
 		err1 := NewGenerationError(ErrorTypeSchemaLoad, "error 1", nil)
 		err2 := NewGenerationError(ErrorTypeSchemaLoad, "error 2", nil)
 		err3 := NewGenerationError(ErrorTypeFileRead, "error 3", nil)
@@ -63,7 +63,7 @@ func TestGenerationError(t *testing.T) {
 }
 
 func TestValidationError(t *testing.T) {
-	t.Run("빈 검증 에러", func(t *testing.T) {
+	t.Run("Empty validation error", func(t *testing.T) {
 		ve := NewValidationError()
 
 		if ve.HasErrors() {
@@ -75,7 +75,7 @@ func TestValidationError(t *testing.T) {
 		}
 	})
 
-	t.Run("에러 추가", func(t *testing.T) {
+	t.Run("Add error", func(t *testing.T) {
 		ve := NewValidationError()
 		ve.AddError("test error", "test.path")
 
@@ -97,7 +97,7 @@ func TestValidationError(t *testing.T) {
 		}
 	})
 
-	t.Run("경고 추가", func(t *testing.T) {
+	t.Run("Add warning", func(t *testing.T) {
 		ve := NewValidationError()
 		ve.AddWarning("test warning", "test.path")
 
@@ -111,7 +111,7 @@ func TestValidationError(t *testing.T) {
 		}
 	})
 
-	t.Run("복합 검증 에러", func(t *testing.T) {
+	t.Run("Complex validation error", func(t *testing.T) {
 		ve := NewValidationError()
 		ve.AddError("error 1", "path1")
 		ve.AddError("error 2", "path2")
@@ -131,7 +131,7 @@ func TestValidationError(t *testing.T) {
 		}
 	})
 
-	t.Run("단일 에러 메시지", func(t *testing.T) {
+	t.Run("Single error message", func(t *testing.T) {
 		ve := NewValidationError()
 		ve.AddError("single error", "path")
 
@@ -144,7 +144,7 @@ func TestValidationError(t *testing.T) {
 }
 
 func TestRecoverableError(t *testing.T) {
-	t.Run("복구 가능한 에러 생성", func(t *testing.T) {
+	t.Run("Create recoverable error", func(t *testing.T) {
 		genErr := NewGenerationError(ErrorTypeSchemaLoad, "test error", nil)
 		recovery := &RecoveryInfo{
 			CanRecover:  true,

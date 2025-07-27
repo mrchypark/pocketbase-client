@@ -9,7 +9,7 @@ import (
 func TestEnumGenerator_GenerateEnums(t *testing.T) {
 	generator := NewEnumGenerator()
 
-	// 테스트용 데이터 준비
+	// Prepare test data
 	collections := []CollectionData{
 		{
 			CollectionName: "devices",
@@ -68,13 +68,13 @@ func TestEnumGenerator_GenerateEnums(t *testing.T) {
 
 	result := generator.GenerateEnums(collections, schemas)
 
-	// 예상 결과: 3개의 enum (devices.status, devices.type, users.role)
+	// Expected result: 3 enums (devices.status, devices.type, users.role)
 	expectedCount := 3
 	if len(result) != expectedCount {
 		t.Errorf("Expected %d enums, got %d", expectedCount, len(result))
 	}
 
-	// devices.status enum 검증
+	// Verify devices.status enum
 	var deviceStatusEnum *EnumData
 	for i := range result {
 		if result[i].CollectionName == "devices" && result[i].FieldName == "status" {
@@ -205,7 +205,7 @@ func TestEnumGenerator_GenerateEnumHelperFunction(t *testing.T) {
 
 	result := generator.GenerateEnumHelperFunction(enumData)
 
-	// 생성된 함수가 올바른 형식인지 확인
+	// Verify that generated function has correct format
 	expectedParts := []string{
 		"func UserRoleTypeValues() []string",
 		"return []string{UserRoleAdmin, UserRoleUser, UserRoleGuest}",
@@ -232,7 +232,7 @@ func TestEnumGenerator_GenerateEnumValidationFunction(t *testing.T) {
 
 	result := generator.GenerateEnumValidationFunction(enumData)
 
-	// 생성된 함수가 올바른 형식인지 확인
+	// Verify that generated function has correct format
 	expectedParts := []string{
 		"func IsValidStatusType(value string) bool",
 		"case StatusActive:",

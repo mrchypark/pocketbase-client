@@ -1,10 +1,10 @@
-# 기본 CRUD 작업 예제 (타입 안전)
+# Basic CRUD Operations Example (Type-Safe)
 
-이 예제는 PocketBase Go 클라이언트에서 사용자 정의 구조체를 사용한 타입 안전한 CRUD 작업을 보여줍니다.
+This example demonstrates type-safe CRUD operations using custom structs in the PocketBase Go client.
 
-## 주요 기능
+## Key Features
 
-### 1. 타입 안전한 구조체 정의
+### 1. Type-Safe Struct Definition
 ```go
 type Post struct {
     pocketbase.BaseModel
@@ -13,49 +13,49 @@ type Post struct {
 }
 ```
 
-### 2. 제네릭 레코드 서비스 사용
+### 2. Generic Record Service Usage
 ```go
 postsService := pocketbase.NewRecordService[Post](client, "posts")
 ```
 
-### 3. 타입 안전한 CRUD 작업
-- **생성**: `postsService.Create(ctx, &post)`
-- **조회**: `postsService.GetList(ctx, options)`
-- **단일 조회**: `postsService.GetOne(ctx, id, options)`
-- **업데이트**: `postsService.Update(ctx, id, &post)`
-- **삭제**: `postsService.Delete(ctx, id)`
+### 3. Type-Safe CRUD Operations
+- **Create**: `postsService.Create(ctx, &post)`
+- **List**: `postsService.GetList(ctx, options)`
+- **Get One**: `postsService.GetOne(ctx, id, options)`
+- **Update**: `postsService.Update(ctx, id, &post)`
+- **Delete**: `postsService.Delete(ctx, id)`
 
-## 장점
+## Advantages
 
-### 타입 안전성
-- 컴파일 타임에 타입 오류 검출
-- IDE의 자동완성 지원
-- 리팩토링 시 안전성 보장
+### Type Safety
+- Compile-time type error detection
+- IDE autocomplete support
+- Refactoring safety guarantee
 
-### 코드 가독성
-- 명확한 데이터 구조
-- 직관적인 필드 접근 (`post.Title`)
-- 비즈니스 로직과 데이터 모델의 분리
+### Code Readability
+- Clear data structure
+- Intuitive field access (`post.Title`)
+- Separation of business logic and data models
 
-## 실행 방법
+## How to Run
 
 ```bash
-# 환경 변수 설정
+# Set environment variables
 export POCKETBASE_URL="http://127.0.0.1:8090"
 
-# 예제 실행
+# Run example
 go run examples/basic_crud/main.go
 ```
 
-## 필요한 PocketBase 설정
+## Required PocketBase Setup
 
-1. `posts` 컬렉션 생성
-2. 다음 필드 추가:
+1. Create `posts` collection
+2. Add the following fields:
    - `title` (text)
    - `content` (text)
-3. 관리자 계정 생성 (`admin@example.com` / `password123`)
+3. Create admin account (`admin@example.com` / `password123`)
 
-## 관련 예제
+## Related Examples
 
-- [Record 직접 사용](../record_direct/) - 동적 스키마를 위한 Record 객체 직접 사용
-- [타입 안전 생성기](../type_safe_generator/) - 스키마에서 자동으로 타입 생성
+- [Direct Record Usage](../record_direct/) - Direct Record object usage for dynamic schemas
+- [Type-Safe Generator](../type_safe_generator/) - Automatically generate types from schema

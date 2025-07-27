@@ -13,7 +13,7 @@ import (
 	"text/template"
 )
 
-// TestEndToEndCodeGeneration은 전체 코드 생성 파이프라인을 테스트합니다
+// TestEndToEndCodeGeneration tests the entire code generation pipeline
 func TestEndToEndCodeGeneration(t *testing.T) {
 	tests := []struct {
 		name           string
@@ -25,7 +25,7 @@ func TestEndToEndCodeGeneration(t *testing.T) {
 		expectedConsts []string
 	}{
 		{
-			name:           "모든 기능 활성화",
+			name:           "All features enabled",
 			schemaFile:     "testdata/complex_schema.json",
 			generateEnums:  true,
 			generateRels:   true,
@@ -34,7 +34,7 @@ func TestEndToEndCodeGeneration(t *testing.T) {
 			expectedConsts: []string{"UsersRoleAdmin", "PostsTagsTech", "PostsStatusDraft"},
 		},
 		{
-			name:           "Enum만 활성화",
+			name:           "Only Enum enabled",
 			schemaFile:     "testdata/complex_schema.json",
 			generateEnums:  true,
 			generateRels:   false,
@@ -43,7 +43,7 @@ func TestEndToEndCodeGeneration(t *testing.T) {
 			expectedConsts: []string{"UsersRoleAdmin", "PostsTagsTech", "PostsStatusDraft"},
 		},
 		{
-			name:           "기본 기능만",
+			name:           "Basic features only",
 			schemaFile:     "testdata/complex_schema.json",
 			generateEnums:  false,
 			generateRels:   false,
@@ -55,17 +55,17 @@ func TestEndToEndCodeGeneration(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// 임시 출력 파일 생성
+			// Create temporary output file
 			tempDir := t.TempDir()
 			outputFile := filepath.Join(tempDir, "models.gen.go")
 
-			// 스키마 로드
+			// Load schema
 			schemas, err := LoadSchema(tt.schemaFile)
 			if err != nil {
-				t.Fatalf("스키마 로드 실패: %v", err)
+				t.Fatalf("Schema load failed: %v", err)
 			}
 
-			// 기본 TemplateData 생성
+			// Generate basic TemplateData
 			baseTplData := TemplateData{
 				PackageName: "models",
 				JSONLibrary: "encoding/json",
@@ -95,7 +95,7 @@ func TestEndToEndCodeGeneration(t *testing.T) {
 				baseTplData.Collections = append(baseTplData.Collections, collectionData)
 			}
 
-			// Enhanced 기능 처리
+			// Process Enhanced features
 			var tplData any
 			if tt.generateEnums || tt.generateRels || tt.generateFiles {
 				enhancedData := EnhancedTemplateData{
@@ -125,70 +125,70 @@ func TestEndToEndCodeGeneration(t *testing.T) {
 				tplData = baseTplData
 			}
 
-			// 템플릿 실행
+			// Execute template
 			templateContent := getTestTemplate()
 			tpl, err := template.New("models").Parse(templateContent)
 			if err != nil {
-				t.Fatalf("템플릿 파싱 실패: %v", err)
+				t.Fatalf("Template parsing failed: %v", err)
 			}
 
 			var buf bytes.Buffer
 			err = tpl.Execute(&buf, tplData)
 			if err != nil {
-				t.Fatalf("템플릿 실행 실패: %v", err)
+				t.Fatalf("Template execution failed: %v", err)
 			}
 
-			// 생성된 코드를 파일에 저장
+			// Save generated code to file
 			err = os.WriteFile(outputFile, buf.Bytes(), 0644)
 			if err != nil {
-				t.Fatalf("파일 저장 실패: %v", err)
+				t.Fatalf("File save failed: %v", err)
 			}
 
-			// 생성된 코드 검증
+			// Verify generated code
 			generatedCode := buf.String()
 
-			// 예상 타입들이 생성되었는지 확인
+			// Verify that expected types were generated
 			for _, expectedType := range tt.expectedTypes {
 				if !strings.Contains(generatedCode, fmt.Sprintf("type %s struct", expectedType)) {
-					t.Errorf("예상 타입 %s가 생성되지 않았습니다", expectedType)
+					t.Errorf("Expected type %s was not generated", expectedType)
 				}
 			}
 
-			// 예상 상수들이 생성되었는지 확인
+			// Verify that expected constants were generated
 			for _, expectedConst := range tt.expectedConsts {
 				if !strings.Contains(generatedCode, expectedConst) {
-					t.Errorf("예상 상수 %s가 생성되지 않았습니다", expectedConst)
+					t.Errorf("Expected constant %s was not generated", expectedConst)
 				}
 			}
 
-			// Go 문법 검증
+			// Go syntax validation
 			err = validateGoSyntax(outputFile)
 			if err != nil {
-				t.Errorf("생성된 코드의 Go 문법 오류: %v", err)
+				t.Errorf("Go syntax error in generated code: %v", err)
 			}
 
-			// 컴파일 가능성 검증
+			// Compilation validation
 			err = validateCompilation(outputFile)
 			if err != nil {
-				t.Errorf("생성된 코드 컴파일 실패: %v", err)
+				t.Errorf("Generated code compilation failed: %v", err)
 			}
 		})
 	}
 }
 
-// TestGeneratedCodeUsability는 생성된 코드의 실제 사용 가능성을 검증합니다
+// TestGeneratedCodeUsability verifies the actual usability of generated code
 func TestGeneratedCodeUsability(t *testing.T) {
-	// 임시 디렉토리 생성
+	// Create temporary directory
 	tempDir := t.TempDir()
 	outputFile := filepath.Join(tempDir, "models.gen.go")
 
-	// 복잡한 스키마로 코드 생성
+	// Generate code with complex schema
 	schemas, err := LoadSchema("testdata/complex_schema.json")
 	if err != nil {
-		t.Fatalf("스키마 로드 실패: %v", err)
+		t.Fatalf("Schema load failed: %v", err)
 	}
 
-	// 모든 기능을 활성화하여 코드 생성
+	// Generate code with all features enabled
 	baseTplData := TemplateData{
 		PackageName: "models",
 		JSONLibrary: "encoding/json",
@@ -234,17 +234,17 @@ func TestGeneratedCodeUsability(t *testing.T) {
 	fileGenerator := NewFileGenerator()
 	enhancedData.FileTypes = fileGenerator.GenerateFileTypes(baseTplData.Collections, schemas)
 
-	// 템플릿 실행
+	// Execute template
 	templateContent := getTestTemplate()
 	tpl, err := template.New("models").Parse(templateContent)
 	if err != nil {
-		t.Fatalf("템플릿 파싱 실패: %v", err)
+		t.Fatalf("Template parsing failed: %v", err)
 	}
 
 	var buf bytes.Buffer
 	err = tpl.Execute(&buf, enhancedData)
 	if err != nil {
-		t.Fatalf("템플릿 실행 실패: %v", err)
+		t.Fatalf("Template execution failed: %v", err)
 	}
 
 	err = os.WriteFile(outputFile, buf.Bytes(), 0644)

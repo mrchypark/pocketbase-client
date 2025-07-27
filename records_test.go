@@ -101,7 +101,7 @@ func createErrorMockServer(t *testing.T, successfulRequests int, errorCode int, 
 			response := map[string]interface{}{
 				"page":       requestCount,
 				"perPage":    100,
-				"totalItems": 300, // 3페이지가 있다고 설정
+				"totalItems": 300, // Set to have 3 pages
 				"totalPages": 3,
 				"items":      generateTestRecords(1, fmt.Sprintf("rec%d", requestCount)),
 			}
@@ -451,16 +451,16 @@ func TestRecordServiceNotFound(t *testing.T) {
 
 // TestBackwardCompatibility ensures new pagination helpers don't break existing functionality
 func TestBackwardCompatibility(t *testing.T) {
-	t.Run("기존 GetList 메서드 동작 확인", func(t *testing.T) {
-		// 기존 GetList 동작이 변경되지 않았는지 확인
+	t.Run("Verify existing GetList method behavior", func(t *testing.T) {
+		// Verify that existing GetList behavior has not changed
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// 요청 경로 확인
+			// Verify request path
 			expectedPath := "/api/collections/posts/records"
 			if r.URL.Path != expectedPath {
 				t.Errorf("Expected path %s, got %s", expectedPath, r.URL.Path)
 			}
 
-			// 쿼리 파라미터 확인
+			// Verify query parameters
 			query := r.URL.Query()
 			if query.Get("page") != "2" {
 				t.Errorf("Expected page=2, got %s", query.Get("page"))
@@ -478,7 +478,7 @@ func TestBackwardCompatibility(t *testing.T) {
 				t.Errorf("Expected expand=author, got %s", query.Get("expand"))
 			}
 
-			// 기존과 동일한 응답 구조
+			// Same response structure as before
 			response := ListResult{
 				Page:       2,
 				PerPage:    50,
@@ -509,7 +509,7 @@ func TestBackwardCompatibility(t *testing.T) {
 
 		client := NewClient(srv.URL)
 
-		// 새로운 방식으로 GetList 호출
+		// Call GetList using the new approach
 		result, err := client.Records("posts").GetList(context.Background(), &ListOptions{
 			Page:    2,
 			PerPage: 50,
@@ -522,7 +522,7 @@ func TestBackwardCompatibility(t *testing.T) {
 			t.Fatalf("GetList failed: %v", err)
 		}
 
-		// 응답 구조 확인
+		// Verify response structure
 		if result.Page != 2 {
 			t.Errorf("Expected page 2, got %d", result.Page)
 		}
@@ -539,7 +539,7 @@ func TestBackwardCompatibility(t *testing.T) {
 			t.Errorf("Expected 2 items, got %d", len(result.Items))
 		}
 
-		// 레코드 구조 확인
+		// Verify record structure
 		if result.Items[0].ID != "test1" {
 			t.Errorf("Expected first record ID 'test1', got '%s'", result.Items[0].ID)
 		}

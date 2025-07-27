@@ -6,7 +6,7 @@ import (
 	"strconv"
 )
 
-// applyListOptions는 ListOptions를 url.Values에 적용합니다.
+// applyListOptions applies ListOptions to url.Values.
 func applyListOptions(q url.Values, opts *ListOptions) {
 	if opts == nil {
 		return
@@ -37,7 +37,7 @@ func applyListOptions(q url.Values, opts *ListOptions) {
 	}
 }
 
-// buildQueryString은 ListOptions를 URL 쿼리 스트링으로 변환합니다.
+// buildQueryString converts ListOptions to URL query string.
 func buildQueryString(opts *ListOptions) string {
 	if opts == nil {
 		return ""
@@ -47,7 +47,7 @@ func buildQueryString(opts *ListOptions) string {
 	return q.Encode()
 }
 
-// buildPathWithQuery는 기본 경로에 쿼리 스트링을 추가합니다.
+// buildPathWithQuery adds query string to the base path.
 func buildPathWithQuery(basePath string, queryString string) string {
 	if queryString == "" {
 		return basePath
@@ -55,7 +55,7 @@ func buildPathWithQuery(basePath string, queryString string) string {
 	return basePath + "?" + queryString
 }
 
-// wrapError는 일관된 에러 래핑을 제공합니다.
+// wrapError provides consistent error wrapping.
 func wrapError(operation, entity string, err error) error {
 	return fmt.Errorf("pocketbase: %s %s: %w", operation, entity, err)
 }

@@ -80,7 +80,7 @@ func BuildTemplateData(schemas []CollectionSchema, packageName string) TemplateD
 
 			goType, _, getterMethod := MapPbTypeToGoType(f, !f.Required)
 
-			// 포인터 타입인지 확인하고 기본 타입 추출
+			// Check if it's a pointer type and extract base type
 			isPointer := strings.HasPrefix(goType, "*")
 			baseType := goType
 			if isPointer {

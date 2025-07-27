@@ -11,14 +11,14 @@ import (
 )
 
 func TestTemplateExecution(t *testing.T) {
-	// 템플릿 파일 읽기
+	// Read template file
 	templatePath := "../../cmd/pbc-gen/template.go.tpl"
 	templateContent, err := os.ReadFile(templatePath)
 	if err != nil {
 		t.Fatalf("Failed to read template file: %v", err)
 	}
 
-	// 템플릿 파싱
+	// Parse template
 	tmpl, err := template.New("test").Parse(string(templateContent))
 	if err != nil {
 		t.Fatalf("Failed to parse template: %v", err)
@@ -261,7 +261,7 @@ func TestTemplateExecution(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// 템플릿 실행
+			// Execute template
 			var buf bytes.Buffer
 			err := tmpl.Execute(&buf, tt.data)
 			if err != nil {
@@ -270,12 +270,12 @@ func TestTemplateExecution(t *testing.T) {
 
 			generatedCode := buf.String()
 
-			// 생성된 코드가 비어있지 않은지 확인
+			// Verify that generated code is not empty
 			if strings.TrimSpace(generatedCode) == "" {
 				t.Fatal("Generated code is empty")
 			}
 
-			// 생성된 코드에 기본 구조가 포함되어 있는지 확인
+			// Verify that generated code contains basic structure
 			expectedParts := []string{
 				"package " + tt.data.PackageName,
 				"import (",
@@ -289,7 +289,7 @@ func TestTemplateExecution(t *testing.T) {
 				}
 			}
 
-			// 각 컬렉션에 대한 구조체가 생성되었는지 확인
+			// Verify that struct for each collection was generated
 			for _, collection := range tt.data.Collections {
 				expectedStructParts := []string{
 					"type " + collection.StructName + " struct",
@@ -305,7 +305,7 @@ func TestTemplateExecution(t *testing.T) {
 					}
 				}
 
-				// 각 필드에 대한 getter/setter가 생성되었는지 확인
+				// Verify that getter/setter for each field was generated
 				for _, field := range collection.Fields {
 					expectedFieldParts := []string{
 						"func (m *" + collection.StructName + ") " + field.GoName + "()",
@@ -320,7 +320,7 @@ func TestTemplateExecution(t *testing.T) {
 				}
 			}
 
-			// Enum 생성 확인
+			// Verify Enum generation
 			if tt.data.GenerateEnums {
 				for _, enum := range tt.data.Enums {
 					expectedEnumParts := []string{
@@ -335,7 +335,7 @@ func TestTemplateExecution(t *testing.T) {
 						}
 					}
 
-					// 각 상수가 생성되었는지 확인
+					// Verify that each constant was generated
 					for _, constant := range enum.Constants {
 						if !strings.Contains(generatedCode, constant.Name+" = \""+constant.Value+"\"") {
 							t.Errorf("Generated code missing expected constant: %s = \"%s\"", constant.Name, constant.Value)
@@ -344,7 +344,7 @@ func TestTemplateExecution(t *testing.T) {
 				}
 			}
 
-			// Relation 타입 생성 확인
+			// Verify Relation type generation
 			if tt.data.GenerateRelations {
 				for _, relation := range tt.data.RelationTypes {
 					expectedRelationParts := []string{
@@ -361,7 +361,7 @@ func TestTemplateExecution(t *testing.T) {
 						}
 					}
 
-					// 다중 관계 타입 확인
+					// Verify multiple relation type
 					if relation.IsMulti {
 						multiTypeName := relation.TypeName + "s"
 						expectedMultiParts := []string{
@@ -379,7 +379,7 @@ func TestTemplateExecution(t *testing.T) {
 				}
 			}
 
-			// File 타입 생성 확인
+			// Verify File type generation
 			if tt.data.GenerateFiles {
 				expectedFileParts := []string{
 					"type FileReference struct",
@@ -398,7 +398,7 @@ func TestTemplateExecution(t *testing.T) {
 				}
 			}
 
-			// Go 코드 포맷팅 테스트 (문법 검사)
+			// Go code formatting test (syntax check)
 			_, err = format.Source([]byte(generatedCode))
 			if err != nil {
 				t.Errorf("Generated code has syntax errors: %v\nGenerated code:\n%s", err, generatedCode)
@@ -408,27 +408,27 @@ func TestTemplateExecution(t *testing.T) {
 }
 
 func TestTemplateCompilation(t *testing.T) {
-	// 임시 디렉토리 생성
+	// Create temporary directory
 	tempDir, err := os.MkdirTemp("", "pbc-gen-test-*")
 	if err != nil {
 		t.Fatalf("Failed to create temp directory: %v", err)
 	}
 	defer os.RemoveAll(tempDir)
 
-	// 템플릿 파일 읽기
+	// Read template file
 	templatePath := "../../cmd/pbc-gen/template.go.tpl"
 	templateContent, err := os.ReadFile(templatePath)
 	if err != nil {
 		t.Fatalf("Failed to read template file: %v", err)
 	}
 
-	// 템플릿 파싱
+	// Parse template
 	tmpl, err := template.New("test").Parse(string(templateContent))
 	if err != nil {
 		t.Fatalf("Failed to parse template: %v", err)
 	}
 
-	// 테스트 데이터
+	// Test data
 	testData := EnhancedTemplateData{
 		TemplateData: TemplateData{
 			PackageName: "testmodels",
@@ -488,21 +488,21 @@ func TestTemplateCompilation(t *testing.T) {
 		GenerateFiles:     true,
 	}
 
-	// 템플릿 실행
+	// Execute template
 	var buf bytes.Buffer
 	err = tmpl.Execute(&buf, testData)
 	if err != nil {
 		t.Fatalf("Template execution failed: %v", err)
 	}
 
-	// 생성된 코드를 파일로 저장
+	// Save generated code to file
 	generatedFile := filepath.Join(tempDir, "models.go")
 	err = os.WriteFile(generatedFile, buf.Bytes(), 0644)
 	if err != nil {
 		t.Fatalf("Failed to write generated file: %v", err)
 	}
 
-	// go.mod 파일 생성 (컴파일을 위해 필요)
+	// Create go.mod file (required for compilation)
 	goModContent := `module testmodels
 
 go 1.21
@@ -521,20 +521,20 @@ replace github.com/pocketbase/pocketbase => github.com/pocketbase/pocketbase v0.
 		t.Fatalf("Failed to write go.mod file: %v", err)
 	}
 
-	// 생성된 코드 읽기
+	// Read generated code
 	generatedCode, err := os.ReadFile(generatedFile)
 	if err != nil {
 		t.Fatalf("Failed to read generated file: %v", err)
 	}
 
-	// Go 문법 검사 (format.Source를 사용하여 문법 오류 확인)
+	// Go syntax check (use format.Source to check for syntax errors)
 	_, err = format.Source(generatedCode)
 	if err != nil {
 		t.Errorf("Generated code has syntax errors: %v", err)
 		t.Logf("Generated code:\n%s", string(generatedCode))
 	}
 
-	// 생성된 코드에 예상되는 구조들이 포함되어 있는지 확인
+	// Verify that generated code contains expected structures
 	codeStr := string(generatedCode)
 	expectedStructures := []string{
 		"package testmodels",
@@ -558,14 +558,14 @@ replace github.com/pocketbase/pocketbase => github.com/pocketbase/pocketbase v0.
 }
 
 func TestTemplateWithDifferentSchemaPatterns(t *testing.T) {
-	// 템플릿 파일 읽기
+	// Read template file
 	templatePath := "../../cmd/pbc-gen/template.go.tpl"
 	templateContent, err := os.ReadFile(templatePath)
 	if err != nil {
 		t.Fatalf("Failed to read template file: %v", err)
 	}
 
-	// 템플릿 파싱
+	// Parse template
 	tmpl, err := template.New("test").Parse(string(templateContent))
 	if err != nil {
 		t.Fatalf("Failed to parse template: %v", err)
@@ -578,7 +578,7 @@ func TestTemplateWithDifferentSchemaPatterns(t *testing.T) {
 	}{
 		{
 			name:        "complex_schema_with_all_field_types",
-			description: "복잡한 스키마 패턴 - 모든 필드 타입 포함",
+			description: "Complex schema pattern - includes all field types",
 			data: EnhancedTemplateData{
 				TemplateData: TemplateData{
 					PackageName: "models",
@@ -646,7 +646,7 @@ func TestTemplateWithDifferentSchemaPatterns(t *testing.T) {
 		},
 		{
 			name:        "edge_case_empty_collections",
-			description: "엣지 케이스 - 빈 컬렉션",
+			description: "Edge case - empty collection",
 			data: EnhancedTemplateData{
 				TemplateData: TemplateData{
 					PackageName: "models",
@@ -660,7 +660,7 @@ func TestTemplateWithDifferentSchemaPatterns(t *testing.T) {
 		},
 		{
 			name:        "special_characters_in_names",
-			description: "특수 문자가 포함된 이름들",
+			description: "Names containing special characters",
 			data: EnhancedTemplateData{
 				TemplateData: TemplateData{
 					PackageName: "models",
@@ -700,7 +700,7 @@ func TestTemplateWithDifferentSchemaPatterns(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Logf("Testing: %s", tt.description)
 
-			// 템플릿 실행
+			// Execute template
 			var buf bytes.Buffer
 			err := tmpl.Execute(&buf, tt.data)
 			if err != nil {
@@ -709,14 +709,14 @@ func TestTemplateWithDifferentSchemaPatterns(t *testing.T) {
 
 			generatedCode := buf.String()
 
-			// 기본 구조 확인
+			// Verify basic structure
 			if tt.data.PackageName != "" {
 				if !strings.Contains(generatedCode, "package "+tt.data.PackageName) {
 					t.Errorf("Generated code missing package declaration")
 				}
 			}
 
-			// Go 문법 검사
+			// Go syntax check
 			if strings.TrimSpace(generatedCode) != "" {
 				_, err = format.Source([]byte(generatedCode))
 				if err != nil {

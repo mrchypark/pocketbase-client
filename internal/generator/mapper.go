@@ -97,7 +97,7 @@ func ToPascalCase(s string) string {
 		case "json":
 			parts[i] = "JSON"
 		default:
-			// 수동으로 첫 글자를 대문자로 변환 (strings.Title 대체)
+			// Manually convert first letter to uppercase (replaces strings.Title)
 			if len(part) > 0 {
 				parts[i] = strings.ToUpper(part[:1]) + part[1:]
 			}

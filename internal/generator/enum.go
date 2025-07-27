@@ -15,7 +15,7 @@ func NewEnumGenerator() *EnumGenerator {
 
 // GenerateEnums generates enum data for all collections
 func (g *EnumGenerator) GenerateEnums(collections []CollectionData, schemas []CollectionSchema) []EnumData {
-	// 성능 최적화: 예상 크기로 슬라이스 미리 할당
+	// Performance optimization: pre-allocate slice with estimated size
 	estimatedEnums := 0
 	for _, schema := range schemas {
 		for _, field := range schema.Fields {
@@ -27,7 +27,7 @@ func (g *EnumGenerator) GenerateEnums(collections []CollectionData, schemas []Co
 
 	enums := make([]EnumData, 0, estimatedEnums)
 
-	// 성능 최적화: 스키마를 맵으로 변환하여 O(1) 조회
+	// Performance optimization: convert schemas to map for O(1) lookup
 	schemaMap := make(map[string]CollectionSchema, len(schemas))
 	for _, schema := range schemas {
 		schemaMap[schema.Name] = schema
@@ -44,7 +44,7 @@ func (g *EnumGenerator) GenerateEnums(collections []CollectionData, schemas []Co
 				continue
 			}
 
-			// 성능 최적화: 직접 enum 값 추출하여 불필요한 함수 호출 제거
+			// Performance optimization: directly extract enum values to eliminate unnecessary function calls
 			if field.Options != nil && len(field.Options.Values) > 0 {
 				enumData := g.generateEnumDataOptimized(field, collection.CollectionName)
 				enums = append(enums, enumData)
@@ -163,12 +163,12 @@ func (g *EnumGenerator) SanitizeConstantValue(value string) string {
 	return fmt.Sprintf(`"%s"`, value)
 }
 
-// generateEnumDataOptimized 성능 최적화된 enum 데이터 생성 함수
+// generateEnumDataOptimized performance-optimized enum data generation function
 func (g *EnumGenerator) generateEnumDataOptimized(field FieldSchema, collectionName string) EnumData {
 	values := field.Options.Values
 	constants := make([]ConstantData, 0, len(values))
 
-	// 성능 최적화: 문자열 빌더 사용하여 메모리 할당 최소화
+	// Performance optimization: use string builder to minimize memory allocation
 	var nameBuilder strings.Builder
 	basePrefix := ToPascalCase(collectionName) + ToPascalCase(field.Name)
 
