@@ -1,3 +1,5 @@
+// Package main demonstrates a real-time chat application using PocketBase Go client.
+// This example shows real-time subscriptions and Record-based message handling.
 package main
 
 import (
@@ -31,12 +33,15 @@ func main() {
 	// --- Initialize PocketBase Client ---
 	client := pocketbase.NewClient(os.Getenv("POCKETBASE_URL"))
 
+	// Create Record service for chat collection
+	chatService := client.Records("chat")
+
 	// --- Subscribe to the 'chat' collection ---
 	// We subscribe to all events ('*') on the 'chat' collection.
 	unsubscribe, err := client.Realtime.Subscribe(context.Background(), []string{"chat"}, func(e *pocketbase.RealtimeEvent, err error) {
 		// This callback function is triggered for every event.
 		if err != nil {
-			log.Printf("Subscription Error: %v\n", err)
+			log.Printf("Subscription error: %v\n", err)
 			return
 		}
 
@@ -46,10 +51,12 @@ func main() {
 			// We can use GetString to safely access its fields.
 			msgUser := e.Record.GetString("user")
 			msgText := e.Record.GetString("text")
+			msgTime := e.Record.GetDateTime("created")
 
 			// Don't print the user's own messages back to them
 			if msgUser != username {
-				fmt.Printf("\n[%s]: %s\n> ", msgUser, msgText)
+				timeStr := msgTime.String()[:19] // YYYY-MM-DD HH:MM:SS format
+				fmt.Printf("\n[%s] %s: %s\n> ", timeStr, msgUser, msgText)
 			}
 		}
 	})
@@ -82,11 +89,11 @@ func main() {
 
 		// Create a new record in the 'chat' collection.
 		// This will trigger the real-time event for all subscribed clients.
-		message := map[string]interface{}{
-			"user": username,
-			"text": text,
-		}
-		if _, err := client.Records.Create(context.Background(), "chat", message); err != nil {
+		message := &pocketbase.Record{}
+		message.Set("user", username)
+		message.Set("text", text)
+
+		if _, err := chatService.Create(context.Background(), message); err != nil {
 			log.Printf("Error sending message: %v", err)
 		}
 
