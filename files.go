@@ -142,7 +142,8 @@ func (s *FileService) Delete(ctx context.Context, collection, recordID, fieldNam
 	}
 
 	// First, get the current record to see the current file list
-	record, err := s.Client.Records.GetOne(ctx, collection, recordID, nil)
+	recordService := NewRecordService[Record](s.Client, collection)
+	record, err := recordService.GetOne(ctx, recordID, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get current record: %w", err)
 	}
@@ -184,9 +185,8 @@ func (s *FileService) Delete(ctx context.Context, collection, recordID, fieldNam
 	}
 
 	// Update the record with the new file list
-	updateData := map[string]interface{}{
-		fieldName: updatedValue,
-	}
+	updateRecord := &Record{}
+	updateRecord.Set(fieldName, updatedValue)
 
-	return s.Client.Records.Update(ctx, collection, recordID, updateData)
+	return recordService.Update(ctx, recordID, updateRecord)
 }

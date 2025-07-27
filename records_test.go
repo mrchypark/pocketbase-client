@@ -207,8 +207,8 @@ func BenchmarkGetListEager(b *testing.B) {
 	b.ReportAllocs()
 
 	for i := 0; i < b.N; i++ {
-		// Use actual Records.GetList method
-		_, err := c.Records.GetList(context.Background(), "posts", &ListOptions{})
+		// Use actual Records method
+		_, err := c.Records("posts").GetList(context.Background(), &ListOptions{})
 		if err != nil {
 			b.Fatalf("unexpected error: %v", err)
 		}
@@ -232,7 +232,7 @@ func TestRecordServiceGetList(t *testing.T) {
 	defer srv.Close()
 
 	c := NewClient(srv.URL)
-	res, err := c.Records.GetList(context.Background(), "posts", &ListOptions{Page: 2})
+	res, err := c.Records("posts").GetList(context.Background(), &ListOptions{Page: 2})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -256,7 +256,7 @@ func TestRecordServiceGetListFieldsSkipTotal(t *testing.T) {
 
 	c := NewClient(srv.URL)
 	opts := &ListOptions{Fields: "id,title", SkipTotal: true}
-	if _, err := c.Records.GetList(context.Background(), "posts", opts); err != nil {
+	if _, err := c.Records("posts").GetList(context.Background(), opts); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
@@ -272,7 +272,7 @@ func TestRecordServiceGetOne(t *testing.T) {
 	defer srv.Close()
 
 	c := NewClient(srv.URL)
-	rec, err := c.Records.GetOne(context.Background(), "posts", "1", nil)
+	rec, err := c.Records("posts").GetOne(context.Background(), "1", nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -293,7 +293,7 @@ func TestRecordServiceGetOneFields(t *testing.T) {
 
 	c := NewClient(srv.URL)
 	opts := &GetOneOptions{Fields: "id,title"}
-	if _, err := c.Records.GetOne(context.Background(), "posts", "1", opts); err != nil {
+	if _, err := c.Records("posts").GetOne(context.Background(), "1", opts); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
@@ -312,7 +312,9 @@ func TestRecordServiceCreate(t *testing.T) {
 	defer srv.Close()
 
 	c := NewClient(srv.URL)
-	rec, err := c.Records.Create(context.Background(), "posts", map[string]string{"title": "hi"})
+	record := &Record{}
+	record.Set("title", "hi")
+	rec, err := c.Records("posts").Create(context.Background(), record)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -336,7 +338,9 @@ func TestRecordServiceCreateWithQuery(t *testing.T) {
 
 	c := NewClient(srv.URL)
 	opts := &WriteOptions{Expand: "rel", Fields: "id"}
-	if _, err := c.Records.CreateWithOptions(context.Background(), "posts", map[string]string{"title": "hi"}, opts); err != nil {
+	record := &Record{}
+	record.Set("title", "hi")
+	if _, err := c.Records("posts").CreateWithOptions(context.Background(), record, opts); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
@@ -355,7 +359,9 @@ func TestRecordServiceUpdate(t *testing.T) {
 	defer srv.Close()
 
 	c := NewClient(srv.URL)
-	rec, err := c.Records.Update(context.Background(), "posts", "1", map[string]string{"title": "new"})
+	record := &Record{}
+	record.Set("title", "new")
+	rec, err := c.Records("posts").Update(context.Background(), "1", record)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -378,7 +384,9 @@ func TestRecordServiceUpdateWithQuery(t *testing.T) {
 
 	c := NewClient(srv.URL)
 	opts := &WriteOptions{Expand: "rel", Fields: "id"}
-	if _, err := c.Records.UpdateWithOptions(context.Background(), "posts", "1", map[string]string{"title": "new"}, opts); err != nil {
+	record := &Record{}
+	record.Set("title", "new")
+	if _, err := c.Records("posts").UpdateWithOptions(context.Background(), "1", record, opts); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
@@ -396,7 +404,7 @@ func TestRecordServiceDelete(t *testing.T) {
 	defer srv.Close()
 
 	c := NewClient(srv.URL)
-	if err := c.Records.Delete(context.Background(), "posts", "1"); err != nil {
+	if err := c.Records("posts").Delete(context.Background(), "1"); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
@@ -416,7 +424,7 @@ func TestRecordServiceAuthHeader(t *testing.T) {
 	// ✨ Modified part: Set auth token with WithToken
 	c.WithToken("tok")
 
-	if _, err := c.Records.GetList(context.Background(), "posts", nil); err != nil {
+	if _, err := c.Records("posts").GetList(context.Background(), nil); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
@@ -429,7 +437,7 @@ func TestRecordServiceNotFound(t *testing.T) {
 	defer srv.Close()
 
 	c := NewClient(srv.URL)
-	_, err := c.Records.GetOne(context.Background(), "posts", "missing", nil)
+	_, err := c.Records("posts").GetOne(context.Background(), "missing", nil)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -501,8 +509,8 @@ func TestBackwardCompatibility(t *testing.T) {
 
 		client := NewClient(srv.URL)
 
-		// 기존 방식으로 GetList 호출
-		result, err := client.Records.GetList(context.Background(), "posts", &ListOptions{
+		// 새로운 방식으로 GetList 호출
+		result, err := client.Records("posts").GetList(context.Background(), &ListOptions{
 			Page:    2,
 			PerPage: 50,
 			Filter:  "status='active'",

@@ -39,10 +39,20 @@ func TestBatchExecuteSuccess(t *testing.T) {
 	defer srv.Close()
 
 	c := NewClient(srv.URL)
-	createReq, _ := c.Records.NewCreateRequest("posts", map[string]any{"title": "a"})
-	updateReq, _ := c.Records.NewUpdateRequest("posts", "2", map[string]any{"title": "b"})
-	deleteReq, _ := c.Records.NewDeleteRequest("posts", "3")
-	upsertReq, _ := c.Records.NewUpsertRequest("posts", map[string]any{"id": "4", "title": "c"})
+	createRecord := &Record{}
+	createRecord.Set("title", "a")
+	createReq, _ := c.Records("posts").NewCreateRequest(createRecord)
+
+	updateRecord := &Record{}
+	updateRecord.Set("title", "b")
+	updateReq, _ := c.Records("posts").NewUpdateRequest("2", updateRecord)
+
+	deleteReq, _ := c.Records("posts").NewDeleteRequest("3")
+
+	upsertRecord := &Record{}
+	upsertRecord.Set("id", "4")
+	upsertRecord.Set("title", "c")
+	upsertReq, _ := c.Records("posts").NewUpsertRequest(upsertRecord)
 
 	res, err := c.Batch.Execute(context.Background(), []*BatchRequest{createReq, updateReq, deleteReq, upsertReq})
 	if err != nil {
@@ -81,8 +91,10 @@ func TestBatchExecutePartialFailure(t *testing.T) {
 	defer srv.Close()
 
 	c := NewClient(srv.URL)
-	createReq, _ := c.Records.NewCreateRequest("posts", map[string]any{"title": "a"})
-	deleteReq, _ := c.Records.NewDeleteRequest("posts", "1")
+	createRecord := &Record{}
+	createRecord.Set("title", "a")
+	createReq, _ := c.Records("posts").NewCreateRequest(createRecord)
+	deleteReq, _ := c.Records("posts").NewDeleteRequest("1")
 
 	res, err := c.Batch.Execute(context.Background(), []*BatchRequest{createReq, deleteReq})
 	if err != nil {
@@ -133,7 +145,9 @@ func TestBatchExecuteParsedError(t *testing.T) {
 	defer srv.Close()
 
 	c := NewClient(srv.URL)
-	req, _ := c.Records.NewCreateRequest("posts", map[string]any{"title": ""})
+	record := &Record{}
+	record.Set("title", "")
+	req, _ := c.Records("posts").NewCreateRequest(record)
 
 	res, err := c.Batch.Execute(context.Background(), []*BatchRequest{req})
 	if err != nil {
@@ -175,7 +189,9 @@ func TestBatchExecuteForbidden(t *testing.T) {
 // TestNewUpsertRequestMissingID tests the NewUpsertRequest with a missing ID.
 func TestNewUpsertRequestMissingID(t *testing.T) {
 	c := NewClient("http://example.com")
-	if _, err := c.Records.NewUpsertRequest("posts", map[string]any{"title": "a"}); err == nil {
+	record := &Record{}
+	record.Set("title", "a")
+	if _, err := c.Records("posts").NewUpsertRequest(record); err == nil {
 		t.Fatal("expected error for missing id")
 	}
 }
