@@ -12,6 +12,7 @@ import (
 // RecordServiceAPI defines the interface for generic record service operations.
 type RecordServiceAPI[T any] interface {
 	GetList(ctx context.Context, opts *ListOptions) (*ListResultAs[T], error)
+	GetAll(ctx context.Context, opts *ListOptions) (*ListResultAs[T], error)
 	GetOne(ctx context.Context, recordID string, opts *GetOneOptions) (*T, error)
 	Create(ctx context.Context, model *T) (*T, error)
 	CreateWithOptions(ctx context.Context, model *T, opts *WriteOptions) (*T, error)
@@ -52,6 +53,63 @@ func (s *RecordService[T]) GetList(ctx context.Context, opts *ListOptions) (*Lis
 	}
 
 	return &result, nil
+}
+
+// GetAll retrieves all records from the collection as generic type T by paginating through all pages.
+func (s *RecordService[T]) GetAll(ctx context.Context, opts *ListOptions) (*ListResultAs[T], error) {
+	// 옵션이 nil이면 기본값으로 초기화
+	if opts == nil {
+		opts = &ListOptions{}
+	}
+
+	// GetAll을 위한 옵션 설정
+	allOpts := *opts // 복사본 생성
+	allOpts.Page = 1
+	allOpts.PerPage = 500
+	allOpts.SkipTotal = true
+
+	// 첫 번째 페이지 요청
+	result, err := s.GetList(ctx, &allOpts)
+	if err != nil {
+		return nil, err
+	}
+
+	// 첫 번째 페이지가 500개 미만이면 모든 데이터를 가져온 것
+	if len(result.Items) < 500 {
+		return result, nil
+	}
+
+	// 모든 아이템을 저장할 슬라이스
+	allItems := make([]*T, 0, len(result.Items))
+	allItems = append(allItems, result.Items...)
+
+	// 다음 페이지들을 순차적으로 요청
+	for page := 2; ; page++ {
+		allOpts.Page = page
+		pageResult, err := s.GetList(ctx, &allOpts)
+		if err != nil {
+			return nil, err
+		}
+
+		// 아이템들을 전체 결과에 추가
+		allItems = append(allItems, pageResult.Items...)
+
+		// 500개 미만이면 마지막 페이지
+		if len(pageResult.Items) < 500 {
+			break
+		}
+	}
+
+	// 최종 결과 구성
+	finalResult := &ListResultAs[T]{
+		Page:       1,
+		PerPage:    len(allItems),
+		TotalItems: len(allItems), // skipTotal=true이므로 실제 개수로 설정
+		TotalPages: 1,
+		Items:      allItems,
+	}
+
+	return finalResult, nil
 }
 
 // GetOne retrieves a single record as generic type T.
