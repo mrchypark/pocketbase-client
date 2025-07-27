@@ -7,6 +7,9 @@ import (
 
 type mockRecordService struct{}
 
+func (m *mockRecordService) GetAll(ctx context.Context, collection string, opts *ListOptions) (*ListResult, error) {
+	return &ListResult{}, nil
+}
 func (m *mockRecordService) GetList(ctx context.Context, collection string, opts *ListOptions) (*ListResult, error) {
 	return &ListResult{}, nil
 }

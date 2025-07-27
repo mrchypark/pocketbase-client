@@ -590,7 +590,7 @@ func (m *RelatedCollection) SetName(value string) {
 // ==============
 
 // GetAllTypes fetches a single AllTypes record by its ID.
-func GetAllTypes(client pocketbase.RecordServiceAPI, id string, opts *pocketbase.GetOneOptions) (*AllTypes, error) {
+func GetAllTypes(client pocketbase.RecordServiceLegacyAPI, id string, opts *pocketbase.GetOneOptions) (*AllTypes, error) {
 	r, err := client.GetOne(context.Background(), "all_types", id, opts)
 	if err != nil {
 		return nil, err
@@ -599,7 +599,7 @@ func GetAllTypes(client pocketbase.RecordServiceAPI, id string, opts *pocketbase
 }
 
 // GetAllTypesList fetches a list of AllTypes records.
-func GetAllTypesList(client pocketbase.RecordServiceAPI, opts *pocketbase.ListOptions) (*AllTypesCollection, error) {
+func GetAllTypesList(client pocketbase.RecordServiceLegacyAPI, opts *pocketbase.ListOptions) (*AllTypesCollection, error) {
 	listResult, err := client.GetList(context.Background(), "all_types", opts)
 	if err != nil {
 		return nil, err
@@ -617,7 +617,7 @@ func GetAllTypesList(client pocketbase.RecordServiceAPI, opts *pocketbase.ListOp
 }
 
 // GetRelatedCollection fetches a single RelatedCollection record by its ID.
-func GetRelatedCollection(client pocketbase.RecordServiceAPI, id string, opts *pocketbase.GetOneOptions) (*RelatedCollection, error) {
+func GetRelatedCollection(client pocketbase.RecordServiceLegacyAPI, id string, opts *pocketbase.GetOneOptions) (*RelatedCollection, error) {
 	r, err := client.GetOne(context.Background(), "related_collection", id, opts)
 	if err != nil {
 		return nil, err
@@ -626,7 +626,7 @@ func GetRelatedCollection(client pocketbase.RecordServiceAPI, id string, opts *p
 }
 
 // GetRelatedCollectionList fetches a list of RelatedCollection records.
-func GetRelatedCollectionList(client pocketbase.RecordServiceAPI, opts *pocketbase.ListOptions) (*RelatedCollectionCollection, error) {
+func GetRelatedCollectionList(client pocketbase.RecordServiceLegacyAPI, opts *pocketbase.ListOptions) (*RelatedCollectionCollection, error) {
 	listResult, err := client.GetList(context.Background(), "related_collection", opts)
 	if err != nil {
 		return nil, err

@@ -11,6 +11,7 @@ A robust, type-safe, and easy-to-use Go client for the [PocketBase API](https://
 
   * **Full API Coverage**: Interact with all PocketBase endpoints, including Records, Collections, Admins, Users, Logs, and Settings.
   * **Type-Safe**: Go structs for all PocketBase models (`Record`, `Admin`, `Collection`, etc.) with proper JSON tagging.
+  * **Generic Record Service**: New `RecordService[T]` provides type-safe CRUD operations with compile-time type checking.
   * **Fluent API**: A logically structured client that is easy to read and use.
   * **Automatic Auth Handling**: The client automatically manages and injects authentication tokens for all relevant requests.
   * **Real-time Subscriptions**: Subscribe to real-time events on your collections with a simple callback function.
@@ -181,7 +182,64 @@ if err != nil { /* ... */ }
 
 ### Record Operations (CRUD)
 
-Perform Create, Read, Update, and Delete operations on your records.
+#### Generic Type-Safe Record Service (Recommended)
+
+Use the new `RecordService[T]` for type-safe operations with compile-time type checking:
+
+```go
+// Define your record type
+type Post struct {
+    pocketbase.BaseModel
+    Title   string `json:"title"`
+    Content string `json:"content"`
+    Author  string `json:"author"`
+}
+
+// Create a type-safe service
+postService := pocketbase.NewRecordService[Post](client, "posts")
+
+ctx := context.Background()
+
+// Create a new record (type-safe)
+newPost := &Post{
+    Title:   "Hello, World!",
+    Content: "This is a test post.",
+    Author:  "John Doe",
+}
+createdPost, err := postService.Create(ctx, newPost, nil)
+if err != nil { /* ... */ }
+fmt.Printf("Created post: %s\n", createdPost.Title) // Type-safe field access
+
+// Get a single record (returns *Post)
+post, err := postService.GetOne(ctx, createdPost.ID, nil)
+if err != nil { /* ... */ }
+fmt.Printf("Retrieved post: %s by %s\n", post.Title, post.Author)
+
+// Update a record (type-safe)
+post.Title = "Hello, Updated World!"
+updatedPost, err := postService.Update(ctx, post.ID, post, nil)
+if err != nil { /* ... */ }
+
+// Get list of records (returns []Post)
+posts, err := postService.GetList(ctx, &pocketbase.ListOptions{
+    Page:    1,
+    PerPage: 10,
+    Sort:    "-created",
+})
+if err != nil { /* ... */ }
+for _, p := range posts.Items {
+    fmt.Printf("Post: %s\n", p.Title) // Type-safe access
+}
+
+// Delete a record
+err = postService.Delete(ctx, updatedPost.ID)
+if err != nil { /* ... */ }
+fmt.Println("Post deleted successfully.")
+```
+
+#### Legacy Record Operations
+
+You can still use the traditional approach for dynamic record operations:
 
 ```go
 ctx := context.Background()
@@ -310,6 +368,10 @@ for i, result := range results {
 ## 📖 API Documentation
 
 For a complete list of available methods and types, please see the [Go package documentation](https://www.google.com/search?q=https://pkg.go.dev/github.com/mrchypark/pocketbase-client).
+
+## 🔄 Migration Guide
+
+If you're upgrading from older versions or want to migrate to the new generic `RecordService[T]`, see the [Migration Guide](MIGRATION_GUIDE.md) for detailed instructions and examples.
 
 ## 🤝 Contributing
 

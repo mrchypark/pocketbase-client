@@ -2,7 +2,6 @@ package pocketbase
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 
 	"github.com/goccy/go-json"
@@ -47,7 +46,7 @@ func (s *BatchService) Execute(ctx context.Context, requests []*BatchRequest) ([
 
 	var rawResponses []*rawBatchResponse
 	if err := s.client.send(ctx, http.MethodPost, "/api/batch", map[string]any{"requests": requests}, &rawResponses); err != nil {
-		return nil, fmt.Errorf("pocketbase: execute batch: %w", err)
+		return nil, wrapError("execute", "batch", err)
 	}
 
 	responses := make([]*BatchResponse, len(rawResponses))

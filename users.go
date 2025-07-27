@@ -36,7 +36,7 @@ func (s *UserService) RequestPasswordReset(ctx context.Context, collection, emai
 	path := fmt.Sprintf("/api/collections/%s/request-password-reset", url.PathEscape(collection))
 	body := map[string]string{"email": email}
 	if err := s.Client.send(ctx, http.MethodPost, path, body, nil); err != nil {
-		return fmt.Errorf("pocketbase: request password reset: %w", err)
+		return wrapError("request", "password reset", err)
 	}
 	return nil
 }
@@ -46,7 +46,7 @@ func (s *UserService) ConfirmPasswordReset(ctx context.Context, collection, toke
 	path := fmt.Sprintf("/api/collections/%s/confirm-password-reset", url.PathEscape(collection))
 	body := map[string]string{"token": token, "password": newPassword, "passwordConfirm": newPasswordConfirm}
 	if err := s.Client.send(ctx, http.MethodPost, path, body, nil); err != nil {
-		return fmt.Errorf("pocketbase: confirm password reset: %w", err)
+		return wrapError("confirm", "password reset", err)
 	}
 	return nil
 }
@@ -56,7 +56,7 @@ func (s *UserService) RequestVerification(ctx context.Context, collection, email
 	path := fmt.Sprintf("/api/collections/%s/request-verification", url.PathEscape(collection))
 	body := map[string]string{"email": email}
 	if err := s.Client.send(ctx, http.MethodPost, path, body, nil); err != nil {
-		return fmt.Errorf("pocketbase: request verification: %w", err)
+		return wrapError("request", "verification", err)
 	}
 	return nil
 }
@@ -66,7 +66,7 @@ func (s *UserService) ConfirmVerification(ctx context.Context, collection, token
 	path := fmt.Sprintf("/api/collections/%s/confirm-verification", url.PathEscape(collection))
 	body := map[string]string{"token": token}
 	if err := s.Client.send(ctx, http.MethodPost, path, body, nil); err != nil {
-		return fmt.Errorf("pocketbase: confirm verification: %w", err)
+		return wrapError("confirm", "verification", err)
 	}
 	return nil
 }
@@ -77,7 +77,7 @@ func (s *UserService) GetOAuth2Providers(ctx context.Context, collection string)
 	var result map[string]interface{}
 	err := s.Client.send(ctx, http.MethodGet, path, nil, &result)
 	if err != nil {
-		return nil, fmt.Errorf("pocketbase: get oauth2 providers: %w", err)
+		return nil, wrapError("get", "oauth2 providers", err)
 	}
 	return result, nil
 }
@@ -96,7 +96,7 @@ func (s *UserService) AuthWithOAuth2(ctx context.Context, collection, provider, 
 	}
 	var res AuthResponse
 	if err := s.Client.send(ctx, http.MethodPost, path, body, &res); err != nil {
-		return nil, fmt.Errorf("pocketbase: auth with oauth2: %w", err)
+		return nil, wrapError("auth with", "oauth2", err)
 	}
 
 	return &res, nil
@@ -107,7 +107,7 @@ func (s *UserService) AuthRefresh(ctx context.Context, collection string) (*Auth
 	path := fmt.Sprintf("/api/collections/%s/auth-refresh", url.PathEscape(collection))
 	var res AuthResponse
 	if err := s.Client.send(ctx, http.MethodPost, path, nil, &res); err != nil {
-		return nil, fmt.Errorf("pocketbase: auth refresh: %w", err)
+		return nil, wrapError("auth", "refresh", err)
 	}
 
 	return &res, nil
@@ -119,7 +119,7 @@ func (s *UserService) RequestOTP(ctx context.Context, collection, email string) 
 	body := map[string]string{"email": email}
 	var res map[string]string
 	if err := s.Client.send(ctx, http.MethodPost, path, body, &res); err != nil {
-		return nil, fmt.Errorf("pocketbase: request otp: %w", err)
+		return nil, wrapError("request", "otp", err)
 	}
 	return res, nil
 }
@@ -130,7 +130,7 @@ func (s *UserService) AuthWithOTP(ctx context.Context, collection, otpID, passwo
 	body := map[string]string{"otpId": otpID, "password": password}
 	var res AuthResponse
 	if err := s.Client.send(ctx, http.MethodPost, path, body, &res); err != nil {
-		return nil, fmt.Errorf("pocketbase: auth with otp: %w", err)
+		return nil, wrapError("auth with", "otp", err)
 	}
 
 	return &res, nil
@@ -141,7 +141,7 @@ func (s *UserService) RequestEmailChange(ctx context.Context, collection, newEma
 	path := fmt.Sprintf("/api/collections/%s/request-email-change", url.PathEscape(collection))
 	body := map[string]string{"newEmail": newEmail}
 	if err := s.Client.send(ctx, http.MethodPost, path, body, nil); err != nil {
-		return fmt.Errorf("pocketbase: request email change: %w", err)
+		return wrapError("request", "email change", err)
 	}
 	return nil
 }
@@ -151,7 +151,7 @@ func (s *UserService) ConfirmEmailChange(ctx context.Context, collection, token,
 	path := fmt.Sprintf("/api/collections/%s/confirm-email-change", url.PathEscape(collection))
 	body := map[string]string{"token": token, "password": password}
 	if err := s.Client.send(ctx, http.MethodPost, path, body, nil); err != nil {
-		return fmt.Errorf("pocketbase: confirm email change: %w", err)
+		return wrapError("confirm", "email change", err)
 	}
 	return nil
 }
@@ -162,7 +162,7 @@ func (s *UserService) Impersonate(ctx context.Context, collection, id string, du
 	body := map[string]int{"duration": duration}
 	var res AuthResponse
 	if err := s.Client.send(ctx, http.MethodPost, path, body, &res); err != nil {
-		return nil, fmt.Errorf("pocketbase: impersonate user: %w", err)
+		return nil, wrapError("impersonate", "user", err)
 	}
 	client := NewClient(s.Client.BaseURL)
 	client.UseAuthResponse(&res)

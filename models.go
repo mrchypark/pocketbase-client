@@ -48,6 +48,7 @@ type ListResult struct {
 	Items      []*Record `json:"items"`
 }
 
+// ListResultAs는 제네릭 타입 T의 레코드 목록과 페이지네이션 정보를 포함하는 구조체입니다.
 type ListResultAs[T any] struct {
 	Page       int  `json:"page"`
 	PerPage    int  `json:"perPage"`

@@ -2,7 +2,6 @@ package pocketbase
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 )
 
@@ -25,56 +24,46 @@ var _ SettingServiceAPI = (*SettingService)(nil)
 
 // GetAll retrieves all setting values.
 func (s *SettingService) GetAll(ctx context.Context) (map[string]interface{}, error) {
-	path := "/api/settings"
 	var result map[string]interface{}
-	err := s.Client.send(ctx, http.MethodGet, path, nil, &result)
-	if err != nil {
-		return nil, fmt.Errorf("pocketbase: get settings: %w", err)
+	if err := s.Client.send(ctx, http.MethodGet, "/api/settings", nil, &result); err != nil {
+		return nil, wrapError("get", "settings", err)
 	}
 	return result, nil
 }
 
 // Update modifies settings.
 func (s *SettingService) Update(ctx context.Context, body interface{}) (map[string]interface{}, error) {
-	path := "/api/settings"
 	var result map[string]interface{}
-	err := s.Client.send(ctx, http.MethodPatch, path, body, &result)
-	if err != nil {
-		return nil, fmt.Errorf("pocketbase: update settings: %w", err)
+	if err := s.Client.send(ctx, http.MethodPatch, "/api/settings", body, &result); err != nil {
+		return nil, wrapError("update", "settings", err)
 	}
 	return result, nil
 }
 
 // TestS3 tests the S3 file storage settings.
 func (s *SettingService) TestS3(ctx context.Context) (map[string]interface{}, error) {
-	path := "/api/settings/test/s3"
 	var result map[string]interface{}
-	err := s.Client.send(ctx, http.MethodPost, path, nil, &result)
-	if err != nil {
-		return nil, fmt.Errorf("pocketbase: test s3: %w", err)
+	if err := s.Client.send(ctx, http.MethodPost, "/api/settings/test/s3", nil, &result); err != nil {
+		return nil, wrapError("test", "s3", err)
 	}
 	return result, nil
 }
 
 // TestEmail tests the SMTP settings.
 func (s *SettingService) TestEmail(ctx context.Context, toEmail string) (map[string]interface{}, error) {
-	path := "/api/settings/test/email"
 	body := map[string]string{"email": toEmail}
 	var result map[string]interface{}
-	err := s.Client.send(ctx, http.MethodPost, path, body, &result)
-	if err != nil {
-		return nil, fmt.Errorf("pocketbase: test email: %w", err)
+	if err := s.Client.send(ctx, http.MethodPost, "/api/settings/test/email", body, &result); err != nil {
+		return nil, wrapError("test", "email", err)
 	}
 	return result, nil
 }
 
 // GenerateAppleClientSecret generates a client secret for Apple OAuth.
 func (s *SettingService) GenerateAppleClientSecret(ctx context.Context, params interface{}) (map[string]interface{}, error) {
-	path := "/api/settings/apple/generate-client-secret"
 	var result map[string]interface{}
-	err := s.Client.send(ctx, http.MethodPost, path, params, &result)
-	if err != nil {
-		return nil, fmt.Errorf("pocketbase: generate apple client secret: %w", err)
+	if err := s.Client.send(ctx, http.MethodPost, "/api/settings/apple/generate-client-secret", params, &result); err != nil {
+		return nil, wrapError("generate", "apple client secret", err)
 	}
 	return result, nil
 }
