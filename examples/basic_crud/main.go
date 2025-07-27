@@ -9,70 +9,76 @@ import (
 	pocketbase "github.com/mrchypark/pocketbase-client"
 )
 
-// Define a struct that matches your collection's schema.
-// The `json` tags are important for serialization.
+// Post는 컬렉션 스키마와 일치하는 구조체를 정의합니다.
+// `json` 태그는 직렬화에 중요합니다.
 type Post struct {
+	pocketbase.BaseModel
 	Title   string `json:"title"`
 	Content string `json:"content"`
 }
 
 func main() {
-	// Initialize the PocketBase client
+	// PocketBase 클라이언트를 초기화합니다
 	client := pocketbase.NewClient(os.Getenv("POCKETBASE_URL"))
 
-	// Authenticate as an admin (or user) to have permission to modify data
+	// 데이터 수정 권한을 위해 관리자(또는 사용자)로 인증합니다
 	if _, err := client.WithAdminPassword(context.Background(), "admin@example.com", "password123"); err != nil {
-		log.Fatalf("Failed to authenticate: %v", err)
+		log.Fatalf("인증 실패: %v", err)
 	}
 
-	// --- 1. Create a new record ---
-	fmt.Println("--- Creating a new record ---")
-	newPost := Post{
+	// posts 컬렉션을 위한 제네릭 레코드 서비스를 생성합니다
+	postsService := pocketbase.NewRecordService[Post](client, "posts")
+
+	// --- 1. 새 레코드 생성 ---
+	fmt.Println("--- 새 레코드 생성 ---")
+	newPost := &Post{
 		Title:   "My First Post",
 		Content: "Hello from the Go SDK!",
 	}
-	createdRecord, err := client.Records.Create(context.Background(), "posts", newPost)
+	createdRecord, err := postsService.Create(context.Background(), newPost)
 	if err != nil {
-		log.Fatalf("Failed to create record: %v", err)
+		log.Fatalf("레코드 생성 실패: %v", err)
 	}
-	fmt.Printf("Created record with ID: %s and title: '%s'\n\n", createdRecord.ID, createdRecord.GetString("title"))
+	fmt.Printf("생성된 레코드 ID: %s, 제목: '%s'\n\n", createdRecord.ID, createdRecord.Title)
 
-	// --- 2. Get a list of records ---
-	fmt.Println("--- Listing records ---")
-	records, err := client.Records.GetList(context.Background(), "posts", &pocketbase.ListOptions{})
+	// --- 2. 레코드 목록 조회 ---
+	fmt.Println("--- 레코드 목록 조회 ---")
+	records, err := postsService.GetList(context.Background(), &pocketbase.ListOptions{})
 	if err != nil {
-		log.Fatalf("Failed to list records: %v", err)
+		log.Fatalf("레코드 목록 조회 실패: %v", err)
 	}
-	fmt.Printf("Found %d total record(s).\n", records.TotalItems)
+	fmt.Printf("총 %d개의 레코드를 찾았습니다.\n", records.TotalItems)
 	for i, record := range records.Items {
-		fmt.Printf("  %d: ID=%s, Title='%s'\n", i+1, record.ID, record.GetString("title"))
+		fmt.Printf("  %d: ID=%s, 제목='%s'\n", i+1, record.ID, record.Title)
 	}
 	fmt.Println()
 
-	// --- 3. Get a single record ---
-	fmt.Println("--- Getting a single record ---")
+	// --- 3. 단일 레코드 조회 ---
+	fmt.Println("--- 단일 레코드 조회 ---")
 	recordID := createdRecord.ID
-	retrievedRecord, err := client.Records.GetOne(context.Background(), "posts", recordID, nil)
+	retrievedRecord, err := postsService.GetOne(context.Background(), recordID, nil)
 	if err != nil {
-		log.Fatalf("Failed to get record %s: %v", recordID, err)
+		log.Fatalf("레코드 %s 조회 실패: %v", recordID, err)
 	}
-	fmt.Printf("Retrieved record with title: '%s' and content: '%s'\n\n", retrievedRecord.GetString("title"), retrievedRecord.GetString("content"))
+	fmt.Printf("조회된 레코드 제목: '%s', 내용: '%s'\n\n", retrievedRecord.Title, retrievedRecord.Content)
 
-	// --- 4. Update a record ---
-	fmt.Println("--- Updating a record ---")
-	updateData := map[string]interface{}{
-		"title": "My Updated Post Title",
+	// --- 4. 레코드 업데이트 ---
+	fmt.Println("--- 레코드 업데이트 ---")
+	updatePost := &Post{
+		BaseModel: pocketbase.BaseModel{ID: recordID},
+		Title:     "My Updated Post Title",
+		Content:   retrievedRecord.Content, // 기존 내용 유지
 	}
-	updatedRecord, err := client.Records.Update(context.Background(), "posts", recordID, updateData)
+	updatedRecord, err := postsService.Update(context.Background(), recordID, updatePost)
 	if err != nil {
-		log.Fatalf("Failed to update record %s: %v", recordID, err)
+		log.Fatalf("레코드 %s 업데이트 실패: %v", recordID, err)
 	}
-	fmt.Printf("Updated record title to: '%s'\n\n", updatedRecord.GetString("title"))
+	fmt.Printf("레코드 제목이 '%s'로 업데이트되었습니다.\n\n", updatedRecord.Title)
 
-	// --- 5. Delete a record ---
-	fmt.Println("--- Deleting a record ---")
-	if err := client.Records.Delete(context.Background(), "posts", recordID); err != nil {
-		log.Fatalf("Failed to delete record %s: %v", recordID, err)
+	// --- 5. 레코드 삭제 ---
+	fmt.Println("--- 레코드 삭제 ---")
+	if err := postsService.Delete(context.Background(), recordID); err != nil {
+		log.Fatalf("레코드 %s 삭제 실패: %v", recordID, err)
 	}
-	fmt.Printf("Successfully deleted record %s.\n", recordID)
+	fmt.Printf("레코드 %s가 성공적으로 삭제되었습니다.\n", recordID)
 }
