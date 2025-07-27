@@ -56,6 +56,8 @@ func (s *RecordService[T]) GetList(ctx context.Context, opts *ListOptions) (*Lis
 }
 
 // GetAll retrieves all records from the collection as generic type T by paginating through all pages.
+// Note: The returned ListResultAs will have Page=1, TotalPages=1, and PerPage set to the total number of items,
+// as it represents a single consolidated result.
 func (s *RecordService[T]) GetAll(ctx context.Context, opts *ListOptions) (*ListResultAs[T], error) {
 	// Initialize options with default values if nil
 	if opts == nil {
