@@ -369,10 +369,6 @@ for i, result := range results {
 
 For a complete list of available methods and types, please see the [Go package documentation](https://www.google.com/search?q=https://pkg.go.dev/github.com/mrchypark/pocketbase-client).
 
-## 🔄 Migration Guide
-
-If you're upgrading from older versions or want to migrate to the new generic `RecordService[T]`, see the [Migration Guide](MIGRATION_GUIDE.md) for detailed instructions and examples.
-
 ## 🤝 Contributing
 
 Contributions are welcome\! If you find a bug or have a suggestion for improvement, please open an issue or submit a pull request.
