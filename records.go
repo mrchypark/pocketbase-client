@@ -81,6 +81,8 @@ func (s *RecordService[T]) GetAll(ctx context.Context, opts *ListOptions) (*List
 
 	// If first page has less than 500 items, we have all data
 	if len(result.Items) < 500 {
+		result.TotalItems = len(result.Items)
+		result.TotalPages = 1
 		return result, nil
 	}
 
