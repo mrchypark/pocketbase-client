@@ -15,7 +15,7 @@ func NewFileGenerator() *FileGenerator {
 
 // GenerateFileTypes generates file type data for all collections
 func (g *FileGenerator) GenerateFileTypes(collections []CollectionData, schemas []CollectionSchema) []FileTypeData {
-	// 성능 최적화: 예상 크기로 슬라이스 미리 할당
+	// Performance optimization: pre-allocate slice with estimated size
 	estimatedFiles := 0
 	for _, schema := range schemas {
 		for _, field := range schema.Fields {
@@ -27,7 +27,7 @@ func (g *FileGenerator) GenerateFileTypes(collections []CollectionData, schemas 
 
 	fileTypes := make([]FileTypeData, 0, estimatedFiles)
 
-	// 성능 최적화: 스키마를 맵으로 변환하여 O(1) 조회
+	// Performance optimization: convert schemas to map for O(1) lookup
 	schemaMap := make(map[string]CollectionSchema, len(schemas))
 	for _, schema := range schemas {
 		schemaMap[schema.Name] = schema
@@ -44,7 +44,7 @@ func (g *FileGenerator) GenerateFileTypes(collections []CollectionData, schemas 
 				continue
 			}
 
-			// 성능 최적화: 직접 file 정보 추출
+			// Performance optimization: directly extract file information
 			fileType := g.generateFileTypeDataOptimized(field, collection.CollectionName)
 			fileTypes = append(fileTypes, fileType)
 		}
@@ -311,12 +311,12 @@ func (g *FileGenerator) GenerateThumbnailSizeConstants(fileType FileTypeData) st
 	return code.String()
 }
 
-// generateFileTypeDataOptimized 성능 최적화된 file 타입 데이터 생성 함수
+// generateFileTypeDataOptimized performance-optimized file type data generation function
 func (g *FileGenerator) generateFileTypeDataOptimized(field FieldSchema, _ string) FileTypeData {
-	// 성능 최적화: 미리 계산된 값들 사용
+	// Performance optimization: use pre-calculated values
 	fileTypeName := ToPascalCase(field.Name) + "File"
 
-	// 다중 파일 여부 및 썸네일 정보 확인
+	// Check multi-file status and thumbnail information
 	isMulti := field.Options != nil && field.Options.MaxSelect != nil && *field.Options.MaxSelect > 1
 	hasThumbnails := field.Options != nil && len(field.Options.Thumbs) > 0
 	var thumbnailSizes []string
@@ -324,7 +324,7 @@ func (g *FileGenerator) generateFileTypeDataOptimized(field FieldSchema, _ strin
 		thumbnailSizes = field.Options.Thumbs
 	}
 
-	// 메서드 생성 (미리 할당된 슬라이스 사용)
+	// Generate methods (using pre-allocated slice)
 	methodCount := 3 // Filename, URL, IsEmpty
 	if hasThumbnails {
 		methodCount++ // ThumbURL

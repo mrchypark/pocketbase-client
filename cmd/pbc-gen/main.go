@@ -26,9 +26,9 @@ func main() {
 	pkgName := flag.String("pkgname", "models", "Package name for the generated file")
 	jsonLib := flag.String("jsonlib", "encoding/json", "JSON library to use (e.g., github.com/goccy/go-json)")
 
-	// 새로운 enhanced 기능 플래그들
+	// New enhanced feature flags
 	generateEnums := flag.Bool("enums", true, "Generate enum constants for select fields")
-	generateRelations := flag.Bool("relations", true, "Generate enhanced relation types")
+	generateRelations := flag.Bool("relations", false, "Generate enhanced relation types")
 	generateFiles := flag.Bool("files", true, "Generate enhanced file types")
 
 	flag.Parse()
@@ -41,16 +41,34 @@ func main() {
 		log.Fatalf("Schema loading failed: %v", genErr)
 	}
 
+	// Detect PocketBase version from raw schema file
+	schemaData, err := os.ReadFile(*schemaPath)
+	if err != nil {
+		log.Fatalf("Failed to read schema file for version detection: %v", err)
+	}
+
+	isLegacyVersion, err := generator.DetectPocketBaseVersionFromRaw(schemaData)
+	if err != nil {
+		log.Fatalf("Failed to detect PocketBase version: %v", err)
+	}
+
+	if isLegacyVersion {
+		log.Printf("Detected PocketBase 0.22+ schema (using 'schema' field)")
+	} else {
+		log.Printf("Detected newer PocketBase schema (using 'fields' field)")
+	}
+
 	// Validate basic configuration
 	if err := validateConfig(*schemaPath, *outputPath, *pkgName); err != nil {
 		log.Fatalf("Configuration validation failed: %v", err)
 	}
 
-	// 기본 TemplateData 생성
+	// Generate basic TemplateData
 	baseTplData := generator.TemplateData{
-		PackageName: *pkgName,
-		JSONLibrary: *jsonLib,
-		Collections: make([]generator.CollectionData, 0, len(schemas)),
+		PackageName:     *pkgName,
+		JSONLibrary:     *jsonLib,
+		Collections:     make([]generator.CollectionData, 0, len(schemas)),
+		IsLegacyVersion: isLegacyVersion,
 	}
 
 	for _, s := range schemas {
@@ -73,7 +91,7 @@ func main() {
 			// Comment is currently not used, so ignore with '_'.
 			goType, _, getter := generator.MapPbTypeToGoType(field, !field.Required)
 
-			// 포인터 타입인지 확인하고 기본 타입 추출
+			// Check if it's a pointer type and extract base type
 			isPointer := strings.HasPrefix(goType, "*")
 			baseType := goType
 			if isPointer {
@@ -93,7 +111,7 @@ func main() {
 		baseTplData.Collections = append(baseTplData.Collections, collectionData)
 	}
 
-	// Enhanced 기능이 활성화된 경우 EnhancedTemplateData 생성
+	// Generate EnhancedTemplateData when Enhanced features are enabled
 	var tplData any
 	if *generateEnums || *generateRelations || *generateFiles {
 		enhancedData := generator.EnhancedTemplateData{
@@ -103,7 +121,7 @@ func main() {
 			GenerateFiles:     *generateFiles,
 		}
 
-		// Enhanced 분석 및 데이터 생성
+		// Enhanced analysis and data generation
 		if *generateEnums {
 			enumGenerator := generator.NewEnumGenerator()
 			enhancedData.Enums = enumGenerator.GenerateEnums(baseTplData.Collections, schemas)
@@ -121,7 +139,7 @@ func main() {
 
 		tplData = enhancedData
 	} else {
-		// 기존 동작 유지 (하위 호환성)
+		// Maintain existing behavior (backward compatibility)
 		tplData = baseTplData
 	}
 

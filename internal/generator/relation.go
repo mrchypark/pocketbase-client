@@ -15,7 +15,7 @@ func NewRelationGenerator() *RelationGenerator {
 
 // GenerateRelationTypes generates relation type data for all collections
 func (g *RelationGenerator) GenerateRelationTypes(collections []CollectionData, schemas []CollectionSchema) []RelationTypeData {
-	// 성능 최적화: 예상 크기로 슬라이스 미리 할당
+	// Performance optimization: pre-allocate slice with estimated size
 	estimatedRelations := 0
 	for _, schema := range schemas {
 		for _, field := range schema.Fields {
@@ -26,11 +26,11 @@ func (g *RelationGenerator) GenerateRelationTypes(collections []CollectionData, 
 	}
 
 	relationTypes := make([]RelationTypeData, 0, estimatedRelations)
-	seenRelations := make(map[string]bool) // 중복 제거를 위한 맵
+	seenRelations := make(map[string]bool) // Map for duplicate removal
 
-	// 성능 최적화: 스키마를 맵으로 변환하여 O(1) 조회
+	// Performance optimization: convert schemas to map for O(1) lookup
 	schemaMap := make(map[string]CollectionSchema, len(schemas))
-	collectionIDMap := make(map[string]string, len(schemas)) // ID -> Name 매핑
+	collectionIDMap := make(map[string]string, len(schemas)) // ID -> Name mapping
 	for _, schema := range schemas {
 		schemaMap[schema.Name] = schema
 		if schema.ID != "" {
@@ -49,12 +49,12 @@ func (g *RelationGenerator) GenerateRelationTypes(collections []CollectionData, 
 				continue
 			}
 
-			// 성능 최적화: 직접 relation 정보 추출
+			// Performance optimization: directly extract relation information
 			if field.Options != nil && field.Options.CollectionID != "" {
 				targetCollection, exists := collectionIDMap[field.Options.CollectionID]
 				if exists {
 					relationType := g.generateRelationTypeDataOptimized(field, collection.CollectionName, targetCollection)
-					// 중복 제거: 같은 타입명이 이미 존재하는지 확인
+					// Duplicate removal: check if same type name already exists
 					if !seenRelations[relationType.TypeName] {
 						seenRelations[relationType.TypeName] = true
 						relationTypes = append(relationTypes, relationType)
@@ -269,16 +269,16 @@ func (g *RelationGenerator) ValidateRelationName(name string) string {
 	return cleaned
 }
 
-// generateRelationTypeDataOptimized 성능 최적화된 relation 타입 데이터 생성 함수
+// generateRelationTypeDataOptimized performance-optimized relation type data generation function
 func (g *RelationGenerator) generateRelationTypeDataOptimized(field FieldSchema, _, targetCollection string) RelationTypeData {
-	// 성능 최적화: 미리 계산된 값들 사용
+	// Performance optimization: use pre-calculated values
 	relationTypeName := ToPascalCase(targetCollection) + "Relation"
 	targetTypeName := ToPascalCase(targetCollection)
 
-	// 다중 관계 여부 확인
+	// Check if it's a multiple relationship
 	isMulti := field.Options.MaxSelect != nil && *field.Options.MaxSelect > 1
 
-	// 메서드 생성 (미리 할당된 슬라이스 사용)
+	// Generate methods (using pre-allocated slice)
 	methods := make([]MethodData, 0, 3)
 
 	// ID method

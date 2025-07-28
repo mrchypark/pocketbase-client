@@ -4,11 +4,11 @@ import (
 	"testing"
 )
 
-// BenchmarkEnumGenerator_GenerateEnums enum 생성 전체 프로세스 성능을 측정합니다
+// BenchmarkEnumGenerator_GenerateEnums measures performance of the entire enum generation process
 func BenchmarkEnumGenerator_GenerateEnums(b *testing.B) {
 	generator := NewEnumGenerator()
 
-	// 테스트용 컬렉션 데이터
+	// Test collection data
 	collections := []CollectionData{
 		{
 			CollectionName: "devices",
@@ -24,7 +24,7 @@ func BenchmarkEnumGenerator_GenerateEnums(b *testing.B) {
 		},
 	}
 
-	// 테스트용 스키마 데이터 (다양한 select 필드 포함)
+	// Test schema data (including various select fields)
 	schemas := []CollectionSchema{
 		{
 			Name: "devices",
@@ -99,7 +99,7 @@ func BenchmarkEnumGenerator_GenerateEnums(b *testing.B) {
 	}
 }
 
-// BenchmarkEnumGenerator_GenerateEnumConstants 단일 enum 상수 생성 성능을 측정합니다
+// BenchmarkEnumGenerator_GenerateEnumConstants measures performance of single enum constant generation
 func BenchmarkEnumGenerator_GenerateEnumConstants(b *testing.B) {
 	generator := NewEnumGenerator()
 
@@ -122,11 +122,11 @@ func BenchmarkEnumGenerator_GenerateEnumConstants(b *testing.B) {
 	}
 }
 
-// BenchmarkEnumGenerator_LargeValueSet 많은 값을 가진 enum 생성 성능을 측정합니다
+// BenchmarkEnumGenerator_LargeValueSet measures performance of enum generation with many values
 func BenchmarkEnumGenerator_LargeValueSet(b *testing.B) {
 	generator := NewEnumGenerator()
 
-	// 100개의 값을 가진 큰 enum
+	// Large enum with 100 values
 	largeValues := make([]string, 100)
 	for i := 0; i < 100; i++ {
 		largeValues[i] = "value_" + string(rune('a'+i%26)) + string(rune('0'+i/26))
@@ -151,11 +151,11 @@ func BenchmarkEnumGenerator_LargeValueSet(b *testing.B) {
 	}
 }
 
-// BenchmarkEnumGenerator_MultipleCollections 여러 컬렉션의 enum 생성 성능을 측정합니다
+// BenchmarkEnumGenerator_MultipleCollections measures performance of enum generation for multiple collections
 func BenchmarkEnumGenerator_MultipleCollections(b *testing.B) {
 	generator := NewEnumGenerator()
 
-	// 10개 컬렉션, 각각 5개의 select 필드
+	// 10 collections, each with 5 select fields
 	collections := make([]CollectionData, 10)
 	schemas := make([]CollectionSchema, 10)
 
@@ -191,11 +191,11 @@ func BenchmarkEnumGenerator_MultipleCollections(b *testing.B) {
 	}
 }
 
-// BenchmarkEnumGenerator_SpecialCharacters 특수문자가 포함된 값들의 enum 생성 성능을 측정합니다
+// BenchmarkEnumGenerator_SpecialCharacters measures performance of enum generation with special characters in values
 func BenchmarkEnumGenerator_SpecialCharacters(b *testing.B) {
 	generator := NewEnumGenerator()
 
-	// 특수문자가 포함된 값들
+	// Values containing special characters
 	specialValues := []string{
 		"value-with-dashes",
 		"value with spaces",
@@ -205,7 +205,7 @@ func BenchmarkEnumGenerator_SpecialCharacters(b *testing.B) {
 		"value#with#hash",
 		"value$with$dollar",
 		"value%with%percent",
-		"한글값",
+		"korean_value",
 		"日本語値",
 	}
 
@@ -228,7 +228,7 @@ func BenchmarkEnumGenerator_SpecialCharacters(b *testing.B) {
 	}
 }
 
-// BenchmarkEnumGenerator_Memory enum 생성의 메모리 사용량을 측정합니다
+// BenchmarkEnumGenerator_Memory measures memory usage of enum generation
 func BenchmarkEnumGenerator_Memory(b *testing.B) {
 	generator := NewEnumGenerator()
 
@@ -262,7 +262,7 @@ func BenchmarkEnumGenerator_Memory(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	b.ReportAllocs() // 메모리 할당 정보 리포트
+	b.ReportAllocs() // Report memory allocation information
 
 	for i := 0; i < b.N; i++ {
 		_ = generator.GenerateEnums(collections, schemas)

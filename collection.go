@@ -61,15 +61,10 @@ var _ CollectionServiceAPI = (*CollectionService)(nil)
 
 // GetList retrieves a list of collections.
 func (s *CollectionService) GetList(ctx context.Context, opts *ListOptions) (*CollectionListResult, error) {
-	path := "/api/collections"
-	q := url.Values{}
-	applyListOptions(q, opts)
-	if qs := q.Encode(); qs != "" {
-		path += "?" + qs
-	}
+	path := buildPathWithQuery("/api/collections", buildQueryString(opts))
 	var res CollectionListResult
 	if err := s.Client.send(ctx, http.MethodGet, path, nil, &res); err != nil {
-		return nil, fmt.Errorf("pocketbase: fetch collections list: %w", err)
+		return nil, wrapError("fetch", "collections list", err)
 	}
 	return &res, nil
 }
@@ -79,17 +74,16 @@ func (s *CollectionService) GetOne(ctx context.Context, idOrName string) (*Colle
 	path := fmt.Sprintf("/api/collections/%s", url.PathEscape(idOrName))
 	var col Collection
 	if err := s.Client.send(ctx, http.MethodGet, path, nil, &col); err != nil {
-		return nil, fmt.Errorf("pocketbase: fetch collection: %w", err)
+		return nil, wrapError("fetch", "collection", err)
 	}
 	return &col, nil
 }
 
 // Create creates a new collection.
 func (s *CollectionService) Create(ctx context.Context, col *Collection) (*Collection, error) {
-	path := "/api/collections"
 	var res Collection
-	if err := s.Client.send(ctx, http.MethodPost, path, col, &res); err != nil {
-		return nil, fmt.Errorf("pocketbase: create collection: %w", err)
+	if err := s.Client.send(ctx, http.MethodPost, "/api/collections", col, &res); err != nil {
+		return nil, wrapError("create", "collection", err)
 	}
 	return &res, nil
 }
@@ -99,7 +93,7 @@ func (s *CollectionService) Update(ctx context.Context, idOrName string, col *Co
 	path := fmt.Sprintf("/api/collections/%s", url.PathEscape(idOrName))
 	var res Collection
 	if err := s.Client.send(ctx, http.MethodPatch, path, col, &res); err != nil {
-		return nil, fmt.Errorf("pocketbase: update collection: %w", err)
+		return nil, wrapError("update", "collection", err)
 	}
 	return &res, nil
 }
@@ -108,24 +102,21 @@ func (s *CollectionService) Update(ctx context.Context, idOrName string, col *Co
 func (s *CollectionService) Delete(ctx context.Context, idOrName string) error {
 	path := fmt.Sprintf("/api/collections/%s", url.PathEscape(idOrName))
 	if err := s.Client.send(ctx, http.MethodDelete, path, nil, nil); err != nil {
-		return fmt.Errorf("pocketbase: delete collection: %w", err)
+		return wrapError("delete", "collection", err)
 	}
 	return nil
 }
 
 // Import creates or updates multiple collections at once.
 func (s *CollectionService) Import(ctx context.Context, cols []*Collection, deleteMissing bool) ([]*Collection, error) {
-	path := "/api/collections/import"
 	q := url.Values{}
 	if deleteMissing {
 		q.Set("deleteMissing", "1")
 	}
-	if qs := q.Encode(); qs != "" {
-		path += "?" + qs
-	}
+	path := buildPathWithQuery("/api/collections/import", q.Encode())
 	var res []*Collection
 	if err := s.Client.send(ctx, http.MethodPut, path, cols, &res); err != nil {
-		return nil, fmt.Errorf("pocketbase: import collections: %w", err)
+		return nil, wrapError("import", "collections", err)
 	}
 	return res, nil
 }

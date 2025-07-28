@@ -9,30 +9,30 @@ import (
 	"time"
 )
 
-// BenchmarkLargeSchemaProcessing 대용량 스키마 처리 성능을 측정합니다
+// BenchmarkLargeSchemaProcessing measures performance of large schema processing
 func BenchmarkLargeSchemaProcessing(b *testing.B) {
 	schemaPath := "testdata/large_schema.json"
 
-	// 스키마 로드 (벤치마크 외부에서 한 번만 수행)
+	// Load schema (performed only once outside benchmark)
 	schemas, err := LoadSchema(schemaPath)
 	if err != nil {
-		b.Fatalf("대용량 스키마 로드 실패: %v", err)
+		b.Fatalf("Large schema load failed: %v", err)
 	}
 
-	b.Logf("로드된 컬렉션 수: %d", len(schemas))
+	b.Logf("Number of loaded collections: %d", len(schemas))
 
-	// 총 필드 수 계산
+	// Calculate total number of fields
 	totalFields := 0
 	for _, schema := range schemas {
 		totalFields += len(schema.Fields)
 	}
-	b.Logf("총 필드 수: %d", totalFields)
+	b.Logf("Total number of fields: %d", totalFields)
 
 	b.ResetTimer()
-	b.ReportAllocs() // 메모리 할당 정보 리포트
+	b.ReportAllocs() // Report memory allocation information
 
 	for i := 0; i < b.N; i++ {
-		// 기본 TemplateData 생성
+		// Generate basic TemplateData
 		baseTplData := TemplateData{
 			PackageName: "models",
 			JSONLibrary: "encoding/json",
@@ -62,7 +62,7 @@ func BenchmarkLargeSchemaProcessing(b *testing.B) {
 			baseTplData.Collections = append(baseTplData.Collections, collectionData)
 		}
 
-		// Enhanced 기능들 생성
+		// Generate Enhanced features
 		enumGenerator := NewEnumGenerator()
 		relationGenerator := NewRelationGenerator()
 		fileGenerator := NewFileGenerator()
@@ -73,13 +73,13 @@ func BenchmarkLargeSchemaProcessing(b *testing.B) {
 	}
 }
 
-// BenchmarkScalabilityTest 확장성 테스트 - 컬렉션 수에 따른 성능 변화를 측정합니다
+// BenchmarkScalabilityTest scalability test - measures performance changes based on number of collections
 func BenchmarkScalabilityTest(b *testing.B) {
 	collectionCounts := []int{1, 5, 10, 20, 50, 100}
 
 	for _, count := range collectionCounts {
 		b.Run(fmt.Sprintf("Collections_%d", count), func(b *testing.B) {
-			// 동적으로 스키마 생성
+			// Generate schema dynamically
 			schemas := generateTestSchemas(count)
 
 			b.ResetTimer()
@@ -92,13 +92,13 @@ func BenchmarkScalabilityTest(b *testing.B) {
 	}
 }
 
-// BenchmarkFieldScalabilityTest 필드 수에 따른 성능 변화를 측정합니다
+// BenchmarkFieldScalabilityTest measures performance changes based on number of fields
 func BenchmarkFieldScalabilityTest(b *testing.B) {
 	fieldCounts := []int{5, 10, 20, 50, 100, 200}
 
 	for _, count := range fieldCounts {
 		b.Run(fmt.Sprintf("Fields_%d", count), func(b *testing.B) {
-			// 많은 필드를 가진 단일 컬렉션 생성
+			// Create single collection with many fields
 			schemas := generateTestSchemasWithFields(1, count)
 
 			b.ResetTimer()
@@ -111,9 +111,9 @@ func BenchmarkFieldScalabilityTest(b *testing.B) {
 	}
 }
 
-// BenchmarkComplexRelationships 복잡한 관계 구조의 성능을 측정합니다
+// BenchmarkComplexRelationships measures performance of complex relationship structures
 func BenchmarkComplexRelationships(b *testing.B) {
-	// 상호 참조가 많은 복잡한 스키마 생성
+	// Generate complex schema with many cross-references
 	schemas := generateComplexRelationSchemas()
 
 	b.ResetTimer()
@@ -124,7 +124,7 @@ func BenchmarkComplexRelationships(b *testing.B) {
 	}
 }
 
-// BenchmarkMemoryUsageBySize 스키마 크기별 메모리 사용량을 측정합니다
+// BenchmarkMemoryUsageBySize measures memory usage by schema size
 func BenchmarkMemoryUsageBySize(b *testing.B) {
 	sizes := []struct {
 		collections int
@@ -159,18 +159,18 @@ func BenchmarkMemoryUsageBySize(b *testing.B) {
 	}
 }
 
-// TestLargeSchemaGeneration 대용량 스키마로 실제 코드 생성 테스트
+// TestLargeSchemaGeneration tests actual code generation with large schema
 func TestLargeSchemaGeneration(t *testing.T) {
 	schemaPath := "testdata/large_schema.json"
 
 	schemas, err := LoadSchema(schemaPath)
 	if err != nil {
-		t.Fatalf("대용량 스키마 로드 실패: %v", err)
+		t.Fatalf("Large schema load failed: %v", err)
 	}
 
 	start := time.Now()
 
-	// 기본 TemplateData 생성
+	// Generate basic TemplateData
 	baseTplData := TemplateData{
 		PackageName: "models",
 		JSONLibrary: "encoding/json",
@@ -200,7 +200,7 @@ func TestLargeSchemaGeneration(t *testing.T) {
 		baseTplData.Collections = append(baseTplData.Collections, collectionData)
 	}
 
-	// Enhanced 기능들 생성
+	// Generate Enhanced features
 	enhancedData := EnhancedTemplateData{
 		TemplateData:      baseTplData,
 		GenerateEnums:     true,
@@ -218,9 +218,9 @@ func TestLargeSchemaGeneration(t *testing.T) {
 	enhancedData.FileTypes = fileGenerator.GenerateFileTypes(baseTplData.Collections, schemas)
 
 	processingTime := time.Since(start)
-	t.Logf("데이터 처리 시간: %v", processingTime)
+	t.Logf("Data processing time: %v", processingTime)
 
-	// 템플릿 실행 테스트
+	// Template execution test
 	templateContent := `package {{.PackageName}}
 
 // Generated code - do not edit
@@ -261,54 +261,54 @@ type {{.TypeName}} struct {
 
 	tpl, err := template.New("test").Parse(templateContent)
 	if err != nil {
-		t.Fatalf("템플릿 파싱 실패: %v", err)
+		t.Fatalf("Template parsing failed: %v", err)
 	}
 
 	start = time.Now()
 
 	tmpFile, err := os.CreateTemp("", "large_schema_test_*.go")
 	if err != nil {
-		t.Fatalf("임시 파일 생성 실패: %v", err)
+		t.Fatalf("Temporary file creation failed: %v", err)
 	}
 	defer os.Remove(tmpFile.Name())
 	defer tmpFile.Close()
 
 	err = tpl.Execute(tmpFile, enhancedData)
 	if err != nil {
-		t.Fatalf("템플릿 실행 실패: %v", err)
+		t.Fatalf("Template execution failed: %v", err)
 	}
 
 	templateTime := time.Since(start)
-	t.Logf("템플릿 실행 시간: %v", templateTime)
+	t.Logf("Template execution time: %v", templateTime)
 
-	// 생성된 파일 크기 확인
+	// Check generated file size
 	fileInfo, err := tmpFile.Stat()
 	if err != nil {
-		t.Fatalf("파일 정보 조회 실패: %v", err)
+		t.Fatalf("File info query failed: %v", err)
 	}
 
-	t.Logf("생성된 파일 크기: %d bytes", fileInfo.Size())
-	t.Logf("총 처리 시간: %v", processingTime+templateTime)
+	t.Logf("Generated file size: %d bytes", fileInfo.Size())
+	t.Logf("Total processing time: %v", processingTime+templateTime)
 
-	// 성능 임계값 검증
+	// Performance threshold validation
 	totalTime := processingTime + templateTime
 	if totalTime > 5*time.Second {
-		t.Errorf("처리 시간이 너무 오래 걸립니다: %v (임계값: 5초)", totalTime)
+		t.Errorf("Processing time is too long: %v (threshold: 5 seconds)", totalTime)
 	}
 
 	if fileInfo.Size() > 10*1024*1024 { // 10MB
-		t.Errorf("생성된 파일이 너무 큽니다: %d bytes (임계값: 10MB)", fileInfo.Size())
+		t.Errorf("Generated file is too large: %d bytes (threshold: 10MB)", fileInfo.Size())
 	}
 }
 
-// TestPerformanceBottlenecks 성능 병목 지점을 식별합니다
+// TestPerformanceBottlenecks identifies performance bottlenecks
 func TestPerformanceBottlenecks(t *testing.T) {
-	schemas := generateTestSchemasWithFields(50, 50) // 50개 컬렉션, 각각 50개 필드
+	schemas := generateTestSchemasWithFields(50, 50) // 50 collections, 50 fields each
 
-	// 각 단계별 시간 측정
+	// Measure time for each step
 	times := make(map[string]time.Duration)
 
-	// 1. 기본 데이터 생성
+	// 1. Generate basic data
 	start := time.Now()
 	baseTplData := TemplateData{
 		PackageName: "models",
@@ -340,37 +340,37 @@ func TestPerformanceBottlenecks(t *testing.T) {
 	}
 	times["basic_data_generation"] = time.Since(start)
 
-	// 2. Enum 생성
+	// 2. Generate Enum
 	start = time.Now()
 	enumGenerator := NewEnumGenerator()
 	enums := enumGenerator.GenerateEnums(baseTplData.Collections, schemas)
 	times["enum_generation"] = time.Since(start)
 
-	// 3. Relation 생성
+	// 3. Generate Relation
 	start = time.Now()
 	relationGenerator := NewRelationGenerator()
 	relations := relationGenerator.GenerateRelationTypes(baseTplData.Collections, schemas)
 	times["relation_generation"] = time.Since(start)
 
-	// 4. File 생성
+	// 4. Generate File
 	start = time.Now()
 	fileGenerator := NewFileGenerator()
 	files := fileGenerator.GenerateFileTypes(baseTplData.Collections, schemas)
 	times["file_generation"] = time.Since(start)
 
-	// 결과 출력 및 분석
-	t.Logf("성능 분석 결과:")
+	// Output and analyze results
+	t.Logf("Performance analysis results:")
 	for phase, duration := range times {
 		t.Logf("  %s: %v", phase, duration)
 	}
 
-	t.Logf("생성된 데이터 통계:")
-	t.Logf("  컬렉션: %d개", len(baseTplData.Collections))
-	t.Logf("  Enum: %d개", len(enums))
-	t.Logf("  Relation: %d개", len(relations))
-	t.Logf("  File: %d개", len(files))
+	t.Logf("Generated data statistics:")
+	t.Logf("  Collections: %d", len(baseTplData.Collections))
+	t.Logf("  Enum: %d", len(enums))
+	t.Logf("  Relation: %d", len(relations))
+	t.Logf("  File: %d", len(files))
 
-	// 병목 지점 식별
+	// Identify bottlenecks
 	maxTime := time.Duration(0)
 	bottleneck := ""
 	for phase, duration := range times {
@@ -380,12 +380,12 @@ func TestPerformanceBottlenecks(t *testing.T) {
 		}
 	}
 
-	t.Logf("가장 오래 걸린 단계: %s (%v)", bottleneck, maxTime)
+	t.Logf("Longest step: %s (%v)", bottleneck, maxTime)
 }
 
-// 헬퍼 함수들
+// Helper functions
 
-// generateTestSchemas 테스트용 스키마를 동적으로 생성합니다
+// generateTestSchemas dynamically generates test schemas
 func generateTestSchemas(collectionCount int) []CollectionSchema {
 	schemas := make([]CollectionSchema, collectionCount)
 
@@ -431,7 +431,7 @@ func generateTestSchemas(collectionCount int) []CollectionSchema {
 	return schemas
 }
 
-// generateTestSchemasWithFields 지정된 수의 필드를 가진 스키마를 생성합니다
+// generateTestSchemasWithFields generates schemas with specified number of fields
 func generateTestSchemasWithFields(collectionCount, fieldCount int) []CollectionSchema {
 	schemas := make([]CollectionSchema, collectionCount)
 
@@ -442,7 +442,7 @@ func generateTestSchemasWithFields(collectionCount, fieldCount int) []Collection
 			fieldType := "text"
 			var options *FieldOptions
 
-			// 필드 타입을 다양하게 분배
+			// Distribute field types diversely
 			switch j % 6 {
 			case 0:
 				fieldType = "text"
@@ -473,7 +473,7 @@ func generateTestSchemasWithFields(collectionCount, fieldCount int) []Collection
 			fields[j] = FieldSchema{
 				Name:     fmt.Sprintf("field_%d", j+1),
 				Type:     fieldType,
-				Required: j%3 == 0, // 1/3 확률로 required
+				Required: j%3 == 0, // 1/3 probability of being required
 				Options:  options,
 			}
 		}
@@ -489,23 +489,23 @@ func generateTestSchemasWithFields(collectionCount, fieldCount int) []Collection
 	return schemas
 }
 
-// generateComplexRelationSchemas 복잡한 관계 구조를 가진 스키마를 생성합니다
+// generateComplexRelationSchemas generates schemas with complex relationship structures
 func generateComplexRelationSchemas() []CollectionSchema {
 	schemas := make([]CollectionSchema, 10)
 
 	for i := 0; i < 10; i++ {
 		fields := make([]FieldSchema, 0)
 
-		// 기본 필드들
+		// Basic fields
 		fields = append(fields, FieldSchema{
 			Name:     "name",
 			Type:     "text",
 			Required: true,
 		})
 
-		// 다른 컬렉션들과의 관계 필드들 추가
+		// Add relationship fields with other collections
 		for j := 0; j < 10; j++ {
-			if i != j { // 자기 자신 제외
+			if i != j { // exclude self
 				fields = append(fields, FieldSchema{
 					Name: fmt.Sprintf("relation_to_%d", j+1),
 					Type: "relation",
@@ -528,7 +528,7 @@ func generateComplexRelationSchemas() []CollectionSchema {
 	return schemas
 }
 
-// processSchemas 스키마 처리 로직을 실행합니다
+// processSchemas executes schema processing logic
 func processSchemas(schemas []CollectionSchema) {
 	baseTplData := TemplateData{
 		PackageName: "models",
@@ -559,7 +559,7 @@ func processSchemas(schemas []CollectionSchema) {
 		baseTplData.Collections = append(baseTplData.Collections, collectionData)
 	}
 
-	// Enhanced 기능들
+	// Enhanced features
 	enumGenerator := NewEnumGenerator()
 	relationGenerator := NewRelationGenerator()
 	fileGenerator := NewFileGenerator()

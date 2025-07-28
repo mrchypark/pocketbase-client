@@ -35,7 +35,6 @@ type Client struct {
 
 	AuthStore   AuthStrategy
 	Collections CollectionServiceAPI // Service for managing collections
-	Records     RecordServiceAPI     // Service for record CRUD operations
 	Realtime    RealtimeServiceAPI   // Service for real-time subscriptions
 	Admins      AdminServiceAPI      // Service for managing administrators
 	Users       UserServiceAPI       // Service for general user-related operations
@@ -84,7 +83,6 @@ func NewClient(baseURL string, opts ...ClientOption) *Client {
 	}
 	c.HTTPClient.Transport = &authInjector{client: c, next: transport}
 	c.Collections = &CollectionService{Client: c}
-	c.Records = &RecordService{Client: c}
 	c.Realtime = &RealtimeService{Client: c}
 	c.Admins = &AdminService{Client: c}
 	c.Users = &UserService{Client: c}
@@ -93,6 +91,7 @@ func NewClient(baseURL string, opts ...ClientOption) *Client {
 	c.Batch = &BatchService{client: c}
 	c.Legacy = &LegacyService{Client: c}
 	c.Files = &FileService{Client: c}
+
 	return c
 }
 
@@ -300,6 +299,11 @@ func (c *Client) HealthCheck(ctx context.Context) (map[string]interface{}, error
 		return nil, err
 	}
 	return result, nil
+}
+
+// Records creates a new generic RecordService for the specified collection.
+func (c *Client) Records(collection string) RecordServiceAPI[Record] {
+	return NewRecordService[Record](c, collection)
 }
 
 func copyWithFlush(dst io.Writer, src io.Reader) (int64, error) {

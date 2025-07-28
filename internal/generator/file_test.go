@@ -9,7 +9,7 @@ import (
 func TestFileGenerator_GenerateFileTypes(t *testing.T) {
 	generator := NewFileGenerator()
 
-	// 테스트용 데이터 준비
+	// Prepare test data
 	collections := []CollectionData{
 		{
 			CollectionName: "users",
@@ -70,13 +70,13 @@ func TestFileGenerator_GenerateFileTypes(t *testing.T) {
 
 	result := generator.GenerateFileTypes(collections, schemas)
 
-	// 예상 결과: 3개의 file type (users.avatar, users.documents, posts.featured_image)
+	// Expected result: 3 file types (users.avatar, users.documents, posts.featured_image)
 	expectedCount := 3
 	if len(result) != expectedCount {
 		t.Errorf("Expected %d file types, got %d", expectedCount, len(result))
 	}
 
-	// users.avatar file type 검증 (단일 파일, 썸네일 있음)
+	// Verify users.avatar file type (single file, with thumbnails)
 	var avatarFile *FileTypeData
 	for i := range result {
 		if result[i].TypeName == "AvatarFile" {
@@ -102,7 +102,7 @@ func TestFileGenerator_GenerateFileTypes(t *testing.T) {
 		t.Errorf("Expected thumbnails %v, got %v", expectedThumbnails, avatarFile.ThumbnailSizes)
 	}
 
-	// users.documents file type 검증 (다중 파일, 썸네일 없음)
+	// Verify users.documents file type (multiple files, no thumbnails)
 	var documentsFile *FileTypeData
 	for i := range result {
 		if result[i].TypeName == "DocumentsFile" {
@@ -219,19 +219,19 @@ func TestFileGenerator_GenerateFileMethods(t *testing.T) {
 				}
 			}
 
-			// Filename method 검증
+			// Verify Filename method
 			filenameMethod := result[0]
 			if filenameMethod.ReturnType != "string" {
 				t.Errorf("Expected Filename method return type 'string', got '%s'", filenameMethod.ReturnType)
 			}
 
-			// URL method 검증
+			// Verify URL method
 			urlMethod := result[1]
 			if urlMethod.ReturnType != "string" {
 				t.Errorf("Expected URL method return type 'string', got '%s'", urlMethod.ReturnType)
 			}
 
-			// IsEmpty method 검증 (마지막 메서드)
+			// Verify IsEmpty method (last method)
 			isEmptyMethod := result[len(result)-1]
 			if isEmptyMethod.Name != "IsEmpty" {
 				t.Errorf("Expected last method to be 'IsEmpty', got '%s'", isEmptyMethod.Name)
@@ -259,7 +259,7 @@ func TestFileGenerator_GenerateFileTypeCode(t *testing.T) {
 
 	result := generator.GenerateFileTypeCode(fileType)
 
-	// 생성된 코드가 올바른 형식인지 확인
+	// Verify that generated code has correct format
 	expectedParts := []string{
 		"type FileReference struct",
 		"filename   string",
@@ -363,7 +363,7 @@ func TestFileGenerator_GenerateFileConstructorCode(t *testing.T) {
 func TestFileGenerator_GenerateMultiFileTypeCode(t *testing.T) {
 	generator := NewFileGenerator()
 
-	// 단일 파일 테스트
+	// Single file test
 	singleFileType := FileTypeData{
 		TypeName:      "DocumentFile",
 		IsMulti:       false,
@@ -378,7 +378,7 @@ func TestFileGenerator_GenerateMultiFileTypeCode(t *testing.T) {
 		t.Error("Single file should generate normal file type")
 	}
 
-	// 다중 파일 테스트
+	// Multiple file test
 	multiFileType := FileTypeData{
 		TypeName:      "ImageFile",
 		IsMulti:       true,

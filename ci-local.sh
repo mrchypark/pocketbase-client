@@ -1,52 +1,52 @@
 #!/bin/bash
 
-# 로컬 CI 테스트 스크립트
-# GitHub Actions CI 워크플로우와 동일한 단계를 로컬에서 실행합니다
+# Local CI test script
+# Runs the same steps as GitHub Actions CI workflow locally
 
-set -e  # 에러 발생 시 스크립트 중단
+set -e  # Exit script on error
 
-echo "🚀 로컬 CI 테스트 시작..."
+echo "🚀 Starting local CI test..."
 
-# 색상 정의
+# Color definitions
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# 단계별 실행 함수
+# Step-by-step execution function
 run_step() {
     local step_name="$1"
     local command="$2"
     
-    echo -e "\n${BLUE}📋 단계: ${step_name}${NC}"
-    echo "실행 명령: $command"
+    echo -e "\n${BLUE}📋 Step: ${step_name}${NC}"
+    echo "Executing command: $command"
     
     if eval "$command"; then
-        echo -e "${GREEN}✅ ${step_name} 성공${NC}"
+        echo -e "${GREEN}✅ ${step_name} succeeded${NC}"
     else
-        echo -e "${RED}❌ ${step_name} 실패${NC}"
+        echo -e "${RED}❌ ${step_name} failed${NC}"
         exit 1
     fi
 }
 
-# Go 버전 확인
-echo -e "\n${YELLOW}🔍 Go 버전 확인${NC}"
+# Check Go version
+echo -e "\n${YELLOW}🔍 Checking Go version${NC}"
 go version
 
-# 1. 포맷 검사 (Format)
-run_step "코드 포맷 검사" "gofmt -w . && git diff --exit-code"
+# 1. Format check
+run_step "Code format check" "gofmt -w . && git diff --exit-code"
 
-# 2. Vet 검사
-run_step "Go Vet 검사" "go vet ./..."
+# 2. Vet check
+run_step "Go Vet check" "go vet ./..."
 
-# 3. 일반 테스트
-run_step "단위 테스트" "go test ./..."
+# 3. Unit tests
+run_step "Unit tests" "go test ./..."
 
-# 4. Race 조건 테스트
-run_step "Race 조건 테스트" "go test -race ./..."
+# 4. Race condition tests
+run_step "Race condition tests" "go test -race ./..."
 
-# 5. 벤치마크 테스트
-run_step "벤치마크 테스트" "go test -bench=. -benchmem ./..."
+# 5. Benchmark tests
+run_step "Benchmark tests" "go test -bench=. -benchmem ./..."
 
-echo -e "\n${GREEN}🎉 모든 CI 테스트가 성공적으로 완료되었습니다!${NC}"
+echo -e "\n${GREEN}🎉 All CI tests completed successfully!${NC}"

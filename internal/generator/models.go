@@ -3,11 +3,12 @@ package generator
 // TemplateData represents the data structure used for code generation templates.
 // It contains all the information needed to generate Go code from PocketBase schemas.
 type TemplateData struct {
-	PackageName string // Go package name for generated code
-	JSONLibrary string // JSON library import path (e.g., "encoding/json")
-	Collections []CollectionData
+	PackageName     string // Go package name for generated code
+	JSONLibrary     string // JSON library import path (e.g., "encoding/json")
+	Collections     []CollectionData
+	IsLegacyVersion bool // True if PocketBase 0.22+ (needs BaseDatetime), false if newer
 
-	// Enhanced 기능을 위한 필드들 (기본값은 빈 슬라이스)
+	// Fields for Enhanced features (default is empty slice)
 	Enums         []EnumData         `json:"enums,omitempty"`
 	RelationTypes []RelationTypeData `json:"relationTypes,omitempty"`
 	FileTypes     []FileTypeData     `json:"fileTypes,omitempty"`
@@ -38,20 +39,20 @@ type FieldData struct {
 type EnhancedFieldInfo struct {
 	FieldSchema
 
-	// Select 필드용 - enum 생성을 위한 정보
-	EnumValues   []string // select 필드의 values 옵션에서 추출
-	EnumTypeName string   // 생성될 enum 타입명 (예: DeviceType)
+	// For Select fields - information for enum generation
+	EnumValues   []string // extracted from values option of select field
+	EnumTypeName string   // enum type name to be generated (e.g., DeviceType)
 
-	// Relation 필드용 - 관계 타입 생성을 위한 정보
-	TargetCollection string // 참조하는 컬렉션명
-	RelationTypeName string // 생성될 관계 타입명 (예: PlantRelation)
-	IsMultiRelation  bool   // 다중 관계 여부 (maxSelect > 1)
+	// For Relation fields - information for relation type generation
+	TargetCollection string // referenced collection name
+	RelationTypeName string // relation type name to be generated (e.g., PlantRelation)
+	IsMultiRelation  bool   // whether it's a multiple relationship (maxSelect > 1)
 
-	// File 필드용 - 파일 타입 생성을 위한 정보
-	FileTypeName   string   // 생성될 파일 타입명 (예: ImageFile)
-	IsMultiFile    bool     // 다중 파일 여부 (maxSelect > 1)
-	HasThumbnails  bool     // 썸네일 지원 여부
-	ThumbnailSizes []string // 썸네일 크기 목록
+	// For File fields - information for file type generation
+	FileTypeName   string   // file type name to be generated (e.g., ImageFile)
+	IsMultiFile    bool     // whether it's multiple files (maxSelect > 1)
+	HasThumbnails  bool     // whether thumbnails are supported
+	ThumbnailSizes []string // list of thumbnail sizes
 }
 
 // EnhancedTemplateData extends TemplateData with enhanced generation features.
@@ -59,56 +60,56 @@ type EnhancedFieldInfo struct {
 type EnhancedTemplateData struct {
 	TemplateData
 
-	// 새로운 기능들
-	Enums         []EnumData         // 생성할 enum 데이터
-	RelationTypes []RelationTypeData // 생성할 관계 타입 데이터
-	FileTypes     []FileTypeData     // 생성할 파일 타입 데이터
+	// New features
+	Enums         []EnumData         // enum data to generate
+	RelationTypes []RelationTypeData // relation type data to generate
+	FileTypes     []FileTypeData     // file type data to generate
 
-	// 생성 옵션 - CLI 플래그로 제어
-	GenerateEnums     bool // enum 생성 여부
-	GenerateRelations bool // 관계 타입 생성 여부
-	GenerateFiles     bool // 파일 타입 생성 여부
+	// Generation options - controlled by CLI flags
+	GenerateEnums     bool // whether to generate enums
+	GenerateRelations bool // whether to generate relation types
+	GenerateFiles     bool // whether to generate file types
 }
 
 // EnumData represents data for generating enum constants from select fields.
 // It contains all information needed to generate type-safe enum constants.
 type EnumData struct {
-	CollectionName string         // 컬렉션명 (예: devices)
-	FieldName      string         // 필드명 (예: type)
-	EnumTypeName   string         // enum 타입명 (예: DeviceType)
-	Constants      []ConstantData // 상수 목록
+	CollectionName string         // collection name (e.g., devices)
+	FieldName      string         // field name (e.g., type)
+	EnumTypeName   string         // enum type name (e.g., DeviceType)
+	Constants      []ConstantData // list of constants
 }
 
 // ConstantData represents a single enum constant with its name and value.
 type ConstantData struct {
-	Name  string // 상수명 (예: DeviceTypeM2)
-	Value string // 상수값 (예: "m2")
+	Name  string // constant name (e.g., DeviceTypeM2)
+	Value string // constant value (e.g., "m2")
 }
 
 // RelationTypeData represents data for generating relation types from relation fields.
 // It contains metadata for creating type-safe relation helpers.
 type RelationTypeData struct {
-	TypeName         string       // 관계 타입명 (예: PlantRelation)
-	TargetCollection string       // 대상 컬렉션명 (예: plants)
-	TargetTypeName   string       // 대상 타입명 (예: Plant)
-	IsMulti          bool         // 다중 관계 여부
-	Methods          []MethodData // 생성할 메서드 목록
+	TypeName         string       // relation type name (e.g., PlantRelation)
+	TargetCollection string       // target collection name (e.g., plants)
+	TargetTypeName   string       // target type name (e.g., Plant)
+	IsMulti          bool         // whether it's a multiple relationship
+	Methods          []MethodData // list of methods to generate
 }
 
 // FileTypeData represents data for generating file types from file fields.
 // It contains metadata for creating file reference helpers with URL generation.
 type FileTypeData struct {
-	TypeName       string       // 파일 타입명 (예: ImageFile)
-	IsMulti        bool         // 다중 파일 여부
-	HasThumbnails  bool         // 썸네일 지원 여부
-	ThumbnailSizes []string     // 썸네일 크기 목록
-	Methods        []MethodData // 생성할 메서드 목록
+	TypeName       string       // file type name (e.g., ImageFile)
+	IsMulti        bool         // whether it's multiple files
+	HasThumbnails  bool         // whether thumbnails are supported
+	ThumbnailSizes []string     // list of thumbnail sizes
+	Methods        []MethodData // list of methods to generate
 }
 
 // MethodData represents a method to be generated for enhanced types.
 // It contains the method signature and implementation details.
 type MethodData struct {
-	Name       string // 메서드명 (예: Load, URL)
-	ReturnType string // 반환 타입 (예: (*Plant, error))
-	Body       string // 메서드 본문 코드
+	Name       string // method name (e.g., Load, URL)
+	ReturnType string // return type (e.g., (*Plant, error))
+	Body       string // method body code
 }

@@ -56,13 +56,15 @@ func uploadFileExample(ctx context.Context, client *pocketbase.Client) error {
 	// Create test file content
 	fileContent := strings.NewReader("This is test file content.")
 
-	// First create a record (assuming posts collection exists)
-	recordData := map[string]interface{}{
-		"title":   "File Upload Test",
-		"content": "This is a post with an attached file.",
-	}
+	// Create Record service for posts collection
+	postsService := client.Records("posts")
 
-	record, err := client.Records.Create(ctx, "posts", recordData)
+	// First create a record (assuming posts collection exists)
+	newRecord := &pocketbase.Record{}
+	newRecord.Set("title", "File Upload Test")
+	newRecord.Set("content", "This is a post with an attached file.")
+
+	record, err := postsService.Create(ctx, newRecord)
 	if err != nil {
 		return fmt.Errorf("failed to create record: %w", err)
 	}
@@ -84,8 +86,11 @@ func uploadFileExample(ctx context.Context, client *pocketbase.Client) error {
 }
 
 func downloadFileExample(ctx context.Context, client *pocketbase.Client) error {
+	// Create Record service for posts collection
+	postsService := client.Records("posts")
+
 	// First find a record with a file
-	records, err := client.Records.GetList(ctx, "posts", &pocketbase.ListOptions{
+	records, err := postsService.GetList(ctx, &pocketbase.ListOptions{
 		Page:    1,
 		PerPage: 1,
 		Filter:  "image != ''", // Records with non-empty image field
@@ -175,8 +180,11 @@ func fileURLExample(client *pocketbase.Client) {
 }
 
 func deleteFileExample(ctx context.Context, client *pocketbase.Client) error {
+	// Create Record service for posts collection
+	postsService := client.Records("posts")
+
 	// Find a record with a file
-	records, err := client.Records.GetList(ctx, "posts", &pocketbase.ListOptions{
+	records, err := postsService.GetList(ctx, &pocketbase.ListOptions{
 		Page:    1,
 		PerPage: 1,
 		Filter:  "image != ''", // Records with non-empty image field

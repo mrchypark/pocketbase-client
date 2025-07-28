@@ -2,64 +2,126 @@ package pocketbase
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"maps"
 	"net/http"
 	"net/url"
+
+	"github.com/goccy/go-json"
 )
 
-// RecordServiceAPI defines the API operations related to records.
-type RecordServiceAPI interface {
-	GetList(ctx context.Context, collection string, opts *ListOptions) (*ListResult, error)
-	GetOne(ctx context.Context, collection, recordID string, opts *GetOneOptions) (*Record, error)
-	Create(ctx context.Context, collection string, body any) (*Record, error)
-	CreateWithOptions(ctx context.Context, collection string, body any, opts *WriteOptions) (*Record, error)
-	Update(ctx context.Context, collection, recordID string, body any) (*Record, error)
-	UpdateWithOptions(ctx context.Context, collection, recordID string, body any, opts *WriteOptions) (*Record, error)
-	Delete(ctx context.Context, collection, recordID string) error
-	NewCreateRequest(collection string, body map[string]any) (*BatchRequest, error)
-	NewUpdateRequest(collection, recordID string, body map[string]any) (*BatchRequest, error)
-	NewDeleteRequest(collection, recordID string) (*BatchRequest, error)
-	NewUpsertRequest(collection string, body map[string]any) (*BatchRequest, error)
-
-	// 페이지네이션 헬퍼 메서드들
-	GetAll(ctx context.Context, collection string, opts *ListOptions) ([]*Record, error)
-	GetAllWithBatchSize(ctx context.Context, collection string, opts *ListOptions, batchSize int) ([]*Record, error)
-	Iterate(ctx context.Context, collection string, opts *ListOptions) *RecordIterator
-	IterateWithBatchSize(ctx context.Context, collection string, opts *ListOptions, batchSize int) *RecordIterator
+// RecordServiceAPI defines the interface for generic record service operations.
+type RecordServiceAPI[T any] interface {
+	GetList(ctx context.Context, opts *ListOptions) (*ListResultAs[T], error)
+	GetAll(ctx context.Context, opts *ListOptions) (*ListResultAs[T], error)
+	GetOne(ctx context.Context, recordID string, opts *GetOneOptions) (*T, error)
+	Create(ctx context.Context, model *T) (*T, error)
+	CreateWithOptions(ctx context.Context, model *T, opts *WriteOptions) (*T, error)
+	Update(ctx context.Context, recordID string, model *T) (*T, error)
+	UpdateWithOptions(ctx context.Context, recordID string, model *T, opts *WriteOptions) (*T, error)
+	Delete(ctx context.Context, recordID string) error
+	NewCreateRequest(model *T) (*BatchRequest, error)
+	NewUpdateRequest(recordID string, model *T) (*BatchRequest, error)
+	NewDeleteRequest(recordID string) (*BatchRequest, error)
+	NewUpsertRequest(model *T) (*BatchRequest, error)
 }
 
-// Mappable interface allows types to convert themselves to map[string]any.
-type Mappable interface {
-	ToMap() map[string]any
+// RecordService provides CRUD operations for a specific type T.
+type RecordService[T any] struct {
+	client         *Client
+	collectionName string
 }
 
-// RecordService handles record-related API operations.
-type RecordService struct {
-	Client *Client
-}
-
-var _ RecordServiceAPI = (*RecordService)(nil)
-
-// GetList retrieves a list of records from a collection.
-func (s *RecordService) GetList(ctx context.Context, collection string, opts *ListOptions) (*ListResult, error) {
-	path := fmt.Sprintf("/api/collections/%s/records", url.PathEscape(collection))
-	q := url.Values{}
-	applyListOptions(q, opts)
-	if qs := q.Encode(); qs != "" {
-		path += "?" + qs
+// NewRecordService creates a new generic service for a specific type T and collection name.
+func NewRecordService[T any](client *Client, collectionName string) RecordServiceAPI[T] {
+	return &RecordService[T]{
+		client:         client,
+		collectionName: collectionName,
 	}
-	var result ListResult
-	if err := s.Client.send(ctx, http.MethodGet, path, nil, &result); err != nil {
-		return nil, fmt.Errorf("pocketbase: fetch records list: %w", err)
+}
+
+// RecordService[T] implements RecordServiceAPI[T] interface - compile time check
+var _ RecordServiceAPI[any] = (*RecordService[any])(nil)
+
+// GetList retrieves a list of records from the collection as generic type T.
+func (s *RecordService[T]) GetList(ctx context.Context, opts *ListOptions) (*ListResultAs[T], error) {
+	basePath := fmt.Sprintf("/api/collections/%s/records", url.PathEscape(s.collectionName))
+	path := buildPathWithQuery(basePath, buildQueryString(opts))
+
+	var result ListResultAs[T]
+	if err := s.client.send(ctx, http.MethodGet, path, nil, &result); err != nil {
+		return nil, wrapError("fetch", "typed records list", err)
 	}
+
 	return &result, nil
 }
 
-// GetOne retrieves a single record.
-func (s *RecordService) GetOne(ctx context.Context, collection, recordID string, opts *GetOneOptions) (*Record, error) {
-	path := fmt.Sprintf("/api/collections/%s/records/%s", url.PathEscape(collection), url.PathEscape(recordID))
+// GetAll retrieves all records from the collection by automatically paginating through all pages.
+// It returns a single consolidated ListResultAs.
+//
+// Note: This method overrides the 'Page' and 'PerPage' options in the provided ListOptions.
+// It fetches records in batches of 500 (the maximum allowed) for efficiency.
+// The returned ListResultAs will have Page=1, TotalPages=1, and PerPage set to the total number of items.
+func (s *RecordService[T]) GetAll(ctx context.Context, opts *ListOptions) (*ListResultAs[T], error) {
+	// Initialize options with default values if nil
+	if opts == nil {
+		opts = &ListOptions{}
+	}
+
+	// Configure options for GetAll operation
+	allOpts := *opts // Create a copy
+	allOpts.Page = 1
+	allOpts.PerPage = 500
+	allOpts.SkipTotal = true
+
+	// Request the first page
+	result, err := s.GetList(ctx, &allOpts)
+	if err != nil {
+		return nil, err
+	}
+
+	// If first page has less than 500 items, we have all data
+	if len(result.Items) < 500 {
+		result.TotalItems = len(result.Items)
+		result.TotalPages = 1
+		return result, nil
+	}
+
+	// Slice to store all items
+	allItems := make([]*T, 0, len(result.Items))
+	allItems = append(allItems, result.Items...)
+
+	// Request subsequent pages sequentially
+	for page := 2; ; page++ {
+		allOpts.Page = page
+		pageResult, err := s.GetList(ctx, &allOpts)
+		if err != nil {
+			return nil, err
+		}
+
+		// Add items to the complete result
+		allItems = append(allItems, pageResult.Items...)
+
+		// If less than 500 items, this is the last page
+		if len(pageResult.Items) < 500 {
+			break
+		}
+	}
+
+	// Construct final result
+	finalResult := &ListResultAs[T]{
+		Page:       1,
+		PerPage:    len(allItems),
+		TotalItems: len(allItems), // Set to actual count since skipTotal=true
+		TotalPages: 1,
+		Items:      allItems,
+	}
+
+	return finalResult, nil
+}
+
+// GetOne retrieves a single record as generic type T.
+func (s *RecordService[T]) GetOne(ctx context.Context, recordID string, opts *GetOneOptions) (*T, error) {
+	basePath := fmt.Sprintf("/api/collections/%s/records/%s", url.PathEscape(s.collectionName), url.PathEscape(recordID))
 	q := url.Values{}
 	if opts != nil {
 		if opts.Expand != "" {
@@ -69,526 +131,132 @@ func (s *RecordService) GetOne(ctx context.Context, collection, recordID string,
 			q.Set("fields", opts.Fields)
 		}
 	}
-	if qs := q.Encode(); qs != "" {
-		path += "?" + qs
+	path := buildPathWithQuery(basePath, q.Encode())
+
+	var result T
+	if err := s.client.send(ctx, http.MethodGet, path, nil, &result); err != nil {
+		return nil, wrapError("fetch", "typed record", err)
 	}
-	var rec Record
-	if err := s.Client.send(ctx, http.MethodGet, path, nil, &rec); err != nil {
-		return nil, fmt.Errorf("pocketbase: fetch record: %w", err)
-	}
-	return &rec, nil
+
+	return &result, nil
 }
 
-// Create creates a new record in the specified collection.
-func (s *RecordService) Create(ctx context.Context, collection string, body any) (*Record, error) {
-	return s.CreateWithOptions(ctx, collection, body, nil)
+// Create creates a new record with generic type T.
+func (s *RecordService[T]) Create(ctx context.Context, model *T) (*T, error) {
+	return s.CreateWithOptions(ctx, model, nil)
 }
 
-// CreateWithOptions creates a new record in the specified collection with additional options.
-func (s *RecordService) CreateWithOptions(ctx context.Context, collection string, body any, opts *WriteOptions) (*Record, error) {
-	path := fmt.Sprintf("/api/collections/%s/records", url.PathEscape(collection))
+// CreateWithOptions creates a new record with generic type T and options.
+func (s *RecordService[T]) CreateWithOptions(ctx context.Context, model *T, opts *WriteOptions) (*T, error) {
+	basePath := fmt.Sprintf("/api/collections/%s/records", url.PathEscape(s.collectionName))
 	q := url.Values{}
 	if opts != nil {
-		if opts.Expand != "" {
-			q.Set("expand", opts.Expand)
-		}
-		if opts.Fields != "" {
-			q.Set("fields", opts.Fields)
-		}
+		opts.apply(q)
 	}
-	if qs := q.Encode(); qs != "" {
-		path += "?" + qs
-	}
-	requestBody := body
-	if mappable, ok := body.(Mappable); ok {
-		// If implemented, call ToMap() to convert to map
-		requestBody = mappable.ToMap()
+	path := buildPathWithQuery(basePath, q.Encode())
+
+	var result T
+	if err := s.client.send(ctx, http.MethodPost, path, model, &result); err != nil {
+		return nil, wrapError("create", "typed record", err)
 	}
 
-	var rec Record
-	if err := s.Client.send(ctx, http.MethodPost, path, requestBody, &rec); err != nil {
-		return nil, fmt.Errorf("pocketbase: create record: %w", err)
-	}
-	return &rec, nil
+	return &result, nil
 }
 
-// Update updates an existing record in the specified collection.
-func (s *RecordService) Update(ctx context.Context, collection, recordID string, body any) (*Record, error) {
-	return s.UpdateWithOptions(ctx, collection, recordID, body, nil)
+// Update updates an existing record with generic type T.
+func (s *RecordService[T]) Update(ctx context.Context, recordID string, model *T) (*T, error) {
+	return s.UpdateWithOptions(ctx, recordID, model, nil)
 }
 
-// UpdateWithOptions updates an existing record in the specified collection with additional options.
-func (s *RecordService) UpdateWithOptions(ctx context.Context, collection, recordID string, body any, opts *WriteOptions) (*Record, error) {
-	path := fmt.Sprintf("/api/collections/%s/records/%s", url.PathEscape(collection), url.PathEscape(recordID))
+// UpdateWithOptions updates an existing record with generic type T and options.
+func (s *RecordService[T]) UpdateWithOptions(ctx context.Context, recordID string, model *T, opts *WriteOptions) (*T, error) {
+	basePath := fmt.Sprintf("/api/collections/%s/records/%s", url.PathEscape(s.collectionName), url.PathEscape(recordID))
 	q := url.Values{}
 	if opts != nil {
-		if opts.Expand != "" {
-			q.Set("expand", opts.Expand)
-		}
-		if opts.Fields != "" {
-			q.Set("fields", opts.Fields)
-		}
+		opts.apply(q)
 	}
-	if qs := q.Encode(); qs != "" {
-		path += "?" + qs
-	}
-	requestBody := body
-	if mappable, ok := body.(Mappable); ok {
-		// If implemented, call ToMap() to convert to map
-		requestBody = mappable.ToMap()
+	path := buildPathWithQuery(basePath, q.Encode())
+
+	var result T
+	if err := s.client.send(ctx, http.MethodPatch, path, model, &result); err != nil {
+		return nil, wrapError("update", "typed record", err)
 	}
 
-	var rec Record
-	if err := s.Client.send(ctx, http.MethodPatch, path, requestBody, &rec); err != nil {
-		return nil, fmt.Errorf("pocketbase: update record: %w", err)
-	}
-	return &rec, nil
+	return &result, nil
 }
 
-// Delete deletes a record from the specified collection.
-func (s *RecordService) Delete(ctx context.Context, collection, recordID string) error {
-	path := fmt.Sprintf("/api/collections/%s/records/%s", url.PathEscape(collection), url.PathEscape(recordID))
-	if err := s.Client.send(ctx, http.MethodDelete, path, nil, nil); err != nil {
-		return fmt.Errorf("pocketbase: delete record: %w", err)
+// Delete deletes a record from the collection.
+func (s *RecordService[T]) Delete(ctx context.Context, recordID string) error {
+	path := fmt.Sprintf("/api/collections/%s/records/%s", url.PathEscape(s.collectionName), url.PathEscape(recordID))
+	if err := s.client.send(ctx, http.MethodDelete, path, nil, nil); err != nil {
+		return wrapError("delete", "typed record", err)
 	}
 	return nil
 }
 
 // NewCreateRequest creates a new batch request for creating a record.
-func (s *RecordService) NewCreateRequest(collection string, body map[string]any) (*BatchRequest, error) {
+func (s *RecordService[T]) NewCreateRequest(model *T) (*BatchRequest, error) {
+	body, err := modelToMap(model)
+	if err != nil {
+		return nil, err
+	}
 	return &BatchRequest{
 		Method: http.MethodPost,
-		URL:    fmt.Sprintf("/api/collections/%s/records", url.PathEscape(collection)),
+		URL:    fmt.Sprintf("/api/collections/%s/records", url.PathEscape(s.collectionName)),
 		Body:   body,
 	}, nil
 }
 
 // NewUpdateRequest creates a new batch request for updating a record.
-func (s *RecordService) NewUpdateRequest(collection, recordID string, body map[string]any) (*BatchRequest, error) {
+func (s *RecordService[T]) NewUpdateRequest(recordID string, model *T) (*BatchRequest, error) {
+	body, err := modelToMap(model)
+	if err != nil {
+		return nil, err
+	}
+
 	return &BatchRequest{
 		Method: http.MethodPatch,
-		URL:    fmt.Sprintf("/api/collections/%s/records/%s", url.PathEscape(collection), url.PathEscape(recordID)),
+		URL:    fmt.Sprintf("/api/collections/%s/records/%s", url.PathEscape(s.collectionName), url.PathEscape(recordID)),
 		Body:   body,
 	}, nil
 }
 
 // NewDeleteRequest creates a new batch request for deleting a record.
-func (s *RecordService) NewDeleteRequest(collection, recordID string) (*BatchRequest, error) {
+func (s *RecordService[T]) NewDeleteRequest(recordID string) (*BatchRequest, error) {
 	return &BatchRequest{
 		Method: http.MethodDelete,
-		URL:    fmt.Sprintf("/api/collections/%s/records/%s", url.PathEscape(collection), url.PathEscape(recordID)),
+		URL:    fmt.Sprintf("/api/collections/%s/records/%s", url.PathEscape(s.collectionName), url.PathEscape(recordID)),
 	}, nil
 }
 
 // NewUpsertRequest creates a new batch request for upserting a record.
-func (s *RecordService) NewUpsertRequest(collection string, body map[string]any) (*BatchRequest, error) {
-	if _, ok := body["id"]; !ok {
+func (s *RecordService[T]) NewUpsertRequest(model *T) (*BatchRequest, error) {
+	body, err := modelToMap(model)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check if id exists and is not empty
+	id, exists := body["id"]
+	if !exists || id == nil || id == "" {
 		return nil, fmt.Errorf("upsert error: 'id' field is required in the body")
 	}
 	return &BatchRequest{
 		Method: http.MethodPut,
-		URL:    fmt.Sprintf("/api/collections/%s/records", url.PathEscape(collection)),
+		URL:    fmt.Sprintf("/api/collections/%s/records", url.PathEscape(s.collectionName)),
 		Body:   body,
 	}, nil
 }
 
-// GetAll 지정된 컬렉션의 모든 레코드를 자동으로 페이지네이션하여 가져옵니다.
-// 기본 배치 크기(100)를 사용하여 GetAllWithBatchSize를 호출합니다.
-func (s *RecordService) GetAll(ctx context.Context, collection string, opts *ListOptions) ([]*Record, error) {
-	return s.GetAllWithBatchSize(ctx, collection, opts, DefaultBatchSize)
-}
-
-// GetAllWithBatchSize 지정된 배치 크기로 컬렉션의 모든 레코드를 페이지네이션하여 가져옵니다.
-// 컨텍스트 취소, 에러 처리, 부분 데이터 보존 등을 지원합니다.
-func (s *RecordService) GetAllWithBatchSize(ctx context.Context, collection string, opts *ListOptions, batchSize int) ([]*Record, error) {
-	return s.GetAllWithBatchSizeAndMetrics(ctx, collection, opts, batchSize, nil)
-}
-
-// GetAllWithBatchSizeAndMetrics 성능 모니터링과 함께 모든 레코드를 가져옵니다.
-func (s *RecordService) GetAllWithBatchSizeAndMetrics(ctx context.Context, collection string, opts *ListOptions, batchSize int, monitor *PerformanceMonitor) ([]*Record, error) {
-	// 배치 크기 검증 및 자동 조정
-	adjustedBatchSize, wasAdjusted := ValidateAndAdjustBatchSize(batchSize)
-	if wasAdjusted {
-		// 로그나 디버그 정보를 위해 조정 사실을 기록할 수 있음
-		// 현재는 조용히 조정
-	}
-	batchSize = adjustedBatchSize
-
-	// 성능 모니터가 없으면 기본 모니터 생성 (비활성화 상태)
-	if monitor == nil {
-		monitor = NewPerformanceMonitor(collection, "GetAll", batchSize)
-		monitor.SetEnabled(false) // 명시적으로 요청하지 않은 경우 비활성화
-	}
-
-	var allRecords []*Record
-	page := 1
-	totalProcessed := 0
-	estimatedTotal := 0
-	currentMemoryUsage := 0
-	peakMemoryUsage := 0
-
-	// ListOptions 복사하여 수정
-	paginatedOpts := s.copyListOptions(opts)
-	paginatedOpts.PerPage = batchSize
-
-	for {
-		// 컨텍스트 취소 확인
-		select {
-		case <-ctx.Done():
-			// 성능 모니터링 완료 (부분 결과)
-			monitor.UpdateTotals(totalProcessed, page-1)
-			monitor.UpdateMemoryUsage(currentMemoryUsage, peakMemoryUsage)
-			monitor.Finish(true)
-
-			return allRecords, &PaginationError{
-				Operation:      "GetAll",
-				Page:           page,
-				PartialData:    allRecords,
-				OriginalErr:    ctx.Err(),
-				TotalProcessed: totalProcessed,
-				Message:        "context cancelled during pagination",
-			}
-		default:
-		}
-
-		// 페이지 요청 시작 모니터링
-		monitor.StartPage(page)
-
-		// 현재 페이지 설정
-		paginatedOpts.Page = page
-
-		// 페이지 데이터 요청
-		result, err := s.GetList(ctx, collection, paginatedOpts)
-
-		// 페이지 요청 완료 모니터링
-		recordCount := 0
-		if result != nil {
-			recordCount = len(result.Items)
-		}
-		monitor.EndPage(page, recordCount, err)
-
-		if err != nil {
-			// 성능 모니터링 완료 (부분 결과)
-			monitor.UpdateTotals(totalProcessed, page-1)
-			monitor.UpdateMemoryUsage(currentMemoryUsage, peakMemoryUsage)
-			monitor.Finish(true)
-
-			return allRecords, &PaginationError{
-				Operation:      "GetAll",
-				Page:           page,
-				PartialData:    allRecords,
-				OriginalErr:    err,
-				TotalProcessed: totalProcessed,
-				Message:        fmt.Sprintf("failed to fetch page %d", page),
-			}
-		}
-
-		// 결과가 없으면 종료
-		if len(result.Items) == 0 {
-			break
-		}
-
-		// 첫 번째 페이지에서 총 예상 크기를 알 수 있으면 슬라이스 용량 미리 할당
-		if page == 1 && result.TotalItems > 0 {
-			estimatedTotal = result.TotalItems
-			// 메모리 효율성을 위해 슬라이스 용량을 미리 할당
-			// 단, 너무 큰 경우 메모리 사용량을 제한
-			maxPrealloc := 10000 // 최대 10,000개까지만 미리 할당
-			if estimatedTotal > maxPrealloc {
-				estimatedTotal = maxPrealloc
-			}
-
-			if cap(allRecords) < estimatedTotal {
-				// 새로운 슬라이스를 생성하고 기존 데이터 복사
-				newRecords := make([]*Record, len(allRecords), estimatedTotal)
-				copy(newRecords, allRecords)
-				allRecords = newRecords
-			}
-		}
-
-		// 레코드 추가 - 메모리 효율적인 방식으로
-		// 슬라이스 용량이 충분하지 않은 경우에만 재할당
-		if cap(allRecords)-len(allRecords) < len(result.Items) {
-			// 현재 크기의 1.5배로 확장하여 재할당 빈도 줄이기
-			newCap := max(len(allRecords)*3/2, len(allRecords)+len(result.Items))
-			newRecords := make([]*Record, len(allRecords), newCap)
-			copy(newRecords, allRecords)
-			allRecords = newRecords
-		}
-		allRecords = append(allRecords, result.Items...)
-		totalProcessed += len(result.Items)
-
-		// 메모리 사용량 추정 및 업데이트
-		batchMemory := EstimateBatchMemoryUsage(result.Items)
-		currentMemoryUsage += batchMemory
-		if currentMemoryUsage > peakMemoryUsage {
-			peakMemoryUsage = currentMemoryUsage
-		}
-		monitor.UpdateMemoryUsage(currentMemoryUsage, peakMemoryUsage)
-
-		// 마지막 페이지 확인
-		if page >= result.TotalPages {
-			break
-		}
-
-		page++
-
-		// 메모리 압박 상황에서 가비지 컬렉션 힌트 제공
-		if totalProcessed%5000 == 0 && totalProcessed > 0 {
-			// 5000개 레코드마다 메모리 상태 확인
-			// 실제 GC 호출은 하지 않고 런타임에 맡김
-		}
-	}
-
-	// 성능 모니터링 완료 (전체 결과)
-	monitor.UpdateTotals(totalProcessed, page-1)
-	monitor.UpdateMemoryUsage(currentMemoryUsage, peakMemoryUsage)
-	monitor.Finish(false)
-
-	return allRecords, nil
-}
-
-// Iterate 지정된 컬렉션의 레코드를 메모리 효율적으로 순회하기 위한 Iterator를 반환합니다.
-// 기본 배치 크기를 사용하여 IterateWithBatchSize를 호출합니다.
-func (s *RecordService) Iterate(ctx context.Context, collection string, opts *ListOptions) *RecordIterator {
-	return s.IterateWithBatchSize(ctx, collection, opts, DefaultBatchSize)
-}
-
-// IterateWithBatchSize 지정된 배치 크기로 컬렉션의 레코드를 순회하기 위한 Iterator를 반환합니다.
-// 메모리 효율적인 페이지별 로딩을 지원하는 Iterator를 생성합니다.
-func (s *RecordService) IterateWithBatchSize(ctx context.Context, collection string, opts *ListOptions, batchSize int) *RecordIterator {
-	// 배치 크기 검증 및 자동 조정
-	adjustedBatchSize, _ := ValidateAndAdjustBatchSize(batchSize)
-	batchSize = adjustedBatchSize
-
-	// ListOptions 복사하여 수정
-	iteratorOpts := s.copyListOptions(opts)
-	iteratorOpts.PerPage = batchSize
-
-	// Iterator 인스턴스 생성
-	iterator := &RecordIterator{
-		service:        s,
-		ctx:            ctx,
-		collection:     collection,
-		opts:           iteratorOpts,
-		batchSize:      batchSize,
-		currentPage:    1,
-		currentBatch:   nil,
-		currentIndex:   0,
-		totalPages:     0,
-		totalItems:     0,
-		finished:       false,
-		err:            nil,
-		autoCleanup:    true, // 기본적으로 자동 메모리 정리 활성화
-		maxBatchMemory: 0,    // 무제한 (향후 확장 가능)
-	}
-
-	return iterator
-}
-
-// copyListOptions ListOptions를 깊은 복사하여 새로운 인스턴스를 반환합니다.
-// QueryParams 맵도 함께 복사하여 원본 옵션에 영향을 주지 않습니다.
-func (s *RecordService) copyListOptions(opts *ListOptions) *ListOptions {
-	if opts == nil {
-		return &ListOptions{}
-	}
-
-	// 구조체 필드들을 복사
-	copied := &ListOptions{
-		Page:      opts.Page,
-		PerPage:   opts.PerPage,
-		Sort:      opts.Sort,
-		Filter:    opts.Filter,
-		Expand:    opts.Expand,
-		Fields:    opts.Fields,
-		SkipTotal: opts.SkipTotal,
-	}
-
-	// QueryParams 맵을 깊은 복사
-	if opts.QueryParams != nil {
-		copied.QueryParams = make(map[string]string, len(opts.QueryParams))
-		maps.Copy(copied.QueryParams, opts.QueryParams)
-	}
-
-	return copied
-}
-
-// isNonRetryableError 재시도하면 안 되는 에러 타입을 판단합니다.
-// 인증, 권한, 잘못된 요청 등의 에러는 재시도해도 성공할 가능성이 낮습니다.
-func isNonRetryableError(err error) bool {
-	if err == nil {
-		return false
-	}
-
-	// APIError 타입 확인
-	var apiErr *APIError
-	if errors.As(err, &apiErr) {
-		return isNonRetryableHTTPStatus(apiErr.Code)
-	}
-
-	// ClientError 타입 확인
-	var clientErr *ClientError
-	if errors.As(err, &clientErr) {
-		return isNonRetryableError(clientErr.OriginalErr)
-	}
-
-	// 컨텍스트 관련 에러는 재시도 불가능
-	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-		return true
-	}
-
-	// 기본적으로 네트워크 관련 에러는 재시도 가능
-	return false
-}
-
-// isNonRetryableHTTPStatus HTTP 상태 코드가 재시도 불가능한지 판단합니다.
-func isNonRetryableHTTPStatus(statusCode int) bool {
-	switch statusCode {
-	case 400: // Bad Request - 잘못된 요청
-		return true
-	case 401: // Unauthorized - 인증 실패
-		return true
-	case 403: // Forbidden - 권한 없음
-		return true
-	case 404: // Not Found - 리소스 없음
-		return true
-	case 409: // Conflict - 충돌
-		return true
-	case 422: // Unprocessable Entity - 유효성 검사 실패
-		return true
-	case 429: // Too Many Requests - 속도 제한 (재시도 가능하지만 백오프 필요)
-		return false
-	case 500, 502, 503, 504: // 서버 에러 (재시도 가능)
-		return false
-	default:
-		// 기타 4xx 에러는 재시도 불가능
-		if statusCode >= 400 && statusCode < 500 {
-			return true
-		}
-		// 5xx 에러는 재시도 가능
-		return false
-	}
-}
-
-// GetAllWithMetrics 성능 모니터링을 활성화하여 모든 레코드를 가져옵니다.
-// 성능 메트릭을 수집하고 반환합니다.
-func (s *RecordService) GetAllWithMetrics(ctx context.Context, collection string, opts *ListOptions) ([]*Record, *PaginationMetrics, error) {
-	return s.GetAllWithBatchSizeAndMetricsEnabled(ctx, collection, opts, DefaultBatchSize, true)
-}
-
-// GetAllWithBatchSizeAndMetricsEnabled 배치 크기와 성능 모니터링 활성화 여부를 지정하여 모든 레코드를 가져옵니다.
-func (s *RecordService) GetAllWithBatchSizeAndMetricsEnabled(ctx context.Context, collection string, opts *ListOptions, batchSize int, enableMetrics bool) ([]*Record, *PaginationMetrics, error) {
-	var monitor *PerformanceMonitor
-	if enableMetrics {
-		monitor = NewPerformanceMonitor(collection, "GetAll", batchSize)
-		monitor.SetCollectPageData(true) // 페이지별 세부 데이터도 수집
-	}
-
-	records, err := s.GetAllWithBatchSizeAndMetrics(ctx, collection, opts, batchSize, monitor)
-
-	var metrics *PaginationMetrics
-	if monitor != nil {
-		metrics = monitor.GetMetrics()
-	}
-
-	return records, metrics, err
-}
-
-// IterateWithMetrics 성능 모니터링을 활성화하여 Iterator를 생성합니다.
-func (s *RecordService) IterateWithMetrics(ctx context.Context, collection string, opts *ListOptions) (*RecordIterator, *PerformanceMonitor) {
-	return s.IterateWithBatchSizeAndMetrics(ctx, collection, opts, DefaultBatchSize)
-}
-
-// IterateWithBatchSizeAndMetrics 배치 크기와 성능 모니터링을 지정하여 Iterator를 생성합니다.
-func (s *RecordService) IterateWithBatchSizeAndMetrics(ctx context.Context, collection string, opts *ListOptions, batchSize int) (*RecordIterator, *PerformanceMonitor) {
-	// 배치 크기 검증 및 자동 조정
-	adjustedBatchSize, _ := ValidateAndAdjustBatchSize(batchSize)
-	batchSize = adjustedBatchSize
-
-	// 성능 모니터 생성
-	monitor := NewPerformanceMonitor(collection, "Iterate", batchSize)
-	monitor.SetCollectPageData(true)
-
-	// ListOptions 복사하여 수정
-	iteratorOpts := s.copyListOptions(opts)
-	iteratorOpts.PerPage = batchSize
-
-	// Iterator 인스턴스 생성 (성능 모니터링 포함)
-	iterator := &RecordIterator{
-		service:        s,
-		ctx:            ctx,
-		collection:     collection,
-		opts:           iteratorOpts,
-		batchSize:      batchSize,
-		currentPage:    1,
-		currentBatch:   nil,
-		currentIndex:   0,
-		totalPages:     0,
-		totalItems:     0,
-		finished:       false,
-		err:            nil,
-		autoCleanup:    true,    // 기본적으로 자동 메모리 정리 활성화
-		maxBatchMemory: 0,       // 무제한 (향후 확장 가능)
-		monitor:        monitor, // 성능 모니터 추가
-	}
-
-	return iterator, monitor
-}
-
-// CompareBatchSizePerformance 다양한 배치 크기로 성능을 비교합니다.
-// 테스트용 함수로, 최적의 배치 크기를 찾는 데 도움이 됩니다.
-func (s *RecordService) CompareBatchSizePerformance(ctx context.Context, collection string, opts *ListOptions, batchSizes []int) ([]*PaginationMetrics, error) {
-	if len(batchSizes) == 0 {
-		return nil, fmt.Errorf("batch sizes cannot be empty")
-	}
-
-	results := make([]*PaginationMetrics, 0, len(batchSizes))
-
-	for _, batchSize := range batchSizes {
-		// 각 배치 크기별로 성능 테스트 실행
-		_, metrics, err := s.GetAllWithBatchSizeAndMetricsEnabled(ctx, collection, opts, batchSize, true)
-		if err != nil {
-			// 에러가 발생해도 부분 결과가 있으면 포함
-			if metrics != nil {
-				results = append(results, metrics)
-			}
-			continue
-		}
-
-		if metrics != nil {
-			results = append(results, metrics)
-		}
-	}
-
-	return results, nil
-}
-
-// GetOptimalBatchSizeForCollection 특정 컬렉션에 대한 최적의 배치 크기를 찾습니다.
-// 여러 배치 크기를 테스트하여 가장 효율적인 크기를 반환합니다.
-func (s *RecordService) GetOptimalBatchSizeForCollection(ctx context.Context, collection string, opts *ListOptions) (int, *PaginationMetrics, error) {
-	// 테스트할 배치 크기들
-	testBatchSizes := []int{25, 50, 100, 200, 500}
-
-	metrics, err := s.CompareBatchSizePerformance(ctx, collection, opts, testBatchSizes)
+func modelToMap[T any](model *T) (map[string]any, error) {
+	// The standard json.Marshal function handles everything.
+	bytes, err := json.Marshal(model)
 	if err != nil {
-		return DefaultBatchSize, nil, err
+		return nil, err
 	}
-
-	if len(metrics) == 0 {
-		return DefaultBatchSize, nil, fmt.Errorf("no performance data collected")
+	var body map[string]any
+	if err := json.Unmarshal(bytes, &body); err != nil {
+		return nil, err
 	}
-
-	// 최적의 배치 크기 선택 (초당 레코드 수 기준)
-	bestMetrics := metrics[0]
-	bestBatchSize := bestMetrics.BatchSize
-
-	for _, metric := range metrics[1:] {
-		// 초당 레코드 수가 더 높고, 에러가 적은 배치 크기 선택
-		if metric.RecordsPerSecond > bestMetrics.RecordsPerSecond && metric.ErrorCount <= bestMetrics.ErrorCount {
-			bestMetrics = metric
-			bestBatchSize = metric.BatchSize
-		}
-	}
-
-	return bestBatchSize, bestMetrics, nil
+	return body, nil
 }

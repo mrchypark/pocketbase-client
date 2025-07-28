@@ -174,7 +174,7 @@ func TestToPascalCase(t *testing.T) {
 
 // TestAnalyzeEnhancedField tests the AnalyzeEnhancedField function
 func TestAnalyzeEnhancedField(t *testing.T) {
-	// 테스트용 컬렉션 스키마 생성
+	// Create test collection schema
 	allCollections := []CollectionSchema{
 		{
 			ID:   "plants_collection_id",
@@ -334,7 +334,7 @@ func TestAnalyzeEnhancedField(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got := AnalyzeEnhancedField(tt.field, tt.collectionName, allCollections)
 
-			// reflect.DeepEqual을 사용하여 구조체 비교
+			// Use reflect.DeepEqual to compare structs
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("AnalyzeEnhancedField() = %+v, want %+v", got, tt.want)
 			}

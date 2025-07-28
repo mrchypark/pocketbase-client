@@ -61,11 +61,12 @@ func (r {{$relation.TypeName}}) ID() string {
 }
 
 // Load fetches the related {{$relation.TargetTypeName}} record
-func (r {{$relation.TypeName}}) Load(ctx context.Context, client pocketbase.RecordServiceAPI) (*{{$relation.TargetTypeName}}, error) {
+func (r {{$relation.TypeName}}) Load(ctx context.Context, client *pocketbase.Client) (*{{$relation.TargetTypeName}}, error) {
 	if r.id == "" {
 		return nil, nil
 	}
-	return Get{{$relation.TargetTypeName}}(client, r.id, nil)
+	service := New{{$relation.TargetTypeName}}Service(client)
+	return service.GetOne(ctx, r.id, nil)
 }
 
 // IsEmpty returns true if the relation is empty
@@ -92,14 +93,15 @@ func (r {{$relation.TypeName}}s) IDs() []string {
 }
 
 // LoadAll fetches all related {{$relation.TargetTypeName}} records
-func (r {{$relation.TypeName}}s) LoadAll(ctx context.Context, client pocketbase.RecordServiceAPI) ([]*{{$relation.TargetTypeName}}, error) {
+func (r {{$relation.TypeName}}s) LoadAll(ctx context.Context, client *pocketbase.Client) ([]*{{$relation.TargetTypeName}}, error) {
 	if len(r) == 0 {
 		return nil, nil
 	}
 	
+	service := New{{$relation.TargetTypeName}}Service(client)
 	var results []*{{$relation.TargetTypeName}}
 	for _, rel := range r {
-		record, err := rel.Load(ctx, client)
+		record, err := service.GetOne(ctx, rel.ID(), nil)
 		if err != nil {
 			return nil, err
 		}
@@ -222,99 +224,23 @@ func (f FileReferences) Filter() FileReferences {
 
 // {{$collection.StructName}} represents a record from the '{{$collection.CollectionName}}' collection.
 type {{$collection.StructName}} struct {
-	pocketbase.Record
-}
-
-// {{$collection.StructName}}Collection is a collection of {{$collection.StructName}} records.
-type {{$collection.StructName}}Collection struct {
-	*pocketbase.ListResult
-	Items []*{{$collection.StructName}} `json:"items"`
-}
-
-// New{{$collection.StructName}} creates a new instance of {{$collection.StructName}}.
-func New{{$collection.StructName}}() *{{$collection.StructName}} {
-	return &{{$collection.StructName}}{Record: pocketbase.Record{}}
-}
-
-// To{{$collection.StructName}} creates a To instance of {{$collection.StructName}} with the provided record.
-func To{{$collection.StructName}}(r *pocketbase.Record) *{{$collection.StructName}} {
-	return &{{$collection.StructName}}{Record: *r}
+	pocketbase.BaseModel
+	{{if $.IsLegacyVersion}}pocketbase.BaseDatetime{{end}}
+	{{range .Fields}}{{.GoName}} {{.GoType}} `json:"{{.JSONName}}{{if .OmitEmpty}},omitempty{{end}}"`
+	{{end}}
 }
 
 
-// ToMap converts the struct to a map[string]any for creating/updating records.
-// It omits empty or zero-value fields to support PATCH operations.
-func (m *{{$collection.StructName}}) ToMap() map[string]any {
-	data := make(map[string]any)
-    
-	// non-zero, non-empty, and non-nil values will be added to the map.
-	{{- range .Fields}}
-	{{- if .OmitEmpty}}
-	if val := m.{{.GoName}}(); val != nil {
-		data["{{.JSONName}}"] = val
-	}
-	{{- else}}
-	// For required fields, we always include them.
-	// You can add more complex logic here if needed, e.g., checking for zero values.
-	data["{{.JSONName}}"] = m.{{.GoName}}()
-	{{- end}}
-    {{- end}}
-
-	return data
-}
-
-{{range .Fields}}
-// {{.GoName}} returns the value of the '{{.JSONName}}' field.
-func (m *{{$collection.StructName}}) {{.GoName}}() {{.GoType}} {
-	return m.{{.GetterMethod}}("{{.JSONName}}")
-}
-
-{{if .IsPointer}}
-// {{.GoName}}ValueOr returns the value of the '{{.JSONName}}' field or the provided default value if nil.
-func (m *{{$collection.StructName}}) {{.GoName}}ValueOr(defaultValue {{.BaseType}}) {{.BaseType}} {
-	if val := m.{{.GoName}}(); val != nil {
-		return *val
-	}
-	return defaultValue
-}
-{{end}}
-
-// Set{{.GoName}} sets the value of the '{{.JSONName}}' field.
-func (m *{{$collection.StructName}}) Set{{.GoName}}(value {{.GoType}}) {
-	m.Set("{{.JSONName}}", value)
-}
-{{end}}
 {{end}}
 
 // ==============
-//  Typed Helpers
+//  Service Constructors (New Approach!)
 // ==============
 {{range .Collections}}
 
-// Get{{.StructName}} fetches a single {{.StructName}} record by its ID.
-func Get{{.StructName}}(client pocketbase.RecordServiceAPI, id string, opts *pocketbase.GetOneOptions) (*{{.StructName}}, error) {
-	r, err := client.GetOne(context.Background(), "{{.CollectionName}}", id, opts)
-	if err != nil {
-		return nil, err
-	}
-	return To{{.StructName}}(r), nil
-}
-
-// Get{{.StructName}}List fetches a list of {{.StructName}} records.
-func Get{{.StructName}}List(client pocketbase.RecordServiceAPI, opts *pocketbase.ListOptions) (*{{.StructName}}Collection, error) {
-	listResult, err := client.GetList(context.Background(), "{{.CollectionName}}", opts)
-	if err != nil {
-		return nil, err
-	}
-
-	typedItems := make([]*{{.StructName}}, len(listResult.Items))
-	for i, r := range listResult.Items {
-		typedItems[i] = To{{.StructName}}(r)
-	}
-
-	return &{{.StructName}}Collection{
-		ListResult: listResult,
-		Items:      typedItems,
-	}, nil
+// New{{.StructName}}Service creates a new typed service for {{.StructName}} records.
+// This is the recommended way to work with {{.StructName}} records using the generic API.
+func New{{.StructName}}Service(client *pocketbase.Client) pocketbase.RecordServiceAPI[{{.StructName}}] {
+	return pocketbase.NewRecordService[{{.StructName}}](client, "{{.CollectionName}}")
 }
 {{end}}

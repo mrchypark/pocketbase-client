@@ -4,7 +4,6 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 
@@ -112,533 +111,53 @@ func (f FileReferences) Filter() FileReferences {
 
 // AllTypes represents a record from the 'all_types' collection.
 type AllTypes struct {
-	pocketbase.Record
-}
-
-// AllTypesCollection is a collection of AllTypes records.
-type AllTypesCollection struct {
-	*pocketbase.ListResult
-	Items []*AllTypes `json:"items"`
-}
-
-// NewAllTypes creates a new instance of AllTypes.
-func NewAllTypes() *AllTypes {
-	return &AllTypes{Record: pocketbase.Record{}}
-}
-
-// ToAllTypes creates a To instance of AllTypes with the provided record.
-func ToAllTypes(r *pocketbase.Record) *AllTypes {
-	return &AllTypes{Record: *r}
-}
-
-// ToMap converts the struct to a map[string]any for creating/updating records.
-// It omits empty or zero-value fields to support PATCH operations.
-func (m *AllTypes) ToMap() map[string]any {
-	data := make(map[string]any)
-
-	// non-zero, non-empty, and non-nil values will be added to the map.
-	// For required fields, we always include them.
-	// You can add more complex logic here if needed, e.g., checking for zero values.
-	data["text_required"] = m.TextRequired()
-	if val := m.TextOptional(); val != nil {
-		data["text_optional"] = val
-	}
-	// For required fields, we always include them.
-	// You can add more complex logic here if needed, e.g., checking for zero values.
-	data["number_required"] = m.NumberRequired()
-	if val := m.NumberOptional(); val != nil {
-		data["number_optional"] = val
-	}
-	// For required fields, we always include them.
-	// You can add more complex logic here if needed, e.g., checking for zero values.
-	data["bool_required"] = m.BoolRequired()
-	if val := m.BoolOptional(); val != nil {
-		data["bool_optional"] = val
-	}
-	// For required fields, we always include them.
-	// You can add more complex logic here if needed, e.g., checking for zero values.
-	data["email_required"] = m.EmailRequired()
-	if val := m.EmailOptional(); val != nil {
-		data["email_optional"] = val
-	}
-	// For required fields, we always include them.
-	// You can add more complex logic here if needed, e.g., checking for zero values.
-	data["url_required"] = m.URLRequired()
-	if val := m.URLOptional(); val != nil {
-		data["url_optional"] = val
-	}
-	// For required fields, we always include them.
-	// You can add more complex logic here if needed, e.g., checking for zero values.
-	data["date_required"] = m.DateRequired()
-	if val := m.DateOptional(); val != nil {
-		data["date_optional"] = val
-	}
-	// For required fields, we always include them.
-	// You can add more complex logic here if needed, e.g., checking for zero values.
-	data["select_single_required"] = m.SelectSingleRequired()
-	if val := m.SelectSingleOptional(); val != nil {
-		data["select_single_optional"] = val
-	}
-	// For required fields, we always include them.
-	// You can add more complex logic here if needed, e.g., checking for zero values.
-	data["select_multi_required"] = m.SelectMultiRequired()
-	if val := m.SelectMultiOptional(); val != nil {
-		data["select_multi_optional"] = val
-	}
-	// For required fields, we always include them.
-	// You can add more complex logic here if needed, e.g., checking for zero values.
-	data["json_required"] = m.JSONRequired()
-	if val := m.JSONOptional(); val != nil {
-		data["json_optional"] = val
-	}
-	if val := m.FileSingle(); val != nil {
-		data["file_single"] = val
-	}
-	if val := m.FileMulti(); val != nil {
-		data["file_multi"] = val
-	}
-	if val := m.RelationSingle(); val != nil {
-		data["relation_single"] = val
-	}
-	if val := m.RelationMulti(); val != nil {
-		data["relation_multi"] = val
-	}
-	if val := m.Created(); val != nil {
-		data["created"] = val
-	}
-	if val := m.Updated(); val != nil {
-		data["updated"] = val
-	}
-
-	return data
-}
-
-// TextRequired returns the value of the 'text_required' field.
-func (m *AllTypes) TextRequired() string {
-	return m.GetString("text_required")
-}
-
-// SetTextRequired sets the value of the 'text_required' field.
-func (m *AllTypes) SetTextRequired(value string) {
-	m.Set("text_required", value)
-}
-
-// TextOptional returns the value of the 'text_optional' field.
-func (m *AllTypes) TextOptional() *string {
-	return m.GetStringPointer("text_optional")
-}
-
-// TextOptionalValueOr returns the value of the 'text_optional' field or the provided default value if nil.
-func (m *AllTypes) TextOptionalValueOr(defaultValue string) string {
-	if val := m.TextOptional(); val != nil {
-		return *val
-	}
-	return defaultValue
-}
-
-// SetTextOptional sets the value of the 'text_optional' field.
-func (m *AllTypes) SetTextOptional(value *string) {
-	m.Set("text_optional", value)
-}
-
-// NumberRequired returns the value of the 'number_required' field.
-func (m *AllTypes) NumberRequired() float64 {
-	return m.GetFloat("number_required")
-}
-
-// SetNumberRequired sets the value of the 'number_required' field.
-func (m *AllTypes) SetNumberRequired(value float64) {
-	m.Set("number_required", value)
-}
-
-// NumberOptional returns the value of the 'number_optional' field.
-func (m *AllTypes) NumberOptional() *float64 {
-	return m.GetFloatPointer("number_optional")
-}
-
-// NumberOptionalValueOr returns the value of the 'number_optional' field or the provided default value if nil.
-func (m *AllTypes) NumberOptionalValueOr(defaultValue float64) float64 {
-	if val := m.NumberOptional(); val != nil {
-		return *val
-	}
-	return defaultValue
-}
-
-// SetNumberOptional sets the value of the 'number_optional' field.
-func (m *AllTypes) SetNumberOptional(value *float64) {
-	m.Set("number_optional", value)
-}
-
-// BoolRequired returns the value of the 'bool_required' field.
-func (m *AllTypes) BoolRequired() bool {
-	return m.GetBool("bool_required")
-}
-
-// SetBoolRequired sets the value of the 'bool_required' field.
-func (m *AllTypes) SetBoolRequired(value bool) {
-	m.Set("bool_required", value)
-}
-
-// BoolOptional returns the value of the 'bool_optional' field.
-func (m *AllTypes) BoolOptional() *bool {
-	return m.GetBoolPointer("bool_optional")
-}
-
-// BoolOptionalValueOr returns the value of the 'bool_optional' field or the provided default value if nil.
-func (m *AllTypes) BoolOptionalValueOr(defaultValue bool) bool {
-	if val := m.BoolOptional(); val != nil {
-		return *val
-	}
-	return defaultValue
-}
-
-// SetBoolOptional sets the value of the 'bool_optional' field.
-func (m *AllTypes) SetBoolOptional(value *bool) {
-	m.Set("bool_optional", value)
-}
-
-// EmailRequired returns the value of the 'email_required' field.
-func (m *AllTypes) EmailRequired() string {
-	return m.GetString("email_required")
-}
-
-// SetEmailRequired sets the value of the 'email_required' field.
-func (m *AllTypes) SetEmailRequired(value string) {
-	m.Set("email_required", value)
-}
-
-// EmailOptional returns the value of the 'email_optional' field.
-func (m *AllTypes) EmailOptional() *string {
-	return m.GetStringPointer("email_optional")
-}
-
-// EmailOptionalValueOr returns the value of the 'email_optional' field or the provided default value if nil.
-func (m *AllTypes) EmailOptionalValueOr(defaultValue string) string {
-	if val := m.EmailOptional(); val != nil {
-		return *val
-	}
-	return defaultValue
-}
-
-// SetEmailOptional sets the value of the 'email_optional' field.
-func (m *AllTypes) SetEmailOptional(value *string) {
-	m.Set("email_optional", value)
-}
-
-// URLRequired returns the value of the 'url_required' field.
-func (m *AllTypes) URLRequired() string {
-	return m.GetString("url_required")
-}
-
-// SetURLRequired sets the value of the 'url_required' field.
-func (m *AllTypes) SetURLRequired(value string) {
-	m.Set("url_required", value)
-}
-
-// URLOptional returns the value of the 'url_optional' field.
-func (m *AllTypes) URLOptional() *string {
-	return m.GetStringPointer("url_optional")
-}
-
-// URLOptionalValueOr returns the value of the 'url_optional' field or the provided default value if nil.
-func (m *AllTypes) URLOptionalValueOr(defaultValue string) string {
-	if val := m.URLOptional(); val != nil {
-		return *val
-	}
-	return defaultValue
-}
-
-// SetURLOptional sets the value of the 'url_optional' field.
-func (m *AllTypes) SetURLOptional(value *string) {
-	m.Set("url_optional", value)
-}
-
-// DateRequired returns the value of the 'date_required' field.
-func (m *AllTypes) DateRequired() types.DateTime {
-	return m.GetDateTime("date_required")
-}
-
-// SetDateRequired sets the value of the 'date_required' field.
-func (m *AllTypes) SetDateRequired(value types.DateTime) {
-	m.Set("date_required", value)
-}
-
-// DateOptional returns the value of the 'date_optional' field.
-func (m *AllTypes) DateOptional() *types.DateTime {
-	return m.GetDateTimePointer("date_optional")
-}
-
-// DateOptionalValueOr returns the value of the 'date_optional' field or the provided default value if nil.
-func (m *AllTypes) DateOptionalValueOr(defaultValue types.DateTime) types.DateTime {
-	if val := m.DateOptional(); val != nil {
-		return *val
-	}
-	return defaultValue
-}
-
-// SetDateOptional sets the value of the 'date_optional' field.
-func (m *AllTypes) SetDateOptional(value *types.DateTime) {
-	m.Set("date_optional", value)
-}
-
-// SelectSingleRequired returns the value of the 'select_single_required' field.
-func (m *AllTypes) SelectSingleRequired() string {
-	return m.GetString("select_single_required")
-}
-
-// SetSelectSingleRequired sets the value of the 'select_single_required' field.
-func (m *AllTypes) SetSelectSingleRequired(value string) {
-	m.Set("select_single_required", value)
-}
-
-// SelectSingleOptional returns the value of the 'select_single_optional' field.
-func (m *AllTypes) SelectSingleOptional() *string {
-	return m.GetStringPointer("select_single_optional")
-}
-
-// SelectSingleOptionalValueOr returns the value of the 'select_single_optional' field or the provided default value if nil.
-func (m *AllTypes) SelectSingleOptionalValueOr(defaultValue string) string {
-	if val := m.SelectSingleOptional(); val != nil {
-		return *val
-	}
-	return defaultValue
-}
-
-// SetSelectSingleOptional sets the value of the 'select_single_optional' field.
-func (m *AllTypes) SetSelectSingleOptional(value *string) {
-	m.Set("select_single_optional", value)
-}
-
-// SelectMultiRequired returns the value of the 'select_multi_required' field.
-func (m *AllTypes) SelectMultiRequired() []string {
-	return m.GetStringSlice("select_multi_required")
-}
-
-// SetSelectMultiRequired sets the value of the 'select_multi_required' field.
-func (m *AllTypes) SetSelectMultiRequired(value []string) {
-	m.Set("select_multi_required", value)
-}
-
-// SelectMultiOptional returns the value of the 'select_multi_optional' field.
-func (m *AllTypes) SelectMultiOptional() []string {
-	return m.GetStringSlice("select_multi_optional")
-}
-
-// SetSelectMultiOptional sets the value of the 'select_multi_optional' field.
-func (m *AllTypes) SetSelectMultiOptional(value []string) {
-	m.Set("select_multi_optional", value)
-}
-
-// JSONRequired returns the value of the 'json_required' field.
-func (m *AllTypes) JSONRequired() json.RawMessage {
-	return m.GetRawMessage("json_required")
-}
-
-// SetJSONRequired sets the value of the 'json_required' field.
-func (m *AllTypes) SetJSONRequired(value json.RawMessage) {
-	m.Set("json_required", value)
-}
-
-// JSONOptional returns the value of the 'json_optional' field.
-func (m *AllTypes) JSONOptional() json.RawMessage {
-	return m.GetRawMessage("json_optional")
-}
-
-// SetJSONOptional sets the value of the 'json_optional' field.
-func (m *AllTypes) SetJSONOptional(value json.RawMessage) {
-	m.Set("json_optional", value)
-}
-
-// FileSingle returns the value of the 'file_single' field.
-func (m *AllTypes) FileSingle() *string {
-	return m.GetStringPointer("file_single")
-}
-
-// FileSingleValueOr returns the value of the 'file_single' field or the provided default value if nil.
-func (m *AllTypes) FileSingleValueOr(defaultValue string) string {
-	if val := m.FileSingle(); val != nil {
-		return *val
-	}
-	return defaultValue
-}
-
-// SetFileSingle sets the value of the 'file_single' field.
-func (m *AllTypes) SetFileSingle(value *string) {
-	m.Set("file_single", value)
-}
-
-// FileMulti returns the value of the 'file_multi' field.
-func (m *AllTypes) FileMulti() []string {
-	return m.GetStringSlice("file_multi")
-}
-
-// SetFileMulti sets the value of the 'file_multi' field.
-func (m *AllTypes) SetFileMulti(value []string) {
-	m.Set("file_multi", value)
-}
-
-// RelationSingle returns the value of the 'relation_single' field.
-func (m *AllTypes) RelationSingle() *string {
-	return m.GetStringPointer("relation_single")
-}
-
-// RelationSingleValueOr returns the value of the 'relation_single' field or the provided default value if nil.
-func (m *AllTypes) RelationSingleValueOr(defaultValue string) string {
-	if val := m.RelationSingle(); val != nil {
-		return *val
-	}
-	return defaultValue
-}
-
-// SetRelationSingle sets the value of the 'relation_single' field.
-func (m *AllTypes) SetRelationSingle(value *string) {
-	m.Set("relation_single", value)
-}
-
-// RelationMulti returns the value of the 'relation_multi' field.
-func (m *AllTypes) RelationMulti() []string {
-	return m.GetStringSlice("relation_multi")
-}
-
-// SetRelationMulti sets the value of the 'relation_multi' field.
-func (m *AllTypes) SetRelationMulti(value []string) {
-	m.Set("relation_multi", value)
-}
-
-// Created returns the value of the 'created' field.
-func (m *AllTypes) Created() *types.DateTime {
-	return m.GetDateTimePointer("created")
-}
-
-// CreatedValueOr returns the value of the 'created' field or the provided default value if nil.
-func (m *AllTypes) CreatedValueOr(defaultValue types.DateTime) types.DateTime {
-	if val := m.Created(); val != nil {
-		return *val
-	}
-	return defaultValue
-}
-
-// SetCreated sets the value of the 'created' field.
-func (m *AllTypes) SetCreated(value *types.DateTime) {
-	m.Set("created", value)
-}
-
-// Updated returns the value of the 'updated' field.
-func (m *AllTypes) Updated() *types.DateTime {
-	return m.GetDateTimePointer("updated")
-}
-
-// UpdatedValueOr returns the value of the 'updated' field or the provided default value if nil.
-func (m *AllTypes) UpdatedValueOr(defaultValue types.DateTime) types.DateTime {
-	if val := m.Updated(); val != nil {
-		return *val
-	}
-	return defaultValue
-}
-
-// SetUpdated sets the value of the 'updated' field.
-func (m *AllTypes) SetUpdated(value *types.DateTime) {
-	m.Set("updated", value)
+	pocketbase.BaseModel
+
+	TextRequired         string          `json:"text_required"`
+	TextOptional         *string         `json:"text_optional,omitempty"`
+	NumberRequired       float64         `json:"number_required"`
+	NumberOptional       *float64        `json:"number_optional,omitempty"`
+	BoolRequired         bool            `json:"bool_required"`
+	BoolOptional         *bool           `json:"bool_optional,omitempty"`
+	EmailRequired        string          `json:"email_required"`
+	EmailOptional        *string         `json:"email_optional,omitempty"`
+	URLRequired          string          `json:"url_required"`
+	URLOptional          *string         `json:"url_optional,omitempty"`
+	DateRequired         types.DateTime  `json:"date_required"`
+	DateOptional         *types.DateTime `json:"date_optional,omitempty"`
+	SelectSingleRequired string          `json:"select_single_required"`
+	SelectSingleOptional *string         `json:"select_single_optional,omitempty"`
+	SelectMultiRequired  []string        `json:"select_multi_required"`
+	SelectMultiOptional  []string        `json:"select_multi_optional,omitempty"`
+	JSONRequired         json.RawMessage `json:"json_required"`
+	JSONOptional         json.RawMessage `json:"json_optional,omitempty"`
+	FileSingle           *string         `json:"file_single,omitempty"`
+	FileMulti            []string        `json:"file_multi,omitempty"`
+	RelationSingle       *string         `json:"relation_single,omitempty"`
+	RelationMulti        []string        `json:"relation_multi,omitempty"`
+	Created              *types.DateTime `json:"created,omitempty"`
+	Updated              *types.DateTime `json:"updated,omitempty"`
 }
 
 // RelatedCollection represents a record from the 'related_collection' collection.
 type RelatedCollection struct {
-	pocketbase.Record
-}
+	pocketbase.BaseModel
 
-// RelatedCollectionCollection is a collection of RelatedCollection records.
-type RelatedCollectionCollection struct {
-	*pocketbase.ListResult
-	Items []*RelatedCollection `json:"items"`
-}
-
-// NewRelatedCollection creates a new instance of RelatedCollection.
-func NewRelatedCollection() *RelatedCollection {
-	return &RelatedCollection{Record: pocketbase.Record{}}
-}
-
-// ToRelatedCollection creates a To instance of RelatedCollection with the provided record.
-func ToRelatedCollection(r *pocketbase.Record) *RelatedCollection {
-	return &RelatedCollection{Record: *r}
-}
-
-// ToMap converts the struct to a map[string]any for creating/updating records.
-// It omits empty or zero-value fields to support PATCH operations.
-func (m *RelatedCollection) ToMap() map[string]any {
-	data := make(map[string]any)
-
-	// non-zero, non-empty, and non-nil values will be added to the map.
-	// For required fields, we always include them.
-	// You can add more complex logic here if needed, e.g., checking for zero values.
-	data["name"] = m.Name()
-
-	return data
-}
-
-// Name returns the value of the 'name' field.
-func (m *RelatedCollection) Name() string {
-	return m.GetString("name")
-}
-
-// SetName sets the value of the 'name' field.
-func (m *RelatedCollection) SetName(value string) {
-	m.Set("name", value)
+	Name string `json:"name"`
 }
 
 // ==============
-//  Typed Helpers
+//  Service Constructors (New Approach!)
 // ==============
 
-// GetAllTypes fetches a single AllTypes record by its ID.
-func GetAllTypes(client pocketbase.RecordServiceAPI, id string, opts *pocketbase.GetOneOptions) (*AllTypes, error) {
-	r, err := client.GetOne(context.Background(), "all_types", id, opts)
-	if err != nil {
-		return nil, err
-	}
-	return ToAllTypes(r), nil
+// NewAllTypesService creates a new typed service for AllTypes records.
+// This is the recommended way to work with AllTypes records using the generic API.
+func NewAllTypesService(client *pocketbase.Client) pocketbase.RecordServiceAPI[AllTypes] {
+	return pocketbase.NewRecordService[AllTypes](client, "all_types")
 }
 
-// GetAllTypesList fetches a list of AllTypes records.
-func GetAllTypesList(client pocketbase.RecordServiceAPI, opts *pocketbase.ListOptions) (*AllTypesCollection, error) {
-	listResult, err := client.GetList(context.Background(), "all_types", opts)
-	if err != nil {
-		return nil, err
-	}
-
-	typedItems := make([]*AllTypes, len(listResult.Items))
-	for i, r := range listResult.Items {
-		typedItems[i] = ToAllTypes(r)
-	}
-
-	return &AllTypesCollection{
-		ListResult: listResult,
-		Items:      typedItems,
-	}, nil
-}
-
-// GetRelatedCollection fetches a single RelatedCollection record by its ID.
-func GetRelatedCollection(client pocketbase.RecordServiceAPI, id string, opts *pocketbase.GetOneOptions) (*RelatedCollection, error) {
-	r, err := client.GetOne(context.Background(), "related_collection", id, opts)
-	if err != nil {
-		return nil, err
-	}
-	return ToRelatedCollection(r), nil
-}
-
-// GetRelatedCollectionList fetches a list of RelatedCollection records.
-func GetRelatedCollectionList(client pocketbase.RecordServiceAPI, opts *pocketbase.ListOptions) (*RelatedCollectionCollection, error) {
-	listResult, err := client.GetList(context.Background(), "related_collection", opts)
-	if err != nil {
-		return nil, err
-	}
-
-	typedItems := make([]*RelatedCollection, len(listResult.Items))
-	for i, r := range listResult.Items {
-		typedItems[i] = ToRelatedCollection(r)
-	}
-
-	return &RelatedCollectionCollection{
-		ListResult: listResult,
-		Items:      typedItems,
-	}, nil
+// NewRelatedCollectionService creates a new typed service for RelatedCollection records.
+// This is the recommended way to work with RelatedCollection records using the generic API.
+func NewRelatedCollectionService(client *pocketbase.Client) pocketbase.RecordServiceAPI[RelatedCollection] {
+	return pocketbase.NewRecordService[RelatedCollection](client, "related_collection")
 }

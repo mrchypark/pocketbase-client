@@ -1,11 +1,12 @@
 package pocketbase
 
 import (
+	"fmt"
 	"net/url"
 	"strconv"
 )
 
-// applyListOptions applies the given ListOptions to query parameters.
+// applyListOptions applies ListOptions to url.Values.
 func applyListOptions(q url.Values, opts *ListOptions) {
 	if opts == nil {
 		return
@@ -34,4 +35,27 @@ func applyListOptions(q url.Values, opts *ListOptions) {
 	for k, v := range opts.QueryParams {
 		q.Set(k, v)
 	}
+}
+
+// buildQueryString converts ListOptions to URL query string.
+func buildQueryString(opts *ListOptions) string {
+	if opts == nil {
+		return ""
+	}
+	q := url.Values{}
+	applyListOptions(q, opts)
+	return q.Encode()
+}
+
+// buildPathWithQuery adds query string to the base path.
+func buildPathWithQuery(basePath string, queryString string) string {
+	if queryString == "" {
+		return basePath
+	}
+	return basePath + "?" + queryString
+}
+
+// wrapError provides consistent error wrapping.
+func wrapError(operation, entity string, err error) error {
+	return fmt.Errorf("pocketbase: %s %s: %w", operation, entity, err)
 }
