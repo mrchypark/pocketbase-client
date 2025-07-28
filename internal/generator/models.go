@@ -3,9 +3,10 @@ package generator
 // TemplateData represents the data structure used for code generation templates.
 // It contains all the information needed to generate Go code from PocketBase schemas.
 type TemplateData struct {
-	PackageName string // Go package name for generated code
-	JSONLibrary string // JSON library import path (e.g., "encoding/json")
-	Collections []CollectionData
+	PackageName     string // Go package name for generated code
+	JSONLibrary     string // JSON library import path (e.g., "encoding/json")
+	Collections     []CollectionData
+	IsLegacyVersion bool // True if PocketBase 0.22+ (needs BaseDatetime), false if newer
 
 	// Fields for Enhanced features (default is empty slice)
 	Enums         []EnumData         `json:"enums,omitempty"`
