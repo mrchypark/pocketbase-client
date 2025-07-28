@@ -204,7 +204,7 @@ func handleError(operation string, err error) {
 
 // Usage example output function
 func printUsageExample() {
-	fmt.Println(`
+	fmt.Print(`
 🎯 Usage Examples:
 
 1. Basic CRUD operations:

@@ -293,10 +293,7 @@ func TestTemplateExecution(t *testing.T) {
 			for _, collection := range tt.data.Collections {
 				expectedStructParts := []string{
 					"type " + collection.StructName + " struct",
-					"func New" + collection.StructName + "()",
-					"func To" + collection.StructName + "(",
-					"func Get" + collection.StructName + "(",
-					"func Get" + collection.StructName + "List(",
+					"func New" + collection.StructName + "Service(",
 				}
 
 				for _, part := range expectedStructParts {
@@ -305,11 +302,10 @@ func TestTemplateExecution(t *testing.T) {
 					}
 				}
 
-				// Verify that getter/setter for each field was generated
+				// Verify that fields are properly defined in struct
 				for _, field := range collection.Fields {
 					expectedFieldParts := []string{
-						"func (m *" + collection.StructName + ") " + field.GoName + "()",
-						"func (m *" + collection.StructName + ") Set" + field.GoName + "(",
+						field.GoName + " " + field.GoType + " `json:\"" + field.JSONName,
 					}
 
 					for _, part := range expectedFieldParts {
@@ -539,9 +535,7 @@ replace github.com/pocketbase/pocketbase => github.com/pocketbase/pocketbase v0.
 	expectedStructures := []string{
 		"package testmodels",
 		"type User struct",
-		"func NewUser()",
-		"func GetUser(",
-		"func GetUserList(",
+		"func NewUserService(",
 		"UserStatusActive",
 		"UserStatusInactive",
 		"type ProfileRelation struct",
