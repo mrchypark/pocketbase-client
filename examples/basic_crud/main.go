@@ -69,7 +69,6 @@ func main() {
 	updatePost := &Post{
 		BaseModel: pocketbase.BaseModel{ID: recordID},
 		Title:     "My Updated Post Title",
-		Content:   retrievedRecord.Content, // Keep existing content
 	}
 	updatedRecord, err := postsService.Update(context.Background(), recordID, updatePost)
 	if err != nil {
