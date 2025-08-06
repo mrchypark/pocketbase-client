@@ -1,362 +1,362 @@
 [
-    {
-        "id": "pbc_all_types_123",
-        "listRule": null,
-        "viewRule": null,
-        "createRule": null,
-        "updateRule": null,
-        "deleteRule": null,
-        "name": "all_types",
-        "type": "base",
-        "fields": [
-            {
-                "autogeneratePattern": "[a-z0-9]{15}",
-                "hidden": false,
-                "id": "text3208210256",
-                "max": 15,
-                "min": 15,
-                "name": "id",
-                "pattern": "^[a-z0-9]+$",
-                "presentable": false,
-                "primaryKey": true,
-                "required": true,
-                "system": true,
-                "type": "text"
-            },
-            {
-                "autogeneratePattern": "",
-                "hidden": false,
-                "id": "text_req",
-                "max": 0,
-                "min": 1,
-                "name": "text_required",
-                "pattern": "",
-                "presentable": false,
-                "primaryKey": false,
-                "required": true,
-                "system": false,
-                "type": "text"
-            },
-            {
-                "autogeneratePattern": "",
-                "hidden": false,
-                "id": "text_opt",
-                "max": 0,
-                "min": 0,
-                "name": "text_optional",
-                "pattern": "",
-                "presentable": false,
-                "primaryKey": false,
-                "required": false,
-                "system": false,
-                "type": "text"
-            },
-            {
-                "hidden": false,
-                "id": "number_req",
-                "max": null,
-                "min": 0,
-                "name": "number_required",
-                "onlyInt": false,
-                "presentable": false,
-                "required": true,
-                "system": false,
-                "type": "number"
-            },
-            {
-                "hidden": false,
-                "id": "number_opt",
-                "max": null,
-                "min": null,
-                "name": "number_optional",
-                "onlyInt": false,
-                "presentable": false,
-                "required": false,
-                "system": false,
-                "type": "number"
-            },
-            {
-                "hidden": false,
-                "id": "bool_req",
-                "name": "bool_required",
-                "presentable": false,
-                "required": true,
-                "system": false,
-                "type": "bool"
-            },
-            {
-                "hidden": false,
-                "id": "bool_opt",
-                "name": "bool_optional",
-                "presentable": false,
-                "required": false,
-                "system": false,
-                "type": "bool"
-            },
-            {
-                "exceptDomains": null,
-                "hidden": false,
-                "id": "email_req",
-                "name": "email_required",
-                "onlyDomains": null,
-                "presentable": false,
-                "required": true,
-                "system": false,
-                "type": "email"
-            },
-            {
-                "exceptDomains": null,
-                "hidden": false,
-                "id": "email_opt",
-                "name": "email_optional",
-                "onlyDomains": null,
-                "presentable": false,
-                "required": false,
-                "system": false,
-                "type": "email"
-            },
-            {
-                "exceptDomains": null,
-                "hidden": false,
-                "id": "url_req",
-                "name": "url_required",
-                "onlyDomains": null,
-                "presentable": false,
-                "required": true,
-                "system": false,
-                "type": "url"
-            },
-            {
-                "exceptDomains": null,
-                "hidden": false,
-                "id": "url_opt",
-                "name": "url_optional",
-                "onlyDomains": null,
-                "presentable": false,
-                "required": false,
-                "system": false,
-                "type": "url"
-            },
-            {
-                "hidden": false,
-                "id": "date_req",
-                "max": "",
-                "min": "",
-                "name": "date_required",
-                "presentable": false,
-                "required": true,
-                "system": false,
-                "type": "date"
-            },
-            {
-                "hidden": false,
-                "id": "date_opt",
-                "max": "",
-                "min": "",
-                "name": "date_optional",
-                "presentable": false,
-                "required": false,
-                "system": false,
-                "type": "date"
-            },
-            {
-                "hidden": false,
-                "id": "select_single_req",
-                "maxSelect": 1,
-                "name": "select_single_required",
-                "presentable": false,
-                "required": true,
-                "system": false,
-                "type": "select",
-                "values": [
-                    "a",
-                    "b",
-                    "c"
-                ]
-            },
-            {
-                "hidden": false,
-                "id": "select_single_opt",
-                "maxSelect": 1,
-                "name": "select_single_optional",
-                "presentable": false,
-                "required": false,
-                "system": false,
-                "type": "select",
-                "values": [
-                    "x",
-                    "y",
-                    "z"
-                ]
-            },
-            {
-                "hidden": false,
-                "id": "select_multi_req",
-                "maxSelect": 3,
-                "name": "select_multi_required",
-                "presentable": false,
-                "required": true,
-                "system": false,
-                "type": "select",
-                "values": [
-                    "a",
-                    "b",
-                    "c"
-                ]
-            },
-            {
-                "hidden": false,
-                "id": "select_multi_opt",
-                "maxSelect": 3,
-                "name": "select_multi_optional",
-                "presentable": false,
-                "required": false,
-                "system": false,
-                "type": "select",
-                "values": [
-                    "x",
-                    "y",
-                    "z"
-                ]
-            },
-            {
-                "hidden": false,
-                "id": "json_req",
-                "maxSize": 2000000,
-                "name": "json_required",
-                "presentable": false,
-                "required": true,
-                "system": false,
-                "type": "json"
-            },
-            {
-                "hidden": false,
-                "id": "json_opt",
-                "maxSize": 2000000,
-                "name": "json_optional",
-                "presentable": false,
-                "required": false,
-                "system": false,
-                "type": "json"
-            },
-            {
-                "hidden": false,
-                "id": "file_single",
-                "maxSelect": 1,
-                "maxSize": 5242880,
-                "mimeTypes": [],
-                "name": "file_single",
-                "presentable": false,
-                "protected": false,
-                "required": false,
-                "system": false,
-                "thumbs": [],
-                "type": "file"
-            },
-            {
-                "hidden": false,
-                "id": "file_multi",
-                "maxSelect": 99,
-                "maxSize": 5242880,
-                "mimeTypes": [],
-                "name": "file_multi",
-                "presentable": false,
-                "protected": false,
-                "required": false,
-                "system": false,
-                "thumbs": [],
-                "type": "file"
-            },
-            {
-                "cascadeDelete": false,
-                "collectionId": "pbc_1125843985",
-                "hidden": false,
-                "id": "relation_single",
-                "maxSelect": 1,
-                "minSelect": 0,
-                "name": "relation_single",
-                "presentable": false,
-                "required": false,
-                "system": false,
-                "type": "relation"
-            },
-            {
-                "cascadeDelete": false,
-                "collectionId": "pbc_1125843985",
-                "hidden": false,
-                "id": "relation_multi",
-                "maxSelect": 0,
-                "minSelect": 0,
-                "name": "relation_multi",
-                "presentable": false,
-                "required": false,
-                "system": false,
-                "type": "relation"
-            },
-            {
-                "hidden": false,
-                "id": "autodate2990389176",
-                "name": "created",
-                "onCreate": true,
-                "onUpdate": false,
-                "presentable": false,
-                "system": false,
-                "type": "autodate"
-            },
-            {
-                "hidden": false,
-                "id": "autodate3332085495",
-                "name": "updated",
-                "onCreate": true,
-                "onUpdate": true,
-                "presentable": false,
-                "system": false,
-                "type": "autodate"
-            }
-        ],
-        "indexes": [],
-        "system": false
-    },
-    {
-        "id": "pbc_1125843985",
-        "listRule": null,
-        "viewRule": null,
-        "createRule": null,
-        "updateRule": null,
-        "deleteRule": null,
-        "name": "related_collection",
-        "type": "base",
-        "fields": [
-            {
-                "autogeneratePattern": "[a-z0-9]{15}",
-                "hidden": false,
-                "id": "text_related_id",
-                "max": 15,
-                "min": 15,
-                "name": "id",
-                "pattern": "^[a-z0-9]+$",
-                "presentable": false,
-                "primaryKey": true,
-                "required": true,
-                "system": true,
-                "type": "text"
-            },
-            {
-                "autogeneratePattern": "",
-                "hidden": false,
-                "id": "name_field",
-                "max": 0,
-                "min": 1,
-                "name": "name",
-                "pattern": "",
-                "presentable": true,
-                "primaryKey": false,
-                "required": true,
-                "system": false,
-                "type": "text"
-            }
-        ],
-        "indexes": [],
-        "system": false
-    }
+  {
+      "id": "pbc_all_types_123",
+      "listRule": null,
+      "viewRule": null,
+      "createRule": null,
+      "updateRule": null,
+      "deleteRule": null,
+      "name": "all_types",
+      "type": "base",
+      "fields": [
+          {
+              "autogeneratePattern": "[a-z0-9]{15}",
+              "hidden": false,
+              "id": "text3208210256",
+              "max": 15,
+              "min": 15,
+              "name": "id",
+              "pattern": "^[a-z0-9]+$",
+              "presentable": false,
+              "primaryKey": true,
+              "required": true,
+              "system": true,
+              "type": "text"
+          },
+          {
+              "autogeneratePattern": "",
+              "hidden": false,
+              "id": "text_req",
+              "max": 0,
+              "min": 1,
+              "name": "text_required",
+              "pattern": "",
+              "presentable": false,
+              "primaryKey": false,
+              "required": true,
+              "system": false,
+              "type": "text"
+          },
+          {
+              "autogeneratePattern": "",
+              "hidden": false,
+              "id": "text_opt",
+              "max": 0,
+              "min": 0,
+              "name": "text_optional",
+              "pattern": "",
+              "presentable": false,
+              "primaryKey": false,
+              "required": false,
+              "system": false,
+              "type": "text"
+          },
+          {
+              "hidden": false,
+              "id": "number_req",
+              "max": null,
+              "min": 0,
+              "name": "number_required",
+              "onlyInt": false,
+              "presentable": false,
+              "required": true,
+              "system": false,
+              "type": "number"
+          },
+          {
+              "hidden": false,
+              "id": "number_opt",
+              "max": null,
+              "min": null,
+              "name": "number_optional",
+              "onlyInt": false,
+              "presentable": false,
+              "required": false,
+              "system": false,
+              "type": "number"
+          },
+          {
+              "hidden": false,
+              "id": "bool_req",
+              "name": "bool_required",
+              "presentable": false,
+              "required": true,
+              "system": false,
+              "type": "bool"
+          },
+          {
+              "hidden": false,
+              "id": "bool_opt",
+              "name": "bool_optional",
+              "presentable": false,
+              "required": false,
+              "system": false,
+              "type": "bool"
+          },
+          {
+              "exceptDomains": null,
+              "hidden": false,
+              "id": "email_req",
+              "name": "email_required",
+              "onlyDomains": null,
+              "presentable": false,
+              "required": true,
+              "system": false,
+              "type": "email"
+          },
+          {
+              "exceptDomains": null,
+              "hidden": false,
+              "id": "email_opt",
+              "name": "email_optional",
+              "onlyDomains": null,
+              "presentable": false,
+              "required": false,
+              "system": false,
+              "type": "email"
+          },
+          {
+              "exceptDomains": null,
+              "hidden": false,
+              "id": "url_req",
+              "name": "url_required",
+              "onlyDomains": null,
+              "presentable": false,
+              "required": true,
+              "system": false,
+              "type": "url"
+          },
+          {
+              "exceptDomains": null,
+              "hidden": false,
+              "id": "url_opt",
+              "name": "url_optional",
+              "onlyDomains": null,
+              "presentable": false,
+              "required": false,
+              "system": false,
+              "type": "url"
+          },
+          {
+              "hidden": false,
+              "id": "date_req",
+              "max": "",
+              "min": "",
+              "name": "date_required",
+              "presentable": false,
+              "required": true,
+              "system": false,
+              "type": "date"
+          },
+          {
+              "hidden": false,
+              "id": "date_opt",
+              "max": "",
+              "min": "",
+              "name": "date_optional",
+              "presentable": false,
+              "required": false,
+              "system": false,
+              "type": "date"
+          },
+          {
+              "hidden": false,
+              "id": "select_single_req",
+              "maxSelect": 1,
+              "name": "select_single_required",
+              "presentable": false,
+              "required": true,
+              "system": false,
+              "type": "select",
+              "values": [
+                  "a",
+                  "b",
+                  "c"
+              ]
+          },
+          {
+              "hidden": false,
+              "id": "select_single_opt",
+              "maxSelect": 1,
+              "name": "select_single_optional",
+              "presentable": false,
+              "required": false,
+              "system": false,
+              "type": "select",
+              "values": [
+                  "x",
+                  "y",
+                  "z"
+              ]
+          },
+          {
+              "hidden": false,
+              "id": "select_multi_req",
+              "maxSelect": 3,
+              "name": "select_multi_required",
+              "presentable": false,
+              "required": true,
+              "system": false,
+              "type": "select",
+              "values": [
+                  "a",
+                  "b",
+                  "c"
+              ]
+          },
+          {
+              "hidden": false,
+              "id": "select_multi_opt",
+              "maxSelect": 3,
+              "name": "select_multi_optional",
+              "presentable": false,
+              "required": false,
+              "system": false,
+              "type": "select",
+              "values": [
+                  "x",
+                  "y",
+                  "z"
+              ]
+          },
+          {
+              "hidden": false,
+              "id": "json_req",
+              "maxSize": 2000000,
+              "name": "json_required",
+              "presentable": false,
+              "required": true,
+              "system": false,
+              "type": "json"
+          },
+          {
+              "hidden": false,
+              "id": "json_opt",
+              "maxSize": 2000000,
+              "name": "json_optional",
+              "presentable": false,
+              "required": false,
+              "system": false,
+              "type": "json"
+          },
+          {
+              "hidden": false,
+              "id": "file_single",
+              "maxSelect": 1,
+              "maxSize": 5242880,
+              "mimeTypes": [],
+              "name": "file_single",
+              "presentable": false,
+              "protected": false,
+              "required": false,
+              "system": false,
+              "thumbs": [],
+              "type": "file"
+          },
+          {
+              "hidden": false,
+              "id": "file_multi",
+              "maxSelect": 99,
+              "maxSize": 5242880,
+              "mimeTypes": [],
+              "name": "file_multi",
+              "presentable": false,
+              "protected": false,
+              "required": false,
+              "system": false,
+              "thumbs": [],
+              "type": "file"
+          },
+          {
+              "cascadeDelete": false,
+              "collectionId": "pbc_1125843985",
+              "hidden": false,
+              "id": "relation_single",
+              "maxSelect": 1,
+              "minSelect": 0,
+              "name": "relation_single",
+              "presentable": false,
+              "required": false,
+              "system": false,
+              "type": "relation"
+          },
+          {
+              "cascadeDelete": false,
+              "collectionId": "pbc_1125843985",
+              "hidden": false,
+              "id": "relation_multi",
+              "maxSelect": 0,
+              "minSelect": 0,
+              "name": "relation_multi",
+              "presentable": false,
+              "required": false,
+              "system": false,
+              "type": "relation"
+          },
+          {
+              "hidden": false,
+              "id": "autodate2990389176",
+              "name": "created",
+              "onCreate": true,
+              "onUpdate": false,
+              "presentable": false,
+              "system": false,
+              "type": "autodate"
+          },
+          {
+              "hidden": false,
+              "id": "autodate3332085495",
+              "name": "updated",
+              "onCreate": true,
+              "onUpdate": true,
+              "presentable": false,
+              "system": false,
+              "type": "autodate"
+          }
+      ],
+      "indexes": [],
+      "system": false
+  },
+  {
+      "id": "pbc_1125843985",
+      "listRule": null,
+      "viewRule": null,
+      "createRule": null,
+      "updateRule": null,
+      "deleteRule": null,
+      "name": "related_collection",
+      "type": "base",
+      "fields": [
+          {
+              "autogeneratePattern": "[a-z0-9]{15}",
+              "hidden": false,
+              "id": "text_related_id",
+              "max": 15,
+              "min": 15,
+              "name": "id",
+              "pattern": "^[a-z0-9]+$",
+              "presentable": false,
+              "primaryKey": true,
+              "required": true,
+              "system": true,
+              "type": "text"
+          },
+          {
+              "autogeneratePattern": "",
+              "hidden": false,
+              "id": "name_field",
+              "max": 0,
+              "min": 1,
+              "name": "name",
+              "pattern": "",
+              "presentable": true,
+              "primaryKey": false,
+              "required": true,
+              "system": false,
+              "type": "text"
+          }
+      ],
+      "indexes": [],
+      "system": false
+  }
 ]

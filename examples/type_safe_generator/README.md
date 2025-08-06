@@ -1,125 +1,150 @@
 # Type-Safe Generator Example
 
-This example demonstrates the type-safe code generation features of the PocketBase Go Client.
+This example demonstrates the type-safe code generation features of the PocketBase Go client, showing how to generate Go structs from PocketBase schema and use them with compile-time type safety.
 
-## 🚀 How to Run
+## 🚀 Quick Start
 
-### 1. Generate Models
 ```bash
-# Run from current directory
-go run ../../cmd/pbc-gen -schema ./schema.json -path ./models.gen.go -pkgname main
-```
+# Start PocketBase server (from project root)
+make pb_run
 
-### 2. Run Example
-```bash
-# PocketBase server must be running on localhost:8090
-go mod tidy
+# Set up admin account at http://localhost:8090/_/
+# Use: admin@example.com / 1q2w3e4r5t
+
+# Run the example
+cd examples/type_safe_generator
 go run .
 ```
 
-## 📋 Included Features
+## 🎯 What You'll Learn
 
-### ✅ Complete Type Safety
-- All fields mapped to appropriate Go types
-- Compile-time type checking
-- IDE auto-completion support
+### Type Safety Benefits
+- **Compile-time validation**: Field names and types verified at compile time
+- **IDE support**: Auto-completion, refactoring, type hints
+- **Runtime safety**: Prevents nil pointer dereference and type casting errors
 
-### 🔧 CRUD Operations
-- `Create`: Create new records
-- `GetOne`: Retrieve single record
-- `GetList`: Paginated list retrieval
-- `GetAll`: Get all records (automatic pagination)
-- `Update`: Update records
-- `Delete`: Delete records
+### Code Generation Workflow
+```bash
+# 1. Export PocketBase schema
+curl http://localhost:8090/api/collections > pb_schema.json
 
-### 🛡️ Safe Field Access
+# 2. Generate type-safe Go models
+go run ./cmd/pbc-gen -schema ./pb_schema.json -path ./models.gen.go
+
+# 3. Use generated models
+go run main.go
+```
+
+## 📋 Example Output
+
+When you run the example, you'll see:
+
+1. **Type Safety Concepts**: Comparison between old map-based and new type-safe approaches
+2. **Generated Model Structure**: Overview of generated Go structs and service constructors
+3. **Live CRUD Demo**: Real database operations using RelatedCollection
+4. **Type Safety Benefits**: Compile-time validation examples
+5. **Development Workflow**: Step-by-step process explanation
+6. **Real-World Patterns**: Practical usage scenarios including batch processing and error handling
+
+## 🏗️ Generated Code Features
+
+### Type-Safe Service Constructors
 ```go
-// Required fields - direct access
-fmt.Println(record.TextRequired)
+// Old way (not type-safe)
+recordService := client.Records("related_collection")
 
-// Optional fields - nil check
+// New way (type-safe)
+service := NewRelatedCollectionService(client)
+```
+
+### Compile-Time Type Validation
+```go
+// ✅ Correct usage - compiles successfully
+record := &RelatedCollection{
+    Name: "example record",
+}
+
+// ❌ Wrong usage - compile error
+record := &RelatedCollection{
+    Name: 123,           // Compile error: type mismatch
+    WrongField: "value", // Compile error: field doesn't exist
+}
+```
+
+### Safe Optional Field Handling
+```go
+// Optional fields use pointers
+var optionalText *string
+if condition {
+    text := "optional value"
+    optionalText = &text
+}
+
+// Safe access
 if record.TextOptional != nil {
     fmt.Println(*record.TextOptional)
 }
-
-// Array fields - safe length check
-fmt.Printf("Item count: %d\n", len(record.SelectMultiRequired))
 ```
 
-### 📊 Supported Field Types
+## 🛠️ File Structure
 
-| PocketBase Type | Go Type (Required) | Go Type (Optional) |
-|----------------|-------------------|-------------------|
-| text | `string` | `*string` |
-| number | `float64` | `*float64` |
-| bool | `bool` | `*bool` |
-| email | `string` | `*string` |
-| url | `string` | `*string` |
-| date | `types.DateTime` | `*types.DateTime` |
-| select (single) | `string` | `*string` |
-| select (multi) | `[]string` | `[]string` |
-| json | `json.RawMessage` | `json.RawMessage` |
-| file (single) | `string` | `*string` |
-| file (multi) | `[]string` | `[]string` |
-| relation (single) | `string` | `*string` |
-| relation (multi) | `[]string` | `[]string` |
-
-## 🎯 Usage Patterns
-
-### Basic Usage
-```go
-// Create service
-service := NewAllTypesService(client)
-
-// Create new record
-record := &AllTypes{
-    TextRequired: "Required value",
-    NumberRequired: 42.0,
-    BoolRequired: true,
-}
-
-// Create
-created, err := service.Create(ctx, record)
-if err != nil {
-    log.Fatal(err)
-}
-
-// Retrieve
-found, err := service.GetOne(ctx, created.ID, nil)
-if err != nil {
-    log.Fatal(err)
-}
-
-// Update
-found.TextRequired = "New value"
-updated, err := service.Update(ctx, found.ID, found)
+```
+examples/type_safe_generator/
+├── pb_schema.json          # PocketBase schema definition
+├── models.gen.go           # Generated type-safe models
+├── main.go                 # Example demonstration code
+└── README.md              # This file
 ```
 
-### Advanced Queries
-```go
-// Filtering and sorting
-list, err := service.GetList(ctx, &pocketbase.ListOptions{
-    Filter:  "text_required != '' && number_required > 0",
-    Sort:    "-created,text_required",
-    PerPage: 20,
-    Page:    1,
-})
+## 💡 Real-World Usage
 
-// All records (automatic pagination)
-all, err := service.GetAll(ctx, &pocketbase.ListOptions{
-    Filter: "bool_required = true",
-})
+### Schema Change Workflow
+```bash
+# After changing schema in PocketBase admin UI
+curl http://localhost:8090/api/collections > pb_schema.json
+go run ./cmd/pbc-gen -schema ./pb_schema.json -path ./models.gen.go
+go build .  # Verify no type errors
 ```
 
-## 🔧 Schema Structure
+### Team Development Benefits
+- **Consistency**: All developers use identical type definitions
+- **Safety**: Schema changes reveal affected code at compile time
+- **Productivity**: IDE support accelerates development
 
-This example uses the following collections:
+### CI/CD Integration
+```yaml
+- name: Generate PocketBase models
+  run: |
+    go run ./cmd/pbc-gen -schema ./pb_schema.json -path ./models.gen.go
+    git diff --exit-code models.gen.go || (echo "Models need update" && exit 1)
+```
 
-- **all_types**: Test collection containing all PocketBase field types
-- **related_collection**: Simple collection for relation testing
+## 🔧 Troubleshooting
 
-## 📝 Notes
+**Authentication Failed**
+- Ensure PocketBase server is running at `http://localhost:8090`
+- Verify admin credentials: `admin@example.com` / `1q2w3e4r5t`
 
-- PocketBase server must be running
-- Appropriate collections and fields must be configured
-- If authentication is required, set authentication info on the client
+**Collection Not Found**
+- Check that collections exist in PocketBase admin UI
+- Verify schema file matches actual PocketBase collections
+
+**Sort Field Errors**
+- The example uses `sort=-id` since `related_collection` doesn't have `created` field
+- For collections with `created`/`updated` fields, use `sort=-created`
+
+**JSON Parsing Errors**
+- Update schema file to latest state: `curl http://localhost:8090/api/collections > pb_schema.json`
+- Regenerate models: `go run ./cmd/pbc-gen -schema ./pb_schema.json -path ./models.gen.go`
+
+## 📚 Key Concepts Demonstrated
+
+The example shows how type-safe code generation provides:
+
+- **Compile-Time Safety**: Field name typos and type mismatches caught before runtime
+- **IDE Integration**: Auto-completion, type hints, and refactoring support
+- **Runtime Protection**: Prevents common errors like nil pointer dereference
+- **Development Efficiency**: Faster coding with better tooling support
+- **Team Collaboration**: Consistent type definitions across the team
+
+This example effectively demonstrates why type-safe PocketBase development is superior to traditional map-based approaches, making it an excellent starting point for understanding the library's code generation capabilities.
