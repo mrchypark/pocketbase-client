@@ -1,3 +1,4 @@
+// Package main demonstrates type-safe PocketBase client usage with generated models
 package main
 
 import (
@@ -81,6 +82,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to create type-safe AllTypes record: %v", err)
 	}
+	fmt.Printf("    ✅ Retrieval complete - Name: %s\n", retrieved.Name)
+	fmt.Println()
 
 	// Verify created record (using type-safe Getters)
 	createdAllTypes := ToAllTypes(createdAllTypeRecord)
