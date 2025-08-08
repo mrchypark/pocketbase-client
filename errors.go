@@ -212,7 +212,7 @@ func ParseAPIError(statusCode int, body []byte) error {
 	}
 
 	var wire rawPocketBaseError
-err := json.Unmarshal(body, &wire)
+	err := json.Unmarshal(body, &wire)
 
 	e := &Error{
 		Status:  statusCode,
