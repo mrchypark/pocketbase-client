@@ -8,7 +8,6 @@
 // Consumers of this client can use the `ParseAPIError` helper to convert an HTTP response
 // into an `*Error`, then use classification helpers such as `IsValidation()` or
 // `IsAuth()` to branch on the category of failure.
-
 package pocketbase
 
 import (
