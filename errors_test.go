@@ -68,7 +68,7 @@ func TestError_IsAuth(t *testing.T) {
 func TestParseAPIError(t *testing.T) {
 	// Test successful response (no error)
 	successResp := &http.Response{StatusCode: 200}
-	err := ParseAPIErrorFromResponse(successResp, []byte("{}"), "/test")
+	err := ParseAPIErrorFromResponse(successResp, []byte("{}"))
 	if err != nil {
 		t.Errorf("Expected no error for successful response, got %v", err)
 	}
@@ -80,7 +80,7 @@ func TestParseAPIError(t *testing.T) {
 	}
 	body := []byte(`{"code": 404, "message": "Record not found."}`)
 
-	err = ParseAPIErrorFromResponse(errorResp, body, "/api/collections/users/records/123")
+	err = ParseAPIErrorFromResponse(errorResp, body)
 	if err == nil {
 		t.Fatal("Expected error for 404 response")
 	}
@@ -105,7 +105,7 @@ func TestParseAPIError(t *testing.T) {
 
 func TestParseAPIError_Direct(t *testing.T) {
 	// Test successful response (no error)
-	err := ParseAPIError(200, make(http.Header), []byte("{}"), "/test")
+	err := ParseAPIError(200, []byte("{}"))
 	if err != nil {
 		t.Errorf("Expected no error for successful response, got %v", err)
 	}
@@ -115,7 +115,7 @@ func TestParseAPIError_Direct(t *testing.T) {
 	headers.Set("Content-Type", "application/json")
 	body := []byte(`{"code": 404, "message": "Record not found.", "data": {"id": {"code": "validation_required", "message": "Missing required value."}}}`)
 
-	err = ParseAPIError(404, headers, body, "/api/collections/users/records/123")
+	err = ParseAPIError(404, body)
 	if err == nil {
 		t.Fatal("Expected error for 404 response")
 	}
@@ -441,7 +441,7 @@ func TestGetErrorCode(t *testing.T) {
 
 func TestParseAPIError_EdgeCases(t *testing.T) {
 	// Test with nil response
-	err := ParseAPIErrorFromResponse(nil, []byte("{}"), "/test")
+	err := ParseAPIErrorFromResponse(nil, []byte("{}"))
 	if err == nil {
 		t.Error("Expected error for nil response")
 	}
@@ -453,7 +453,7 @@ func TestParseAPIError_EdgeCases(t *testing.T) {
 	}
 	invalidJSON := []byte(`{"invalid": json}`)
 
-	err = ParseAPIErrorFromResponse(resp, invalidJSON, "/test")
+	err = ParseAPIErrorFromResponse(resp, invalidJSON)
 	if err == nil {
 		t.Error("Expected error for invalid JSON")
 	}
