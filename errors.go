@@ -1,10 +1,10 @@
 // Package pocketbase provides extended error handling utilities for PocketBase API interactions.
-
+//
 // This file defines a richer error type (`Error`) than the basic `APIError`.
 // It classifies errors based on HTTP status codes, parses structured JSON error bodies,
 // and normalizes server error messages to stable alias codes. The alias set is derived
 // from the PocketBase documentation for main and v0.22.x releases.
-
+//
 // Consumers of this client can use the `ParseAPIError` helper to convert an HTTP response
 // into an `*Error`, then use classification helpers such as `IsValidation()` or
 // `IsAuth()` to branch on the category of failure.
@@ -394,6 +394,7 @@ func initializeMessageAliases() {
 		"Something went wrong while processing your request.": "internal_generic",
 	}
 
+	// Copy all aliases to messageAliases map
 	for message, alias := range aliases {
 		messageAliases[message] = alias
 	}
@@ -550,4 +551,31 @@ func (e *Error) Equals(other *Error) bool {
 	}
 
 	return true
+}
+
+// LogFields returns structured fields for logging purposes.
+// This provides a logging-friendly representation of the error.
+func (e *Error) LogFields() map[string]interface{} {
+	if e == nil {
+		return map[string]interface{}{"error": "nil"}
+	}
+
+	fields := map[string]interface{}{
+		"status":  e.Status,
+		"message": e.Message,
+	}
+
+	if e.Code != "" {
+		fields["code"] = e.Code
+	}
+
+	if e.Endpoint != "" {
+		fields["endpoint"] = e.Endpoint
+	}
+
+	if len(e.Data) > 0 {
+		fields["field_errors"] = len(e.Data)
+	}
+
+	return fields
 }

@@ -671,10 +671,10 @@ func TestRegisterMessageAlias_ThreadSafety(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(numGoroutines)
 
-	for i := 0; i < numGoroutines; i++ {
+	for i := range numGoroutines {
 		go func(id int) {
 			defer wg.Done()
-			for j := 0; j < numOperations; j++ {
+			for j := range numOperations {
 				message := fmt.Sprintf("Test message %d-%d", id, j)
 				alias := fmt.Sprintf("test_alias_%d_%d", id, j)
 				RegisterMessageAlias(message, alias)
@@ -742,5 +742,76 @@ func TestErrorNilSafety(t *testing.T) {
 	}
 	if !nilErr.Is(nil) {
 		t.Error("Expected nil error to equal nil")
+	}
+}
+
+func TestError_LogFields(t *testing.T) {
+	// Test nil error
+	var nilErr *Error
+	fields := nilErr.LogFields()
+	if fields["error"] != "nil" {
+		t.Errorf("Expected nil error to have 'error': 'nil', got %v", fields)
+	}
+
+	// Test basic error
+	err := &Error{
+		Status:  404,
+		Code:    "not_found",
+		Message: "Resource not found",
+	}
+
+	fields = err.LogFields()
+	expectedFields := map[string]interface{}{
+		"status":  404,
+		"code":    "not_found",
+		"message": "Resource not found",
+	}
+
+	for key, expected := range expectedFields {
+		if fields[key] != expected {
+			t.Errorf("Expected field %s to be %v, got %v", key, expected, fields[key])
+		}
+	}
+
+	// Test error with endpoint and field errors
+	errWithData := &Error{
+		Status:   400,
+		Message:  "Validation failed",
+		Endpoint: "/api/test",
+		Data: map[string]FieldError{
+			"email": {Code: "required", Message: "Email is required"},
+			"name":  {Code: "invalid", Message: "Name is invalid"},
+		},
+	}
+
+	fields = errWithData.LogFields()
+	if fields["status"] != 400 {
+		t.Errorf("Expected status 400, got %v", fields["status"])
+	}
+	if fields["message"] != "Validation failed" {
+		t.Errorf("Expected message 'Validation failed', got %v", fields["message"])
+	}
+	if fields["endpoint"] != "/api/test" {
+		t.Errorf("Expected endpoint '/api/test', got %v", fields["endpoint"])
+	}
+	if fields["field_errors"] != 2 {
+		t.Errorf("Expected field_errors 2, got %v", fields["field_errors"])
+	}
+
+	// Test error without optional fields
+	simpleErr := &Error{
+		Status:  500,
+		Message: "Internal error",
+	}
+
+	fields = simpleErr.LogFields()
+	if _, hasCode := fields["code"]; hasCode {
+		t.Error("Expected no code field for error without code")
+	}
+	if _, hasEndpoint := fields["endpoint"]; hasEndpoint {
+		t.Error("Expected no endpoint field for error without endpoint")
+	}
+	if _, hasFieldErrors := fields["field_errors"]; hasFieldErrors {
+		t.Error("Expected no field_errors field for error without field errors")
 	}
 }
