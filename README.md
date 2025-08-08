@@ -388,7 +388,7 @@ Common error codes you can check for:
 - `too_many_requests` - Rate limit exceeded
 - `internal_generic` - Server internal error
 
-See the [full list of error codes](./errors.go) in the source code.
+See the [full list of error codes](./errors.md) in the source code.
 
 ## 📖 Examples
 
