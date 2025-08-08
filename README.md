@@ -220,11 +220,6 @@ type Error struct {
     Code    string                 // Stable alias code ("collection_not_found")
     Message string                 // Server error message
     Data    map[string]FieldError  // Field validation errors
-    
-    // Debugging fields
-    Endpoint   string     // API endpoint that failed
-    RawHeaders http.Header // Original response headers
-    RawBody    []byte     // Original response body
 }
 ```
 

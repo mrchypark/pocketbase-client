@@ -267,32 +267,31 @@ func RegisterMessageAlias(serverMessage, alias string) {
 }
 
 // getMessageAlias retrieves the alias for a message with caching for performance.
+// Returns (alias, true) if an alias exists, or ("", false) if no alias is found.
+// Caches both positive and negative results to avoid repeated map lookups.
 func getMessageAlias(message string) (string, bool) {
 	// Fast path: check cache first
 	aliasCache.mu.RLock()
-	if alias, ok := aliasCache.cache[message]; ok {
-		aliasCache.mu.RUnlock()
-		return alias, true
-	}
+	alias, foundInCache := aliasCache.cache[message]
 	aliasCache.mu.RUnlock()
+	if foundInCache {
+		return alias, alias != "" // An empty string in cache means a known non-match.
+	}
 
 	// Slow path: check main map and update cache
 	aliasCache.mu.Lock()
 	defer aliasCache.mu.Unlock()
 
-	// Double-check in case another goroutine updated it
-	if alias, ok := aliasCache.cache[message]; ok {
-		return alias, true
+	// Double-check in case another goroutine populated the cache.
+	alias, foundInCache = aliasCache.cache[message]
+	if foundInCache {
+		return alias, alias != ""
 	}
 
-	if alias, ok := messageAliases[message]; ok {
-		aliasCache.cache[message] = alias
-		return alias, true
-	}
-
-	// Cache negative result to avoid repeated lookups
-	aliasCache.cache[message] = ""
-	return "", false
+	alias, foundInMap := messageAliases[message]
+	// Cache the result, whether it's a hit or a miss (empty string).
+	aliasCache.cache[message] = alias
+	return alias, foundInMap
 }
 
 // applyKnownAliases stores the alias derived from messageAliases back into e.Code.
