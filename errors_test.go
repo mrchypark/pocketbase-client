@@ -684,6 +684,44 @@ func TestRegisterMessageAlias_ThreadSafety(t *testing.T) {
 	wg.Wait()
 }
 
+func TestGetMessageAlias_CacheBehavior(t *testing.T) {
+	// Clear cache for this test
+	aliasCache.mu.Lock()
+	aliasCache.cache = make(map[string]string)
+	aliasCache.mu.Unlock()
+
+	// Test message that doesn't exist
+	nonExistentMessage := "This message does not exist in aliases"
+
+	// First call should return false
+	alias1, found1 := getMessageAlias(nonExistentMessage)
+	if alias1 != "" || found1 {
+		t.Errorf("First call: expected ('', false), got ('%s', %v)", alias1, found1)
+	}
+
+	// Second call should also return false (cached miss)
+	alias2, found2 := getMessageAlias(nonExistentMessage)
+	if alias2 != "" || found2 {
+		t.Errorf("Second call: expected ('', false), got ('%s', %v)", alias2, found2)
+	}
+
+	// Test message that exists
+	existingMessage := "Record not found."
+	expectedAlias := "record_not_found"
+
+	// First call should return true
+	alias3, found3 := getMessageAlias(existingMessage)
+	if alias3 != expectedAlias || !found3 {
+		t.Errorf("First call for existing: expected ('%s', true), got ('%s', %v)", expectedAlias, alias3, found3)
+	}
+
+	// Second call should also return true (cached hit)
+	alias4, found4 := getMessageAlias(existingMessage)
+	if alias4 != expectedAlias || !found4 {
+		t.Errorf("Second call for existing: expected ('%s', true), got ('%s', %v)", expectedAlias, alias4, found4)
+	}
+}
+
 func TestHelperFunctionsWithErrorsIs(t *testing.T) {
 	// Test that helper functions work the same as errors.Is
 	notFoundErr := &Error{Status: 404}
