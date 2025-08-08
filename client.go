@@ -155,10 +155,7 @@ func (c *Client) sendStream(ctx context.Context, method, path string, body io.Re
 		if err != nil {
 			return nil, fmt.Errorf("pocketbase: failed to read response body: %w", err)
 		}
-		if err := ParseAPIError(res, resBody, path); err != nil {
-			return nil, err
-		}
-		return nil, fmt.Errorf("pocketbase: http error %d: %s", res.StatusCode, string(resBody))
+		return nil, ParseAPIError(res, resBody, path)
 	}
 
 	return res.Body, nil
