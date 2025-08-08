@@ -133,7 +133,7 @@ func TestBatchExecuteParsedError(t *testing.T) {
 		responses := []*BatchResponse{
 			{
 				Status: http.StatusBadRequest,
-Body:   json.RawMessage(`{"code":400,"message":"validation failed","data":{"title":{"code":"validation_required","message":"This field is required."}}}`),
+				Body:   json.RawMessage(`{"code":400,"message":"validation failed","data":{"title":{"code":"validation_required","message":"This field is required."}}}`),
 				ParsedError: &Error{
 					Status:  400,
 					Code:    "invalid_request_payload",
