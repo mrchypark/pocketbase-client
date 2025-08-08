@@ -211,12 +211,17 @@ func ParseAPIError(statusCode int, body []byte) error {
 	}
 
 	var wire rawPocketBaseError
-	_ = json.Unmarshal(body, &wire) // tolerate invalid JSON
+err := json.Unmarshal(body, &wire)
 
 	e := &Error{
 		Status:  statusCode,
 		Message: strings.TrimSpace(wire.Message),
 		Data:    wire.Data,
+	}
+
+	// If JSON parsing fails and the message is empty, use the raw body as the message.
+	if err != nil && e.Message == "" {
+		e.Message = string(body)
 	}
 
 	if e.Data == nil {
