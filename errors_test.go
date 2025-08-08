@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"sync"
 	"testing"
 )
@@ -472,26 +473,9 @@ func TestError_ErrorMessage_EdgeCases(t *testing.T) {
 	}
 
 	result := errWithData.Error()
-	if !contains(result, "data=2 field error(s)") {
+	if !strings.Contains(result, "data=2 field error(s)") {
 		t.Errorf("Expected error message to contain field count, got '%s'", result)
 	}
-}
-
-// Helper function for string contains check
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(substr) == 0 ||
-		(len(s) > len(substr) && (s[:len(substr)] == substr ||
-			s[len(s)-len(substr):] == substr ||
-			containsSubstring(s, substr))))
-}
-
-func containsSubstring(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
 }
 
 // Tests for new features
