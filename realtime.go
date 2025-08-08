@@ -76,7 +76,7 @@ func (s *RealtimeService) Subscribe(ctx context.Context, topics []string, callba
 			}
 
 			// Send subscription request using the main client's send method
-			body := map[string]interface{}{"clientId": connectEvent.ClientID, "subscriptions": topics}
+			body := map[string]any{"clientId": connectEvent.ClientID, "subscriptions": topics}
 			if err := s.Client.send(subCtx, http.MethodPost, path, body, nil); err != nil {
 				connectErrChan <- fmt.Errorf("pocketbase: failed to send subscription request: %w", err)
 			} else {

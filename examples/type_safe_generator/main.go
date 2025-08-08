@@ -82,7 +82,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to create type-safe AllTypes record: %v", err)
 	}
-	fmt.Printf("    ✅ Retrieval complete - Name: %s\n", retrieved.Name)
+	fmt.Printf("    ✅ Retrieval complete - Name: %s\n", createdAllTypeRecord.GetString("name"))
 	fmt.Println()
 
 	// Verify created record (using type-safe Getters)

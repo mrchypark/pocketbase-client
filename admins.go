@@ -11,8 +11,8 @@ import (
 type AdminServiceAPI interface {
 	GetList(ctx context.Context, opts *ListOptions) (*ListResult, error)
 	GetOne(ctx context.Context, adminID string) (*Admin, error)
-	Create(ctx context.Context, body interface{}) (*Admin, error)
-	Update(ctx context.Context, adminID string, body interface{}) (*Admin, error)
+	Create(ctx context.Context, body any) (*Admin, error)
+	Update(ctx context.Context, adminID string, body any) (*Admin, error)
 	Delete(ctx context.Context, adminID string) error
 }
 
@@ -50,8 +50,8 @@ func (s *AdminService) GetOne(ctx context.Context, adminID string) (*Admin, erro
 }
 
 // Create creates a new administrator.
-func (s *AdminService) Create(ctx context.Context, body interface{}) (*Admin, error) {
-	path := "/api/admins"
+func (s *AdminService) Create(ctx context.Context, body any) (*Admin, error) {
+	path := "/api/admins/"
 	var adm Admin
 	if err := s.Client.send(ctx, http.MethodPost, path, body, &adm); err != nil {
 		return nil, err
@@ -60,7 +60,7 @@ func (s *AdminService) Create(ctx context.Context, body interface{}) (*Admin, er
 }
 
 // Update modifies administrator information.
-func (s *AdminService) Update(ctx context.Context, adminID string, body interface{}) (*Admin, error) {
+func (s *AdminService) Update(ctx context.Context, adminID string, body any) (*Admin, error) {
 	path := fmt.Sprintf("/api/admins/%s", url.PathEscape(adminID))
 	var adm Admin
 	if err := s.Client.send(ctx, http.MethodPatch, path, body, &adm); err != nil {

@@ -14,7 +14,7 @@ type UserServiceAPI interface {
 	ConfirmPasswordReset(ctx context.Context, collection, token, newPassword, newPasswordConfirm string) error
 	RequestVerification(ctx context.Context, collection, email string) error
 	ConfirmVerification(ctx context.Context, collection, token string) error
-	GetOAuth2Providers(ctx context.Context, collection string) (map[string]interface{}, error)
+	GetOAuth2Providers(ctx context.Context, collection string) (map[string]any, error)
 	AuthWithOAuth2(ctx context.Context, collection, provider, code, verifier, redirect string, createData map[string]any) (*AuthResponse, error)
 	AuthRefresh(ctx context.Context, collection string) (*AuthResponse, error)
 	RequestOTP(ctx context.Context, collection, email string) (map[string]string, error)
@@ -72,9 +72,9 @@ func (s *UserService) ConfirmVerification(ctx context.Context, collection, token
 }
 
 // GetOAuth2Providers retrieves OAuth2 provider information.
-func (s *UserService) GetOAuth2Providers(ctx context.Context, collection string) (map[string]interface{}, error) {
+func (s *UserService) GetOAuth2Providers(ctx context.Context, collection string) (map[string]any, error) {
 	path := fmt.Sprintf("/api/collections/%s/auth-methods", url.PathEscape(collection))
-	var result map[string]interface{}
+	var result map[string]any
 	err := s.Client.send(ctx, http.MethodGet, path, nil, &result)
 	if err != nil {
 		return nil, err
