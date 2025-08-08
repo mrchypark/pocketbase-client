@@ -229,7 +229,7 @@ func NewStreamProcessor() (*StreamProcessor, io.Writer) {
     }, pw
 }
 
-func (sp *StreamProcessor) ProcessRecords(callback func(record map[string]interface{})) error {
+func (sp *StreamProcessor) ProcessRecords(callback func(record map[string]any)) error {
     defer sp.pipe.Close()
     
     for sp.scanner.Scan() {
@@ -238,7 +238,7 @@ func (sp *StreamProcessor) ProcessRecords(callback func(record map[string]interf
             continue
         }
         
-        var record map[string]interface{}
+        var record map[string]any
         if err := json.Unmarshal([]byte(line), &record); err != nil {
             continue // Skip invalid JSON
         }
@@ -254,7 +254,7 @@ func streamAndProcess(client *pb.Client) error {
     
     // Start processing in a goroutine
     go func() {
-        processor.ProcessRecords(func(record map[string]interface{}) {
+        processor.ProcessRecords(func(record map[string]any) {
             fmt.Printf("Processing record: %s\n", record["id"])
             // Process each record as it arrives
         })
@@ -314,7 +314,7 @@ func realtimeStreaming(client *pb.Client) error {
 
 ```go
 // ❌ This will fail
-var result map[string]interface{}
+var result map[string]any
 err := client.SendWithOptions(ctx, "GET", "/path", nil, &result, WithResponseWriter(&buf))
 // Error: "WithResponseWriter and responseData cannot be used together"
 

@@ -23,10 +23,10 @@ type ListResultLazy struct {
 // --- Test helpers for pagination ---
 
 // generateTestRecords creates test records for pagination testing
-func generateTestRecords(count int, prefix string) []map[string]interface{} {
-	records := make([]map[string]interface{}, count)
+func generateTestRecords(count int, prefix string) []map[string]any {
+	records := make([]map[string]any, count)
 	for i := 0; i < count; i++ {
-		records[i] = map[string]interface{}{
+		records[i] = map[string]any{
 			"id":             fmt.Sprintf("%s_%d", prefix, i),
 			"collectionId":   "test_col",
 			"collectionName": "test",
@@ -69,12 +69,12 @@ func createPaginationMockServer(t *testing.T, totalRecords int, pageSize int) (*
 		}
 
 		// Generate records for this page
-		var items []map[string]interface{}
+		var items []map[string]any
 		if startIdx < totalRecords {
 			items = generateTestRecords(endIdx-startIdx, fmt.Sprintf("rec%d", startIdx))
 		}
 
-		response := map[string]interface{}{
+		response := map[string]any{
 			"page":       page,
 			"perPage":    perPage,
 			"totalItems": totalRecords,
@@ -98,7 +98,7 @@ func createErrorMockServer(t *testing.T, successfulRequests int, errorCode int, 
 
 		if requestCount <= successfulRequests {
 			// Return successful response
-			response := map[string]interface{}{
+			response := map[string]any{
 				"page":       requestCount,
 				"perPage":    100,
 				"totalItems": 300, // Set to have 3 pages
@@ -110,9 +110,9 @@ func createErrorMockServer(t *testing.T, successfulRequests int, errorCode int, 
 		} else {
 			// Return error
 			w.WriteHeader(errorCode)
-			_ = json.NewEncoder(w).Encode(APIError{
-				Code:    errorCode,
-				Message: errorMessage,
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"code":    errorCode,
+				"message": errorMessage,
 			})
 		}
 	}))
@@ -144,9 +144,9 @@ func assertRecordsEqual(t *testing.T, expected, actual []*Record) {
 
 // generateBenchListResponse generates large record list JSON for benchmark tests.
 func generateBenchListResponse(numRecords int) []byte {
-	items := make([]map[string]interface{}, numRecords)
+	items := make([]map[string]any, numRecords)
 	for i := 0; i < numRecords; i++ {
-		items[i] = map[string]interface{}{
+		items[i] = map[string]any{
 			"id":             fmt.Sprintf("rec_%d", i),
 			"collectionId":   "posts_col",
 			"collectionName": "posts",
@@ -157,7 +157,7 @@ func generateBenchListResponse(numRecords int) []byte {
 			"view_count":     i * 10,
 		}
 	}
-	response := map[string]interface{}{
+	response := map[string]any{
 		"page":       1,
 		"perPage":    numRecords,
 		"totalItems": numRecords,
@@ -432,7 +432,7 @@ func TestRecordServiceAuthHeader(t *testing.T) {
 func TestRecordServiceNotFound(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
-		_ = json.NewEncoder(w).Encode(APIError{Code: 404, Message: "no"})
+		_ = json.NewEncoder(w).Encode(map[string]any{"code": 404, "message": "no"})
 	}))
 	defer srv.Close()
 
@@ -441,8 +441,8 @@ func TestRecordServiceNotFound(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error")
 	}
-	var apiErr *APIError
-	if !errors.As(err, &apiErr) || apiErr.Code != 404 {
+	var pbErr *Error
+	if !errors.As(err, &pbErr) || pbErr.Status != 404 {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }

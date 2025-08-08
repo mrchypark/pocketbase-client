@@ -176,6 +176,180 @@ results, err := client.Batch.Execute(ctx, []*pocketbase.BatchRequest{
 })
 ```
 
+## 🚨 Error Handling
+
+The client provides comprehensive error handling with type-safe error checking and detailed error information.
+
+### Error Types
+
+All PocketBase API errors are wrapped in a structured `*Error` type:
+
+```go
+type Error struct {
+    Status  int                    // HTTP status code (404, 401, etc.)
+    Code    string                 // Stable alias code ("collection_not_found")
+    Message string                 // Server error message
+    Data    map[string]FieldError  // Field validation errors
+}
+```
+
+### Standard Go Error Patterns
+
+Use Go's standard `errors.Is` and `errors.As` patterns:
+
+```go
+import (
+    "errors"
+    "net/http"
+    pocketbase "github.com/mrchypark/pocketbase-client"
+)
+
+// Check by HTTP status code
+if errors.Is(err, pocketbase.HTTPStatus(http.StatusNotFound)) {
+    fmt.Println("Resource not found")
+}
+
+// Use convenience constants
+if errors.Is(err, pocketbase.StatusNotFound) {
+    fmt.Println("Resource not found")
+}
+
+// Extract detailed error information
+var pbErr *pocketbase.Error
+if errors.As(err, &pbErr) {
+    fmt.Printf("API Error: %d %s (code: %s)\n", 
+        pbErr.Status, pbErr.Message, pbErr.Code)
+}
+```
+
+### Convenience Functions
+
+For common error types, use helper functions:
+
+```go
+if pocketbase.IsNotFoundError(err) {
+    // Handle 404 errors
+}
+
+if pocketbase.IsAuthError(err) {
+    // Handle 401 authentication errors
+}
+
+if pocketbase.IsValidationError(err) {
+    // Handle validation errors with field details
+    fieldErrors := pocketbase.GetFieldErrors(err)
+    for field, fieldErr := range fieldErrors {
+        fmt.Printf("Field %s: %s\n", field, fieldErr.Message)
+    }
+}
+
+if pocketbase.IsForbiddenError(err) {
+    // Handle 403 authorization errors
+}
+
+if pocketbase.IsRateLimitedError(err) {
+    // Handle 429 rate limit errors
+}
+```
+
+### Error Code Checking
+
+Check for specific error conditions using stable alias codes:
+
+```go
+if pocketbase.HasErrorCode(err, "collection_not_found") {
+    // Handle collection not found specifically
+}
+
+if pocketbase.HasErrorCode(err, "record_not_found") {
+    // Handle record not found specifically
+}
+
+// Get error code for logging
+code := pocketbase.GetErrorCode(err)
+if code != "" {
+    log.Printf("PocketBase error code: %s", code)
+}
+```
+
+### HTTP Status Code Checking
+
+Work directly with HTTP status codes:
+
+```go
+// Generic HTTP status checking
+if pocketbase.HasHTTPStatus(err, http.StatusNotFound) {
+    // Handle any 404 error
+}
+
+// Get HTTP status for custom logic
+status := pocketbase.GetHTTPStatus(err)
+if status >= 500 {
+    // Handle server errors
+}
+```
+
+### Complete Error Handling Example
+
+```go
+func handlePocketBaseError(err error) {
+    if err == nil {
+        return
+    }
+
+    // Check for specific error types first
+    switch {
+    case pocketbase.IsNotFoundError(err):
+        log.Println("Resource not found - may need to create it")
+    case pocketbase.IsAuthError(err):
+        log.Println("Authentication failed - check credentials")
+    case pocketbase.IsValidationError(err):
+        log.Println("Validation failed:")
+        fieldErrors := pocketbase.GetFieldErrors(err)
+        for field, fieldErr := range fieldErrors {
+            log.Printf("  %s: %s", field, fieldErr.Message)
+        }
+    case pocketbase.IsForbiddenError(err):
+        log.Println("Access denied - insufficient permissions")
+    case pocketbase.IsRateLimitedError(err):
+        log.Println("Rate limited - slow down requests")
+    default:
+        // Extract detailed error information
+        var pbErr *pocketbase.Error
+        if errors.As(err, &pbErr) {
+            log.Printf("PocketBase API error: %d %s", pbErr.Status, pbErr.Message)
+            if pbErr.Code != "" {
+                log.Printf("Error code: %s", pbErr.Code)
+            }
+        } else {
+            log.Printf("Non-PocketBase error: %v", err)
+        }
+    }
+}
+
+// Usage in your application
+post, err := service.GetOne(ctx, "invalid-id", nil)
+if err != nil {
+    handlePocketBaseError(err)
+    return
+}
+```
+
+### Available Error Codes
+
+Common error codes you can check for:
+
+- `collection_not_found` - Collection doesn't exist
+- `record_not_found` - Record doesn't exist
+- `invalid_auth_token` - Authentication token is invalid
+- `forbidden_generic` - Generic permission denied
+
+- `invalid_request_payload` - Malformed request data
+- `too_many_requests` - Rate limit exceeded
+- `internal_generic` - Server internal error
+
+See the [full list of error codes](./errors.md) for a comprehensive reference.
+
 ## 📖 Examples
 
 Comprehensive examples in the [`examples/`](./examples/) directory:
@@ -185,6 +359,7 @@ Comprehensive examples in the [`examples/`](./examples/) directory:
 - **[`batch`](./examples/batch/)** - Batch operations
 - **[`file_management`](./examples/file_management/)** - File upload/download
 - **[`realtime_subscriptions`](./examples/realtime_subscriptions/)** - Real-time events
+- **[`error_handling`](./examples/error_handling/)** - Comprehensive error handling patterns
 - **[`type_safe_generator`](./examples/type_safe_generator/)** - Code generation demo
 
 ## 🔧 Configuration

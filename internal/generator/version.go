@@ -37,7 +37,7 @@ func DetectPocketBaseVersion(schemas []CollectionSchema) bool {
 // DetectPocketBaseVersionFromRaw detects version from raw JSON data.
 // This is more accurate as it checks the actual JSON structure.
 func DetectPocketBaseVersionFromRaw(data []byte) (bool, error) {
-	var rawSchemas []map[string]interface{}
+	var rawSchemas []map[string]any
 	if err := json.Unmarshal(data, &rawSchemas); err != nil {
 		return false, err
 	}

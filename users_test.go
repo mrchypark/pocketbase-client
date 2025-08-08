@@ -79,7 +79,7 @@ func TestUserServiceGetOAuth2Providers(t *testing.T) {
 		if r.URL.Path != "/api/collections/users/auth-methods" {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{"google": true})
+		_ = json.NewEncoder(w).Encode(map[string]any{"google": true})
 	}))
 	defer srv.Close()
 

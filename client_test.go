@@ -51,9 +51,9 @@ func TestAuthenticateWithPassword(t *testing.T) {
 		if r.URL.Path != "/api/collections/users/auth-with-password" {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
-		resp := map[string]interface{}{
+		resp := map[string]any{
 			"token": token,
-			"record": map[string]interface{}{
+			"record": map[string]any{
 				"id":             "1",
 				"collectionId":   "users",
 				"collectionName": "users",
@@ -81,7 +81,7 @@ func TestAuthenticateWithPassword(t *testing.T) {
 func TestAuthenticateAsAdminBadCredentials(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
-		_ = json.NewEncoder(w).Encode(APIError{Code: 400, Message: "invalid"})
+		_ = json.NewEncoder(w).Encode(map[string]any{"code": 400, "message": "invalid"})
 	}))
 	defer srv.Close()
 	c := NewClient(srv.URL)
@@ -90,18 +90,21 @@ func TestAuthenticateAsAdminBadCredentials(t *testing.T) {
 		t.Fatal("expected error")
 	}
 
-	// CORRECTED: Use errors.As to check for the underlying error type.
-	var apiErr *APIError
-	if !errors.As(err, &apiErr) {
-		t.Fatalf("expected error to wrap *APIError, but it did not (got %T)", err)
+	// Check for the new Error type
+	var pbErr *Error
+	if !errors.As(err, &pbErr) {
+		t.Fatalf("expected error to be *Error, but it was not (got %T)", err)
 	}
-	if apiErr.Code != 400 {
-		t.Fatalf("unexpected code: %d", apiErr.Code)
+	if pbErr.Status != 400 {
+		t.Fatalf("unexpected status: %d", pbErr.Status)
 	}
 
-	// PREFERRED: Use errors.Is to check against our predefined error values.
-	if !errors.Is(err, ErrBadRequest) {
-		t.Fatalf("expected error to be ErrBadRequest, got %v", err)
+	// Check using helper function - for 400 errors, we can check if it's a validation error
+	if !IsValidationError(err) {
+		// If not validation error, check if it's at least a bad request
+		if !pbErr.IsBadRequest() {
+			t.Fatalf("expected error to be a bad request error, got status %d", pbErr.Status)
+		}
 	}
 }
 

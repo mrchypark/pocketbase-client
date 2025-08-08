@@ -10,7 +10,7 @@ import (
 // LogServiceAPI defines the API operations for viewing server logs.
 type LogServiceAPI interface {
 	GetRequestsList(ctx context.Context, opts *ListOptions) (*ListResult, error)
-	GetRequest(ctx context.Context, requestID string) (map[string]interface{}, error)
+	GetRequest(ctx context.Context, requestID string) (map[string]any, error)
 	GetStats(ctx context.Context) (*LogStats, error)
 }
 
@@ -26,17 +26,17 @@ func (s *LogService) GetRequestsList(ctx context.Context, opts *ListOptions) (*L
 	path := buildPathWithQuery("/api/logs/requests", buildQueryString(opts))
 	var res ListResult
 	if err := s.Client.send(ctx, http.MethodGet, path, nil, &res); err != nil {
-		return nil, wrapError("fetch", "logs list", err)
+		return nil, err
 	}
 	return &res, nil
 }
 
 // GetRequest retrieves detailed information for a specific request log.
-func (s *LogService) GetRequest(ctx context.Context, requestID string) (map[string]interface{}, error) {
+func (s *LogService) GetRequest(ctx context.Context, requestID string) (map[string]any, error) {
 	path := fmt.Sprintf("/api/logs/requests/%s", url.PathEscape(requestID))
-	var result map[string]interface{}
+	var result map[string]any
 	if err := s.Client.send(ctx, http.MethodGet, path, nil, &result); err != nil {
-		return nil, wrapError("fetch", "log request", err)
+		return nil, err
 	}
 	return result, nil
 }
@@ -58,7 +58,7 @@ type LogStats struct {
 func (s *LogService) GetStats(ctx context.Context) (*LogStats, error) {
 	var stats LogStats
 	if err := s.Client.send(ctx, http.MethodGet, "/api/logs/stats", nil, &stats); err != nil {
-		return nil, wrapError("fetch", "log stats", err)
+		return nil, err
 	}
 	return &stats, nil
 }

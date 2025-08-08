@@ -32,7 +32,7 @@ func TestLogServiceGetRequest(t *testing.T) {
 		if r.URL.Path != "/api/logs/requests/1" {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
-		if err := json.NewEncoder(w).Encode(map[string]interface{}{"id": "1"}); err != nil {
+		if err := json.NewEncoder(w).Encode(map[string]any{"id": "1"}); err != nil {
 			t.Fatalf("encode error: %v", err)
 		}
 	}))

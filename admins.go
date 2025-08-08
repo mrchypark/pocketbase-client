@@ -11,8 +11,8 @@ import (
 type AdminServiceAPI interface {
 	GetList(ctx context.Context, opts *ListOptions) (*ListResult, error)
 	GetOne(ctx context.Context, adminID string) (*Admin, error)
-	Create(ctx context.Context, body interface{}) (*Admin, error)
-	Update(ctx context.Context, adminID string, body interface{}) (*Admin, error)
+	Create(ctx context.Context, body any) (*Admin, error)
+	Update(ctx context.Context, adminID string, body any) (*Admin, error)
 	Delete(ctx context.Context, adminID string) error
 }
 
@@ -28,7 +28,7 @@ func (s *AdminService) GetList(ctx context.Context, opts *ListOptions) (*ListRes
 	path := buildPathWithQuery("/api/admins", buildQueryString(opts))
 	var res ListResult
 	if err := s.Client.send(ctx, http.MethodGet, path, nil, &res); err != nil {
-		return nil, wrapError("fetch", "admins list", err)
+		return nil, err
 	}
 	return &res, nil
 }
@@ -38,26 +38,26 @@ func (s *AdminService) GetOne(ctx context.Context, adminID string) (*Admin, erro
 	path := fmt.Sprintf("/api/admins/%s", url.PathEscape(adminID))
 	var adm Admin
 	if err := s.Client.send(ctx, http.MethodGet, path, nil, &adm); err != nil {
-		return nil, wrapError("fetch", "admin", err)
+		return nil, err
 	}
 	return &adm, nil
 }
 
 // Create creates a new administrator.
-func (s *AdminService) Create(ctx context.Context, body interface{}) (*Admin, error) {
+func (s *AdminService) Create(ctx context.Context, body any) (*Admin, error) {
 	var adm Admin
 	if err := s.Client.send(ctx, http.MethodPost, "/api/admins", body, &adm); err != nil {
-		return nil, wrapError("create", "admin", err)
+		return nil, err
 	}
 	return &adm, nil
 }
 
 // Update modifies administrator information.
-func (s *AdminService) Update(ctx context.Context, adminID string, body interface{}) (*Admin, error) {
+func (s *AdminService) Update(ctx context.Context, adminID string, body any) (*Admin, error) {
 	path := fmt.Sprintf("/api/admins/%s", url.PathEscape(adminID))
 	var adm Admin
 	if err := s.Client.send(ctx, http.MethodPatch, path, body, &adm); err != nil {
-		return nil, wrapError("update", "admin", err)
+		return nil, err
 	}
 	return &adm, nil
 }
@@ -66,7 +66,7 @@ func (s *AdminService) Update(ctx context.Context, adminID string, body interfac
 func (s *AdminService) Delete(ctx context.Context, adminID string) error {
 	path := fmt.Sprintf("/api/admins/%s", url.PathEscape(adminID))
 	if err := s.Client.send(ctx, http.MethodDelete, path, nil, nil); err != nil {
-		return wrapError("delete", "admin", err)
+		return err
 	}
 	return nil
 }

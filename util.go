@@ -1,7 +1,6 @@
 package pocketbase
 
 import (
-	"fmt"
 	"net/url"
 	"strconv"
 )
@@ -53,9 +52,4 @@ func buildPathWithQuery(basePath string, queryString string) string {
 		return basePath
 	}
 	return basePath + "?" + queryString
-}
-
-// wrapError provides consistent error wrapping.
-func wrapError(operation, entity string, err error) error {
-	return fmt.Errorf("pocketbase: %s %s: %w", operation, entity, err)
 }
