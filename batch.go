@@ -58,11 +58,11 @@ func (s *BatchService) Execute(ctx context.Context, requests []*BatchRequest) ([
 				StatusCode: rawRes.Status,
 				Header:     make(http.Header),
 			}
-            if apiErr := ParseAPIError(mockResp, rawRes.Body, "batch"); apiErr != nil {
-                if pbErr, ok := apiErr.(*Error); ok {
-                    res.ParsedError = pbErr
-                }
-            }
+			if apiErr := ParseAPIError(mockResp, rawRes.Body, "batch"); apiErr != nil {
+				if pbErr, ok := apiErr.(*Error); ok {
+					res.ParsedError = pbErr
+				}
+			}
 			res.Body = rawRes.Body
 		} else {
 			if err := json.Unmarshal(rawRes.Body, &res.Body); err != nil {
