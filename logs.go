@@ -10,7 +10,7 @@ import (
 // LogServiceAPI defines the API operations for viewing server logs.
 type LogServiceAPI interface {
 	GetRequestsList(ctx context.Context, opts *ListOptions) (*ListResult, error)
-	GetRequest(ctx context.Context, requestID string) (map[string]interface{}, error)
+	GetRequest(ctx context.Context, requestID string) (map[string]any, error)
 	GetStats(ctx context.Context) (*LogStats, error)
 }
 
@@ -32,9 +32,9 @@ func (s *LogService) GetRequestsList(ctx context.Context, opts *ListOptions) (*L
 }
 
 // GetRequest retrieves detailed information for a specific request log.
-func (s *LogService) GetRequest(ctx context.Context, requestID string) (map[string]interface{}, error) {
+func (s *LogService) GetRequest(ctx context.Context, requestID string) (map[string]any, error) {
 	path := fmt.Sprintf("/api/logs/requests/%s", url.PathEscape(requestID))
-	var result map[string]interface{}
+	var result map[string]any
 	if err := s.Client.send(ctx, http.MethodGet, path, nil, &result); err != nil {
 		return nil, err
 	}

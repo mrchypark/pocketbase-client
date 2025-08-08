@@ -131,8 +131,12 @@ func TestParseAPIError_Direct(t *testing.T) {
 	if pbErr.Message != "Record not found." {
 		t.Errorf("Expected message 'Record not found.', got '%s'", pbErr.Message)
 	}
-	if pbErr.Endpoint != "/api/collections/users/records/123" {
-		t.Errorf("Expected endpoint '/api/collections/users/records/123', got '%s'", pbErr.Endpoint)
+	if pbErr.Debug == nil || pbErr.Debug.Endpoint != "/api/collections/users/records/123" {
+		endpoint := ""
+		if pbErr.Debug != nil {
+			endpoint = pbErr.Debug.Endpoint
+		}
+		t.Errorf("Expected endpoint '/api/collections/users/records/123', got '%s'", endpoint)
 	}
 
 	// Test field errors
@@ -499,10 +503,12 @@ func TestError_ErrorMessage_EdgeCases(t *testing.T) {
 
 	// Test error with endpoint
 	err := &Error{
-		Status:   404,
-		Code:     "not_found",
-		Message:  "Not Found",
-		Endpoint: "/api/test",
+		Status:  404,
+		Code:    "not_found",
+		Message: "Not Found",
+		Debug: &DebugInfo{
+			Endpoint: "/api/test",
+		},
 	}
 
 	expected := "pocketbase: 404 Not Found code=not_found msg=Not Found at=/api/test"
@@ -633,7 +639,9 @@ func TestErrorEquals(t *testing.T) {
 		Message: "Not found",
 		Data:    map[string]FieldError{"field": {Code: "invalid", Message: "Invalid"}},
 		// Different debugging fields should be ignored
-		Endpoint: "/different/endpoint",
+		Debug: &DebugInfo{
+			Endpoint: "/different/endpoint",
+		},
 	}
 
 	if !err1.Equals(err2) {
@@ -761,7 +769,7 @@ func TestError_LogFields(t *testing.T) {
 	}
 
 	fields = err.LogFields()
-	expectedFields := map[string]interface{}{
+	expectedFields := map[string]any{
 		"status":  404,
 		"code":    "not_found",
 		"message": "Resource not found",
@@ -775,9 +783,11 @@ func TestError_LogFields(t *testing.T) {
 
 	// Test error with endpoint and field errors
 	errWithData := &Error{
-		Status:   400,
-		Message:  "Validation failed",
-		Endpoint: "/api/test",
+		Status:  400,
+		Message: "Validation failed",
+		Debug: &DebugInfo{
+			Endpoint: "/api/test",
+		},
 		Data: map[string]FieldError{
 			"email": {Code: "required", Message: "Email is required"},
 			"name":  {Code: "invalid", Message: "Name is invalid"},

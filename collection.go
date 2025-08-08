@@ -20,27 +20,27 @@ type CollectionServiceAPI interface {
 // Collection represents the schema of a PocketBase collection.
 type Collection struct {
 	BaseModel
-	Name       string                 `json:"name"`
-	Type       string                 `json:"type"`
-	System     bool                   `json:"system"`
-	Schema     []SchemaField          `json:"schema"`
-	ListRule   string                 `json:"listRule"`
-	ViewRule   string                 `json:"viewRule"`
-	CreateRule string                 `json:"createRule"`
-	UpdateRule string                 `json:"updateRule"`
-	DeleteRule string                 `json:"deleteRule"`
-	Indexes    string                 `json:"indexes"`
-	Options    map[string]interface{} `json:"options"`
+	Name       string         `json:"name"`
+	Type       string         `json:"type"`
+	System     bool           `json:"system"`
+	Schema     []SchemaField  `json:"schema"`
+	ListRule   string         `json:"listRule"`
+	ViewRule   string         `json:"viewRule"`
+	CreateRule string         `json:"createRule"`
+	UpdateRule string         `json:"updateRule"`
+	DeleteRule string         `json:"deleteRule"`
+	Indexes    string         `json:"indexes"`
+	Options    map[string]any `json:"options"`
 }
 
 // SchemaField defines a collection field.
 type SchemaField struct {
-	Name        string                 `json:"name"`
-	Type        string                 `json:"type"`
-	Required    bool                   `json:"required"`
-	Presentable bool                   `json:"presentable"`
-	Unique      bool                   `json:"unique"`
-	Options     map[string]interface{} `json:"options"`
+	Name        string         `json:"name"`
+	Type        string         `json:"type"`
+	Required    bool           `json:"required"`
+	Presentable bool           `json:"presentable"`
+	Unique      bool           `json:"unique"`
+	Options     map[string]any `json:"options"`
 }
 
 // CollectionListResult contains the result of a collection list query.

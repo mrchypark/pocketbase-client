@@ -15,7 +15,7 @@ func TestClientHealthCheck(t *testing.T) {
 		if r.URL.Path != "/api/health" {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{"code": "200"})
+		_ = json.NewEncoder(w).Encode(map[string]any{"code": "200"})
 	}))
 	defer srv.Close()
 

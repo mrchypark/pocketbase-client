@@ -23,10 +23,10 @@ type ListResultLazy struct {
 // --- Test helpers for pagination ---
 
 // generateTestRecords creates test records for pagination testing
-func generateTestRecords(count int, prefix string) []map[string]interface{} {
-	records := make([]map[string]interface{}, count)
+func generateTestRecords(count int, prefix string) []map[string]any {
+	records := make([]map[string]any, count)
 	for i := 0; i < count; i++ {
-		records[i] = map[string]interface{}{
+		records[i] = map[string]any{
 			"id":             fmt.Sprintf("%s_%d", prefix, i),
 			"collectionId":   "test_col",
 			"collectionName": "test",
@@ -69,12 +69,12 @@ func createPaginationMockServer(t *testing.T, totalRecords int, pageSize int) (*
 		}
 
 		// Generate records for this page
-		var items []map[string]interface{}
+		var items []map[string]any
 		if startIdx < totalRecords {
 			items = generateTestRecords(endIdx-startIdx, fmt.Sprintf("rec%d", startIdx))
 		}
 
-		response := map[string]interface{}{
+		response := map[string]any{
 			"page":       page,
 			"perPage":    perPage,
 			"totalItems": totalRecords,
@@ -98,7 +98,7 @@ func createErrorMockServer(t *testing.T, successfulRequests int, errorCode int, 
 
 		if requestCount <= successfulRequests {
 			// Return successful response
-			response := map[string]interface{}{
+			response := map[string]any{
 				"page":       requestCount,
 				"perPage":    100,
 				"totalItems": 300, // Set to have 3 pages
@@ -144,9 +144,9 @@ func assertRecordsEqual(t *testing.T, expected, actual []*Record) {
 
 // generateBenchListResponse generates large record list JSON for benchmark tests.
 func generateBenchListResponse(numRecords int) []byte {
-	items := make([]map[string]interface{}, numRecords)
+	items := make([]map[string]any, numRecords)
 	for i := 0; i < numRecords; i++ {
-		items[i] = map[string]interface{}{
+		items[i] = map[string]any{
 			"id":             fmt.Sprintf("rec_%d", i),
 			"collectionId":   "posts_col",
 			"collectionName": "posts",
@@ -157,7 +157,7 @@ func generateBenchListResponse(numRecords int) []byte {
 			"view_count":     i * 10,
 		}
 	}
-	response := map[string]interface{}{
+	response := map[string]any{
 		"page":       1,
 		"perPage":    numRecords,
 		"totalItems": numRecords,

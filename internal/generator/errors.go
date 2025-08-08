@@ -9,7 +9,7 @@ import (
 type GenerationError struct {
 	Type    ErrorType
 	Message string
-	Details map[string]interface{}
+	Details map[string]any
 	Cause   error
 }
 
@@ -81,24 +81,24 @@ func NewGenerationError(errorType ErrorType, message string, cause error) *Gener
 	return &GenerationError{
 		Type:    errorType,
 		Message: message,
-		Details: make(map[string]interface{}),
+		Details: make(map[string]any),
 		Cause:   cause,
 	}
 }
 
 // WithDetail adds a detail to the error.
-func (e *GenerationError) WithDetail(key string, value interface{}) *GenerationError {
+func (e *GenerationError) WithDetail(key string, value any) *GenerationError {
 	if e.Details == nil {
-		e.Details = make(map[string]interface{})
+		e.Details = make(map[string]any)
 	}
 	e.Details[key] = value
 	return e
 }
 
 // WithDetails adds multiple details to the error.
-func (e *GenerationError) WithDetails(details map[string]interface{}) *GenerationError {
+func (e *GenerationError) WithDetails(details map[string]any) *GenerationError {
 	if e.Details == nil {
-		e.Details = make(map[string]interface{})
+		e.Details = make(map[string]any)
 	}
 	for k, v := range details {
 		e.Details[k] = v
@@ -113,12 +113,12 @@ type ValidationError struct {
 
 // ValidationIssue represents a single validation issue.
 type ValidationIssue struct {
-	Type       string      `json:"type"`
-	Message    string      `json:"message"`
-	Path       string      `json:"path,omitempty"`
-	Suggestion string      `json:"suggestion,omitempty"`
-	Severity   Severity    `json:"severity"`
-	Context    interface{} `json:"context,omitempty"`
+	Type       string   `json:"type"`
+	Message    string   `json:"message"`
+	Path       string   `json:"path,omitempty"`
+	Suggestion string   `json:"suggestion,omitempty"`
+	Severity   Severity `json:"severity"`
+	Context    any      `json:"context,omitempty"`
 }
 
 // Severity represents the severity level of a validation issue.
@@ -244,10 +244,10 @@ func NewValidationError() *ValidationError {
 
 // RecoveryInfo provides information for error recovery.
 type RecoveryInfo struct {
-	CanRecover    bool                   `json:"can_recover"`
-	Suggestions   []string               `json:"suggestions"`
-	PartialResult interface{}            `json:"partial_result,omitempty"`
-	Context       map[string]interface{} `json:"context,omitempty"`
+	CanRecover    bool           `json:"can_recover"`
+	Suggestions   []string       `json:"suggestions"`
+	PartialResult any            `json:"partial_result,omitempty"`
+	Context       map[string]any `json:"context,omitempty"`
 }
 
 // RecoverableError represents an error that might be recoverable.
@@ -304,7 +304,7 @@ func WrapFileError(err error, filePath string, operation string) *GenerationErro
 }
 
 // CreateConfigError creates a configuration error.
-func CreateConfigError(message string, details map[string]interface{}) *GenerationError {
+func CreateConfigError(message string, details map[string]any) *GenerationError {
 	return NewGenerationError(ErrorTypeInvalidConfig, message, nil).
 		WithDetails(details)
 }

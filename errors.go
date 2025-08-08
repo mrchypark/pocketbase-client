@@ -13,6 +13,7 @@ package pocketbase
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
 	"strings"
 	"sync"
@@ -61,9 +62,20 @@ type FieldError struct {
 	Message string `json:"message"`
 }
 
+// DebugInfo contains debugging information for PocketBase API errors.
+// This information is only populated when debug mode is enabled.
+type DebugInfo struct {
+	// Endpoint records the API endpoint used, for debugging.
+	Endpoint string
+	// RawHeaders captures the original response headers.
+	RawHeaders http.Header
+	// RawBody captures the original response body bytes.
+	RawBody []byte
+}
+
 // Error represents a normalized PocketBase API error. It contains the HTTP status,
 // a generic message, optional per-field errors, and derived metadata such as the
-// error alias code and debugging information.
+// error alias code and optional debugging information.
 type Error struct {
 	// Status is the HTTP status code.
 	Status int `json:"status"`
@@ -74,13 +86,8 @@ type Error struct {
 	// Data contains per-field validation errors, keyed by field name.
 	Data map[string]FieldError `json:"data"`
 
-	// Debugging fields (not serialized)
-	// Endpoint optionally records the API endpoint used, for debugging.
-	Endpoint string `json:"-"`
-	// RawHeaders captures the original response headers.
-	RawHeaders http.Header `json:"-"`
-	// RawBody captures the original response body bytes.
-	RawBody []byte `json:"-"`
+	// Debug contains optional debugging information (not serialized)
+	Debug *DebugInfo `json:"-"`
 }
 
 // =============================================================================
@@ -118,8 +125,8 @@ func (e *Error) Error() string {
 	}
 
 	// Add endpoint if present (debugging)
-	if e.Endpoint != "" {
-		parts = append(parts, "at="+e.Endpoint)
+	if e.Debug != nil && e.Debug.Endpoint != "" {
+		parts = append(parts, "at="+e.Debug.Endpoint)
 	}
 
 	return strings.Join(parts, " ")
@@ -227,12 +234,14 @@ func ParseAPIError(statusCode int, headers http.Header, body []byte, endpoint st
 	_ = json.Unmarshal(body, &wire) // tolerate invalid JSON
 
 	e := &Error{
-		Status:     statusCode,
-		Message:    strings.TrimSpace(wire.Message),
-		Data:       wire.Data,
-		Endpoint:   endpoint,
-		RawHeaders: headers.Clone(),
-		RawBody:    append([]byte(nil), body...), // defensive copy
+		Status:  statusCode,
+		Message: strings.TrimSpace(wire.Message),
+		Data:    wire.Data,
+		Debug: &DebugInfo{
+			Endpoint:   endpoint,
+			RawHeaders: headers.Clone(),
+			RawBody:    append([]byte(nil), body...), // defensive copy
+		},
 	}
 
 	if e.Data == nil {
@@ -394,10 +403,8 @@ func initializeMessageAliases() {
 		"Something went wrong while processing your request.": "internal_generic",
 	}
 
-	// Copy all aliases to messageAliases map
-	for message, alias := range aliases {
-		messageAliases[message] = alias
-	}
+	// Copy all aliases to messageAliases map using maps.Copy (Go 1.21+)
+	maps.Copy(messageAliases, aliases)
 }
 
 // Initialize message aliases at package load time
@@ -550,17 +557,18 @@ func (e *Error) Equals(other *Error) bool {
 		}
 	}
 
+	// Debug fields are intentionally ignored for equality comparison
 	return true
 }
 
 // LogFields returns structured fields for logging purposes.
 // This provides a logging-friendly representation of the error.
-func (e *Error) LogFields() map[string]interface{} {
+func (e *Error) LogFields() map[string]any {
 	if e == nil {
-		return map[string]interface{}{"error": "nil"}
+		return map[string]any{"error": "nil"}
 	}
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"status":  e.Status,
 		"message": e.Message,
 	}
@@ -569,8 +577,8 @@ func (e *Error) LogFields() map[string]interface{} {
 		fields["code"] = e.Code
 	}
 
-	if e.Endpoint != "" {
-		fields["endpoint"] = e.Endpoint
+	if e.Debug != nil && e.Debug.Endpoint != "" {
+		fields["endpoint"] = e.Debug.Endpoint
 	}
 
 	if len(e.Data) > 0 {

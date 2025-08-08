@@ -59,7 +59,7 @@ func explainTypeSafety() {
 	fmt.Println("  Type safety means validating data types at compile time.")
 	fmt.Println()
 	fmt.Println("  🔴 Old approach (not type-safe):")
-	fmt.Println(`    record := map[string]interface{}{
+	fmt.Println(`    record := map[string]any{
         "text_field": "value",
         "number_field": "123", // 🚨 String assigned to number field
         "wrong_field": "value", // 🚨 Non-existent field

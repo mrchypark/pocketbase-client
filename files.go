@@ -154,7 +154,7 @@ func (s *FileService) Delete(ctx context.Context, collection, recordID, fieldNam
 		return record, nil // Field doesn't exist, nothing to delete
 	}
 
-	var updatedValue interface{}
+	var updatedValue any
 
 	// Handle different field types (single file vs multiple files)
 	switch v := currentValue.(type) {
@@ -165,7 +165,7 @@ func (s *FileService) Delete(ctx context.Context, collection, recordID, fieldNam
 		} else {
 			return record, nil // File not found in this field
 		}
-	case []interface{}:
+	case []any:
 		// Multiple files field
 		var newFiles []string
 		found := false

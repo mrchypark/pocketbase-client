@@ -115,7 +115,7 @@ func downloadFileExample(ctx context.Context, client *pocketbase.Client) error {
 	switch v := imageField.(type) {
 	case string:
 		filename = v
-	case []interface{}:
+	case []any:
 		if len(v) > 0 {
 			if str, ok := v[0].(string); ok {
 				filename = str
@@ -209,7 +209,7 @@ func deleteFileExample(ctx context.Context, client *pocketbase.Client) error {
 	switch v := imageField.(type) {
 	case string:
 		filename = v
-	case []interface{}:
+	case []any:
 		if len(v) > 0 {
 			if str, ok := v[0].(string); ok {
 				filename = str

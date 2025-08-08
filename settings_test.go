@@ -15,7 +15,7 @@ func TestSettingServiceGetAll(t *testing.T) {
 		if r.URL.Path != "/api/settings" {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
-		if err := json.NewEncoder(w).Encode(map[string]interface{}{"appName": "pb"}); err != nil {
+		if err := json.NewEncoder(w).Encode(map[string]any{"appName": "pb"}); err != nil {
 			t.Fatalf("encode error: %v", err)
 		}
 	}))
@@ -36,14 +36,14 @@ func TestSettingServiceUpdate(t *testing.T) {
 		if r.Method != http.MethodPatch {
 			t.Fatalf("unexpected method: %s", r.Method)
 		}
-		if err := json.NewEncoder(w).Encode(map[string]interface{}{"appName": "pb"}); err != nil {
+		if err := json.NewEncoder(w).Encode(map[string]any{"appName": "pb"}); err != nil {
 			t.Fatalf("encode error: %v", err)
 		}
 	}))
 	defer srv.Close()
 
 	c := NewClient(srv.URL)
-	m, err := c.Settings.Update(context.Background(), map[string]interface{}{"appName": "pb"})
+	m, err := c.Settings.Update(context.Background(), map[string]any{"appName": "pb"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

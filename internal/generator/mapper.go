@@ -63,12 +63,12 @@ func MapPbTypeToGoType(field FieldSchema, omitEmpty bool) (string, string, strin
 			}
 		}
 	default:
-		goType = "interface{}"
+		goType = "any"
 		getterMethod = "Get"
 	}
 
-	// Finally decide whether to apply pointer type (exclude if already pointer, slice, json.RawMessage, or interface{})
-	if omitEmpty && !strings.HasPrefix(goType, "[]") && goType != "json.RawMessage" && goType != "interface{}" && !strings.HasPrefix(goType, "*") {
+	// Finally decide whether to apply pointer type (exclude if already pointer, slice, json.RawMessage, or any)
+	if omitEmpty && !strings.HasPrefix(goType, "[]") && goType != "json.RawMessage" && goType != "any" && !strings.HasPrefix(goType, "*") {
 		goType = "*" + goType
 	}
 
