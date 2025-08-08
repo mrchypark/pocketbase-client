@@ -383,7 +383,7 @@ Common error codes you can check for:
 - `record_not_found` - Record doesn't exist
 - `invalid_auth_token` - Authentication token is invalid
 - `forbidden_generic` - Generic permission denied
-- `validation_failed` - Request validation failed
+
 - `invalid_request_payload` - Malformed request data
 - `too_many_requests` - Rate limit exceeded
 - `internal_generic` - Server internal error

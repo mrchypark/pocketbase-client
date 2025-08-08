@@ -521,7 +521,6 @@ func NewTestError(status int, code, message string) *Error {
 func NewTestValidationError(fieldErrors map[string]FieldError) *Error {
 	return &Error{
 		Status:  http.StatusBadRequest,
-		Code:    "validation_failed",
 		Message: "Validation failed",
 		Data:    fieldErrors,
 	}
