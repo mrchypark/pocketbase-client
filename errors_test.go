@@ -68,7 +68,7 @@ func TestError_IsAuth(t *testing.T) {
 func TestParseAPIError(t *testing.T) {
 	// Test successful response (no error)
 	successResp := &http.Response{StatusCode: 200}
-	err := ParseAPIError(successResp, []byte("{}"), "/test")
+	err := ParseAPIErrorFromResponse(successResp, []byte("{}"), "/test")
 	if err != nil {
 		t.Errorf("Expected no error for successful response, got %v", err)
 	}
@@ -80,7 +80,7 @@ func TestParseAPIError(t *testing.T) {
 	}
 	body := []byte(`{"code": 404, "message": "Record not found."}`)
 
-	err = ParseAPIError(errorResp, body, "/api/collections/users/records/123")
+	err = ParseAPIErrorFromResponse(errorResp, body, "/api/collections/users/records/123")
 	if err == nil {
 		t.Fatal("Expected error for 404 response")
 	}
@@ -100,6 +100,54 @@ func TestParseAPIError(t *testing.T) {
 
 	if !pbErr.IsNotFound() {
 		t.Error("Expected error to be a not found error")
+	}
+}
+
+func TestParseAPIError_Direct(t *testing.T) {
+	// Test successful response (no error)
+	err := ParseAPIError(200, make(http.Header), []byte("{}"), "/test")
+	if err != nil {
+		t.Errorf("Expected no error for successful response, got %v", err)
+	}
+
+	// Test error response
+	headers := make(http.Header)
+	headers.Set("Content-Type", "application/json")
+	body := []byte(`{"code": 404, "message": "Record not found.", "data": {"id": {"code": "validation_required", "message": "Missing required value."}}}`)
+
+	err = ParseAPIError(404, headers, body, "/api/collections/users/records/123")
+	if err == nil {
+		t.Fatal("Expected error for 404 response")
+	}
+
+	var pbErr *Error
+	if !errors.As(err, &pbErr) {
+		t.Fatalf("Expected *Error, got %T", err)
+	}
+
+	if pbErr.Status != 404 {
+		t.Errorf("Expected status 404, got %d", pbErr.Status)
+	}
+	if pbErr.Message != "Record not found." {
+		t.Errorf("Expected message 'Record not found.', got '%s'", pbErr.Message)
+	}
+	if pbErr.Endpoint != "/api/collections/users/records/123" {
+		t.Errorf("Expected endpoint '/api/collections/users/records/123', got '%s'", pbErr.Endpoint)
+	}
+
+	// Test field errors
+	if len(pbErr.Data) != 1 {
+		t.Errorf("Expected 1 field error, got %d", len(pbErr.Data))
+	}
+	if fieldErr, ok := pbErr.Data["id"]; ok {
+		if fieldErr.Code != "validation_required" {
+			t.Errorf("Expected field error code 'validation_required', got '%s'", fieldErr.Code)
+		}
+		if fieldErr.Message != "Missing required value." {
+			t.Errorf("Expected field error message 'Missing required value.', got '%s'", fieldErr.Message)
+		}
+	} else {
+		t.Error("Expected field error for 'id' field")
 	}
 }
 
@@ -396,7 +444,7 @@ func TestGetErrorCode(t *testing.T) {
 
 func TestParseAPIError_EdgeCases(t *testing.T) {
 	// Test with nil response
-	err := ParseAPIError(nil, []byte("{}"), "/test")
+	err := ParseAPIErrorFromResponse(nil, []byte("{}"), "/test")
 	if err == nil {
 		t.Error("Expected error for nil response")
 	}
@@ -408,7 +456,7 @@ func TestParseAPIError_EdgeCases(t *testing.T) {
 	}
 	invalidJSON := []byte(`{"invalid": json}`)
 
-	err = ParseAPIError(resp, invalidJSON, "/test")
+	err = ParseAPIErrorFromResponse(resp, invalidJSON, "/test")
 	if err == nil {
 		t.Error("Expected error for invalid JSON")
 	}

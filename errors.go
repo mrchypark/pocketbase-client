@@ -132,8 +132,8 @@ func (e *Error) Unwrap() error { return nil }
 // Is implements the errors.Is semantics for *Error.
 //
 // It allows callers to use standard library errors.Is to compare PocketBase
-// errors by their HTTP status or Code alias. Supported target types:
-//   - *Error: matches by Status (if non-zero) or Code (if non-empty)
+// errors by their HTTP status and Code alias. Supported target types:
+//   - *Error: matches by Status (if non-zero) and Code (if non-empty) - all specified fields must match
 //   - HTTPStatus: matches by HTTP status code
 //
 // Other fields such as Message, Data, Endpoint, RawHeaders and RawBody are
@@ -145,14 +145,20 @@ func (e *Error) Is(target error) bool {
 
 	switch t := target.(type) {
 	case *Error:
-		// Match by HTTP status if target specifies one
-		if t.Status != 0 && e.Status == t.Status {
-			return true
+		// An empty target error shouldn't match anything.
+		if t.Status == 0 && t.Code == "" {
+			return false
 		}
-		// Match by alias code if target specifies one
-		if t.Code != "" && e.Code == t.Code {
-			return true
+		// If target specifies a status, it must match.
+		if t.Status != 0 && e.Status != t.Status {
+			return false
 		}
+		// If target specifies a code, it must match.
+		if t.Code != "" && e.Code != t.Code {
+			return false
+		}
+		// All specified fields in the target matched.
+		return true
 	case HTTPStatus:
 		// Match by HTTP status code
 		return e.Status == int(t)
@@ -206,21 +212,15 @@ func (e *Error) IsBadRequest() bool {
 // rawPocketBaseError matches the JSON structure returned by the PocketBase API.
 // It is used internally to decode error bodies.
 type rawPocketBaseError struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
-	Data    map[string]struct {
-		Code    string `json:"code"`
-		Message string `json:"message"`
-	} `json:"data"`
+	Code    int                   `json:"code"`
+	Message string                `json:"message"`
+	Data    map[string]FieldError `json:"data"`
 }
 
 // ParseAPIError converts an HTTP response and body into an *Error. If the response
 // status code is < 400, nil is returned.
-func ParseAPIError(resp *http.Response, body []byte, endpoint string) error {
-	if resp == nil {
-		return errors.New("pocketbase: nil http.Response")
-	}
-	if resp.StatusCode < 400 {
+func ParseAPIError(statusCode int, headers http.Header, body []byte, endpoint string) error {
+	if statusCode < 400 {
 		return nil
 	}
 
@@ -228,22 +228,30 @@ func ParseAPIError(resp *http.Response, body []byte, endpoint string) error {
 	_ = json.Unmarshal(body, &wire) // tolerate invalid JSON
 
 	e := &Error{
-		Status:     resp.StatusCode,
+		Status:     statusCode,
 		Message:    strings.TrimSpace(wire.Message),
-		Data:       make(map[string]FieldError, len(wire.Data)), // pre-allocate
+		Data:       wire.Data,
 		Endpoint:   endpoint,
-		RawHeaders: resp.Header.Clone(),
+		RawHeaders: headers.Clone(),
 		RawBody:    append([]byte(nil), body...), // defensive copy
 	}
 
-	// Convert field errors
-	for k, v := range wire.Data {
-		e.Data[k] = FieldError{Code: v.Code, Message: v.Message}
+	if e.Data == nil {
+		e.Data = make(map[string]FieldError)
 	}
 
 	// Apply message alias mapping
 	applyKnownAliases(e)
 	return e
+}
+
+// ParseAPIErrorFromResponse is a convenience wrapper around ParseAPIError that accepts
+// an *http.Response. This maintains backward compatibility with existing code.
+func ParseAPIErrorFromResponse(resp *http.Response, body []byte, endpoint string) error {
+	if resp == nil {
+		return errors.New("pocketbase: nil http.Response")
+	}
+	return ParseAPIError(resp.StatusCode, resp.Header, body, endpoint)
 }
 
 // =============================================================================
