@@ -75,7 +75,7 @@ func TestBatchExecutePartialFailure(t *testing.T) {
 		responses := []*BatchResponse{
 			{
 				Status: http.StatusBadRequest,
-				Body:   json.RawMessage(`{"code":400,"message":"invalid","data":{"title":"required"}}`),
+				Body:   json.RawMessage("{\"code\":400,\"message\":\"invalid\",\"data\":{\"title\":{\"code\":\"validation_required\",\"message\":\"The title is required.\"}}}"),
 				ParsedError: &Error{
 					Status:  400,
 					Code:    "invalid_request_payload",
