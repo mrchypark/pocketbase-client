@@ -494,7 +494,7 @@ func containsSubstring(s, substr string) bool {
 	return false
 }
 
-// 새로운 기능들에 대한 테스트
+// Tests for new features
 
 func TestHTTPStatus(t *testing.T) {
 	// Test HTTPStatus Error method
