@@ -131,13 +131,6 @@ func TestParseAPIError_Direct(t *testing.T) {
 	if pbErr.Message != "Record not found." {
 		t.Errorf("Expected message 'Record not found.', got '%s'", pbErr.Message)
 	}
-	if pbErr.Debug == nil || pbErr.Debug.Endpoint != "/api/collections/users/records/123" {
-		endpoint := ""
-		if pbErr.Debug != nil {
-			endpoint = pbErr.Debug.Endpoint
-		}
-		t.Errorf("Expected endpoint '/api/collections/users/records/123', got '%s'", endpoint)
-	}
 
 	// Test field errors
 	if len(pbErr.Data) != 1 {
@@ -501,17 +494,14 @@ func TestError_ErrorMessage_EdgeCases(t *testing.T) {
 		t.Errorf("Expected '<nil>' for nil error, got '%s'", nilErr.Error())
 	}
 
-	// Test error with endpoint
+	// Test basic error without endpoint
 	err := &Error{
 		Status:  404,
 		Code:    "not_found",
 		Message: "Not Found",
-		Debug: &DebugInfo{
-			Endpoint: "/api/test",
-		},
 	}
 
-	expected := "pocketbase: 404 Not Found code=not_found msg=Not Found at=/api/test"
+	expected := "pocketbase: 404 Not Found code=not_found msg=Not Found"
 	if err.Error() != expected {
 		t.Errorf("Expected '%s', got '%s'", expected, err.Error())
 	}
@@ -638,10 +628,6 @@ func TestErrorEquals(t *testing.T) {
 		Code:    "not_found",
 		Message: "Not found",
 		Data:    map[string]FieldError{"field": {Code: "invalid", Message: "Invalid"}},
-		// Different debugging fields should be ignored
-		Debug: &DebugInfo{
-			Endpoint: "/different/endpoint",
-		},
 	}
 
 	if !err1.Equals(err2) {
@@ -781,13 +767,10 @@ func TestError_LogFields(t *testing.T) {
 		}
 	}
 
-	// Test error with endpoint and field errors
+	// Test error with field errors
 	errWithData := &Error{
 		Status:  400,
 		Message: "Validation failed",
-		Debug: &DebugInfo{
-			Endpoint: "/api/test",
-		},
 		Data: map[string]FieldError{
 			"email": {Code: "required", Message: "Email is required"},
 			"name":  {Code: "invalid", Message: "Name is invalid"},
@@ -800,9 +783,6 @@ func TestError_LogFields(t *testing.T) {
 	}
 	if fields["message"] != "Validation failed" {
 		t.Errorf("Expected message 'Validation failed', got %v", fields["message"])
-	}
-	if fields["endpoint"] != "/api/test" {
-		t.Errorf("Expected endpoint '/api/test', got %v", fields["endpoint"])
 	}
 	if fields["field_errors"] != 2 {
 		t.Errorf("Expected field_errors 2, got %v", fields["field_errors"])
@@ -817,9 +797,6 @@ func TestError_LogFields(t *testing.T) {
 	fields = simpleErr.LogFields()
 	if _, hasCode := fields["code"]; hasCode {
 		t.Error("Expected no code field for error without code")
-	}
-	if _, hasEndpoint := fields["endpoint"]; hasEndpoint {
-		t.Error("Expected no endpoint field for error without endpoint")
 	}
 	if _, hasFieldErrors := fields["field_errors"]; hasFieldErrors {
 		t.Error("Expected no field_errors field for error without field errors")
