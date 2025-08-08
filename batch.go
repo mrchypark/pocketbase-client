@@ -53,15 +53,8 @@ func (s *BatchService) Execute(ctx context.Context, requests []*BatchRequest) ([
 	for i, rawRes := range rawResponses {
 		res := &BatchResponse{Status: rawRes.Status}
 		if rawRes.Status >= http.StatusBadRequest {
-			// Create a mock response for ParseAPIError
-			mockResp := &http.Response{
-				StatusCode: rawRes.Status,
-				Header:     make(http.Header),
-			}
-			if apiErr := ParseAPIError(mockResp, rawRes.Body, "batch"); apiErr != nil {
-				if pbErr, ok := apiErr.(*Error); ok {
-					res.ParsedError = pbErr
-				}
+			if apiErr := ParseAPIError(rawRes.Status, make(http.Header), rawRes.Body, "batch"); apiErr != nil {
+				res.ParsedError = apiErr.(*Error)
 			}
 			res.Body = rawRes.Body
 		} else {
