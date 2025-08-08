@@ -380,7 +380,7 @@ if err != nil {
 Common error codes you can check for:
 
 - `collection_not_found` - Collection doesn't exist
-- `record_not_found` - Record doesn't exist  
+- `record_not_found` - Record doesn't exist
 - `invalid_auth_token` - Authentication token is invalid
 - `forbidden_generic` - Generic permission denied
 - `validation_failed` - Request validation failed
