@@ -72,7 +72,7 @@
 
 500 Internal Server Error
 	•	Something went wrong while processing your request.
-(panic, db errer etc)
+(panic, db error etc)
 
 ⸻
 
