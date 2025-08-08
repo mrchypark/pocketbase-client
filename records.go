@@ -61,7 +61,6 @@ func GetListAs[T any](ctx context.Context, client *Client, collection string, op
 	if err := client.send(ctx, http.MethodGet, path, nil, &result); err != nil {
 		return nil, err
 	}
-
 	return &result, nil
 }
 
@@ -106,8 +105,7 @@ func GetOneAs[T any](ctx context.Context, client *Client, collection, recordID s
 	if err := client.send(ctx, "GET", path, nil, &result); err != nil {
 		return nil, err
 	}
-
-	return &result, nil
+	return &rec, nil
 }
 
 // Create creates a new record in the specified collection.
@@ -157,8 +155,7 @@ func CreateAs[T any](ctx context.Context, s *RecordService, collection string, b
 	if err := s.Client.send(ctx, http.MethodPost, path, body, &result); err != nil {
 		return nil, fmt.Errorf("pocketbase: create typed record: %w", err)
 	}
-
-	return &result, nil
+	return &rec, nil
 }
 
 // Update updates an existing record in the specified collection.
@@ -211,8 +208,7 @@ func UpdateAs[T any](ctx context.Context, s *RecordService, collection, recordID
 	if err := s.Client.send(ctx, http.MethodPatch, path, body, &result); err != nil {
 		return nil, fmt.Errorf("pocketbase: update typed record: %w", err)
 	}
-
-	return &result, nil
+	return &rec, nil
 }
 
 // Delete deletes a record from the specified collection.

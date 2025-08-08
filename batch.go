@@ -2,7 +2,6 @@ package pocketbase
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 
 	"github.com/goccy/go-json"
@@ -35,7 +34,7 @@ type BatchResponse struct {
 	Body   any `json:"body"`
 
 	// ParsedError contains structured error information from a failed response.
-	ParsedError *APIError `json:"-"`
+	ParsedError *Error `json:"-"`
 }
 
 // Execute sends the given requests to /api/batch.
@@ -47,16 +46,22 @@ func (s *BatchService) Execute(ctx context.Context, requests []*BatchRequest) ([
 
 	var rawResponses []*rawBatchResponse
 	if err := s.client.send(ctx, http.MethodPost, "/api/batch", map[string]any{"requests": requests}, &rawResponses); err != nil {
-		return nil, fmt.Errorf("pocketbase: execute batch: %w", err)
+		return nil, err
 	}
 
 	responses := make([]*BatchResponse, len(rawResponses))
 	for i, rawRes := range rawResponses {
 		res := &BatchResponse{Status: rawRes.Status}
 		if rawRes.Status >= http.StatusBadRequest {
-			var apiErr APIError
-			if err := json.Unmarshal(rawRes.Body, &apiErr); err == nil {
-				res.ParsedError = &apiErr
+			// Create a mock response for ParseAPIError
+			mockResp := &http.Response{
+				StatusCode: rawRes.Status,
+				Header:     make(http.Header),
+			}
+			if err := ParseAPIError(mockResp, rawRes.Body, "batch"); err != nil {
+				if pbErr, ok := err.(*Error); ok {
+					res.ParsedError = pbErr
+				}
 			}
 			res.Body = rawRes.Body
 		} else {

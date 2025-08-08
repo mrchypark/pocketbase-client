@@ -110,9 +110,9 @@ func createErrorMockServer(t *testing.T, successfulRequests int, errorCode int, 
 		} else {
 			// Return error
 			w.WriteHeader(errorCode)
-			_ = json.NewEncoder(w).Encode(APIError{
-				Code:    errorCode,
-				Message: errorMessage,
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"code":    errorCode,
+				"message": errorMessage,
 			})
 		}
 	}))
@@ -424,7 +424,7 @@ func TestRecordServiceAuthHeader(t *testing.T) {
 func TestRecordServiceNotFound(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
-		_ = json.NewEncoder(w).Encode(APIError{Code: 404, Message: "no"})
+		_ = json.NewEncoder(w).Encode(map[string]any{"code": 404, "message": "no"})
 	}))
 	defer srv.Close()
 
@@ -433,8 +433,8 @@ func TestRecordServiceNotFound(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error")
 	}
-	var apiErr *APIError
-	if !errors.As(err, &apiErr) || apiErr.Code != 404 {
+	var pbErr *Error
+	if !errors.As(err, &pbErr) || pbErr.Status != 404 {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }

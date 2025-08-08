@@ -156,11 +156,10 @@ func (c *Client) sendStream(ctx context.Context, method, path string, body io.Re
 		if err != nil {
 			return nil, fmt.Errorf("pocketbase: failed to read response body: %w", err)
 		}
-		apiErr := &APIError{}
-		if err := json.Unmarshal(resBody, apiErr); err != nil {
-			return nil, fmt.Errorf("pocketbase: http error %d: %s", res.StatusCode, string(resBody))
+		if err := ParseAPIError(res, resBody, path); err != nil {
+			return nil, err
 		}
-		return nil, apiErr
+		return nil, fmt.Errorf("pocketbase: http error %d: %s", res.StatusCode, string(resBody))
 	}
 
 	return res.Body, nil
@@ -205,13 +204,8 @@ func (c *Client) do(ctx context.Context, method, path string, body io.Reader, co
 			return fmt.Errorf("pocketbase: failed to read error response body: %w", err)
 		}
 
-		// Core logic: parse the APIError and wrap it with our new function.
-		apiErr := &APIError{}
-		if err := json.Unmarshal(resBody, apiErr); err != nil {
-			// If JSON parsing fails, map the error based on the HTTP status code.
-			return mapAndWrapError(nil, res.StatusCode, string(resBody))
-		}
-		return mapAndWrapError(apiErr, res.StatusCode, "")
+		// Parse error using new error system
+		return ParseAPIError(res, resBody, path)
 	}
 
 	// The success response handling logic
@@ -326,63 +320,4 @@ func copyWithFlush(dst io.Writer, src io.Reader) (int64, error) {
 		}
 	}
 	return total, nil
-}
-
-// mapAndWrapError translates an API error into a predefined client error,
-// wrapping the original APIError for detailed inspection.
-func mapAndWrapError(apiErr *APIError, statusCode int, rawBody string) error {
-	var baseErr error
-
-	if apiErr == nil {
-		// If APIError parsing failed, determine a base error from the status code.
-		switch statusCode {
-		case http.StatusNotFound:
-			baseErr = ErrNotFound
-		case http.StatusUnauthorized:
-			baseErr = ErrUnauthorized
-		case http.StatusForbidden:
-			baseErr = ErrForbidden
-		default:
-			baseErr = ErrUnknown
-		}
-		// Create a new APIError containing the raw response body for context.
-		apiErr = &APIError{Code: statusCode, Message: http.StatusText(statusCode), Data: map[string]interface{}{"raw_body": rawBody}}
-	} else {
-		// Determine the base error from the APIError message content.
-		msg := strings.ToLower(apiErr.Message)
-		switch {
-		case strings.Contains(msg, "not found"):
-			baseErr = ErrNotFound
-		case strings.Contains(msg, "unauthorized"), strings.Contains(msg, "requires a valid auth record"):
-			baseErr = ErrUnauthorized
-		case strings.Contains(msg, "not allowed"):
-			baseErr = ErrForbidden
-		case strings.Contains(msg, "invalid email or password"), strings.Contains(msg, "invalid credentials"):
-			baseErr = ErrInvalidCredentials
-		case strings.Contains(msg, "auth record not found"):
-			baseErr = ErrUserNotFound
-		case strings.Contains(msg, "record is not verified"):
-			baseErr = ErrUserNotVerified
-		case strings.Contains(msg, "token is invalid or has expired"):
-			baseErr = ErrTokenInvalidOrExpired
-		case strings.Contains(msg, "failed to load the submitted data"):
-			baseErr = ErrRecordInvalidData
-		case strings.Contains(msg, "file is too large"):
-			baseErr = ErrFileTooLarge
-		case strings.Contains(msg, "file type is not allowed"):
-			baseErr = ErrInvalidFileType
-		default:
-			if apiErr.Code == http.StatusBadRequest {
-				baseErr = ErrBadRequest
-			} else {
-				baseErr = ErrUnknown
-			}
-		}
-	}
-
-	// CORRECTED: Return our new custom error type.
-	return &ClientError{
-		BaseErr:     baseErr,
-		OriginalErr: apiErr,
-	}
 }

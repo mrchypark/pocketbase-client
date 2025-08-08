@@ -31,7 +31,7 @@ func (s *LogService) GetRequestsList(ctx context.Context, opts *ListOptions) (*L
 	}
 	var res ListResult
 	if err := s.Client.send(ctx, http.MethodGet, path, nil, &res); err != nil {
-		return nil, fmt.Errorf("pocketbase: fetch logs list: %w", err)
+		return nil, err
 	}
 	return &res, nil
 }
@@ -41,7 +41,7 @@ func (s *LogService) GetRequest(ctx context.Context, requestID string) (map[stri
 	path := fmt.Sprintf("/api/logs/requests/%s", url.PathEscape(requestID))
 	var result map[string]interface{}
 	if err := s.Client.send(ctx, http.MethodGet, path, nil, &result); err != nil {
-		return nil, fmt.Errorf("pocketbase: fetch log request: %w", err)
+		return nil, err
 	}
 	return result, nil
 }
@@ -61,10 +61,9 @@ type LogStats struct {
 
 // GetStats retrieves request log statistics.
 func (s *LogService) GetStats(ctx context.Context) (*LogStats, error) {
-	path := "/api/logs/stats"
 	var stats LogStats
-	if err := s.Client.send(ctx, http.MethodGet, path, nil, &stats); err != nil {
-		return nil, fmt.Errorf("pocketbase: fetch log stats: %w", err)
+	if err := s.Client.send(ctx, http.MethodGet, "/api/logs/stats", nil, &stats); err != nil {
+		return nil, err
 	}
 	return &stats, nil
 }
