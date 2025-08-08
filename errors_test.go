@@ -231,7 +231,7 @@ func TestErrorIs_ByCode(t *testing.T) {
 	}
 }
 
-// 추가 테스트들
+// Additional tests
 
 func TestError_AllMethods(t *testing.T) {
 	tests := []struct {
