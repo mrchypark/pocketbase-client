@@ -331,23 +331,18 @@ func handlePocketBaseError(err error) {
     switch {
     case pocketbase.IsNotFoundError(err):
         log.Println("Resource not found - may need to create it")
-        
     case pocketbase.IsAuthError(err):
         log.Println("Authentication failed - check credentials")
-        
     case pocketbase.IsValidationError(err):
         log.Println("Validation failed:")
         fieldErrors := pocketbase.GetFieldErrors(err)
         for field, fieldErr := range fieldErrors {
             log.Printf("  %s: %s", field, fieldErr.Message)
         }
-        
     case pocketbase.IsForbiddenError(err):
         log.Println("Access denied - insufficient permissions")
-        
     case pocketbase.IsRateLimitedError(err):
         log.Println("Rate limited - slow down requests")
-        
     default:
         // Extract detailed error information
         var pbErr *pocketbase.Error
