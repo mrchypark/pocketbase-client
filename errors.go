@@ -63,20 +63,9 @@ type FieldError struct {
 	Message string `json:"message"`
 }
 
-// DebugInfo contains debugging information for PocketBase API errors.
-// This information is only populated when debug mode is enabled.
-type DebugInfo struct {
-	// Endpoint records the API endpoint used, for debugging.
-	Endpoint string
-	// RawHeaders captures the original response headers.
-	RawHeaders http.Header
-	// RawBody captures the original response body bytes.
-	RawBody []byte
-}
-
 // Error represents a normalized PocketBase API error. It contains the HTTP status,
 // a generic message, optional per-field errors, and derived metadata such as the
-// error alias code and optional debugging information.
+// error alias code.
 type Error struct {
 	// Status is the HTTP status code.
 	Status int `json:"status"`
@@ -86,9 +75,6 @@ type Error struct {
 	Message string `json:"message"`
 	// Data contains per-field validation errors, keyed by field name.
 	Data map[string]FieldError `json:"data"`
-
-	// Debug contains optional debugging information (not serialized)
-	Debug *DebugInfo `json:"-"`
 }
 
 // =============================================================================
@@ -125,11 +111,6 @@ func (e *Error) Error() string {
 		parts = append(parts, fmt.Sprintf("data=%d field error(s)", len(e.Data)))
 	}
 
-	// Add endpoint if present (debugging)
-	if e.Debug != nil && e.Debug.Endpoint != "" {
-		parts = append(parts, "at="+e.Debug.Endpoint)
-	}
-
 	return strings.Join(parts, " ")
 }
 
@@ -143,8 +124,7 @@ func (e *Error) Unwrap() error { return nil }
 //   - *Error: matches by Status (if non-zero) and Code (if non-empty) - all specified fields must match
 //   - HTTPStatus: matches by HTTP status code
 //
-// Other fields such as Message, Data, Endpoint, RawHeaders and RawBody are
-// ignored during comparisons.
+// Other fields such as Message and Data are ignored during comparisons.
 func (e *Error) Is(target error) bool {
 	if e == nil {
 		return target == nil
@@ -238,11 +218,6 @@ func ParseAPIError(statusCode int, headers http.Header, body []byte, endpoint st
 		Status:  statusCode,
 		Message: strings.TrimSpace(wire.Message),
 		Data:    wire.Data,
-		Debug: &DebugInfo{
-			Endpoint:   endpoint,
-			RawHeaders: headers.Clone(),
-			RawBody:    append([]byte(nil), body...), // defensive copy
-		},
 	}
 
 	if e.Data == nil {
@@ -558,7 +533,6 @@ func (e *Error) Equals(other *Error) bool {
 		}
 	}
 
-	// Debug fields are intentionally ignored for equality comparison
 	return true
 }
 
@@ -576,10 +550,6 @@ func (e *Error) LogFields() map[string]any {
 
 	if e.Code != "" {
 		fields["code"] = e.Code
-	}
-
-	if e.Debug != nil && e.Debug.Endpoint != "" {
-		fields["endpoint"] = e.Debug.Endpoint
 	}
 
 	if len(e.Data) > 0 {
