@@ -424,17 +424,17 @@ func TestParseAPIError_EdgeCases(t *testing.T) {
 }
 
 func TestRegisterMessageAlias(t *testing.T) {
-	// 기존 alias 백업
+	// Backup original alias
 	originalAlias := messageAliases["Test message"]
 
-	// 새 alias 등록
+	// Register new alias
 	RegisterMessageAlias("Test message", "test_alias")
 
 	if messageAliases["Test message"] != "test_alias" {
 		t.Error("RegisterMessageAlias did not set the alias correctly")
 	}
 
-	// 정리 (원래 상태로 복원)
+	// Cleanup (restore original state)
 	if originalAlias == "" {
 		delete(messageAliases, "Test message")
 	} else {
