@@ -49,7 +49,7 @@ func (s *RecordService[T]) GetList(ctx context.Context, opts *ListOptions) (*Lis
 
 	var result ListResultAs[T]
 	if err := s.client.send(ctx, http.MethodGet, path, nil, &result); err != nil {
-		return nil, wrapError("fetch", "typed records list", err)
+		return nil, err
 	}
 
 	return &result, nil
@@ -135,7 +135,7 @@ func (s *RecordService[T]) GetOne(ctx context.Context, recordID string, opts *Ge
 
 	var result T
 	if err := s.client.send(ctx, http.MethodGet, path, nil, &result); err != nil {
-		return nil, wrapError("fetch", "typed record", err)
+		return nil, err
 	}
 
 	return &result, nil
@@ -157,7 +157,7 @@ func (s *RecordService[T]) CreateWithOptions(ctx context.Context, model *T, opts
 
 	var result T
 	if err := s.client.send(ctx, http.MethodPost, path, model, &result); err != nil {
-		return nil, wrapError("create", "typed record", err)
+		return nil, err
 	}
 
 	return &result, nil
@@ -179,7 +179,7 @@ func (s *RecordService[T]) UpdateWithOptions(ctx context.Context, recordID strin
 
 	var result T
 	if err := s.client.send(ctx, http.MethodPatch, path, model, &result); err != nil {
-		return nil, wrapError("update", "typed record", err)
+		return nil, err
 	}
 
 	return &result, nil
@@ -189,7 +189,7 @@ func (s *RecordService[T]) UpdateWithOptions(ctx context.Context, recordID strin
 func (s *RecordService[T]) Delete(ctx context.Context, recordID string) error {
 	path := fmt.Sprintf("/api/collections/%s/records/%s", url.PathEscape(s.collectionName), url.PathEscape(recordID))
 	if err := s.client.send(ctx, http.MethodDelete, path, nil, nil); err != nil {
-		return wrapError("delete", "typed record", err)
+		return err
 	}
 	return nil
 }

@@ -76,11 +76,12 @@ func TestBatchExecutePartialFailure(t *testing.T) {
 			{
 				Status: http.StatusBadRequest,
 				Body:   json.RawMessage(`{"code":400,"message":"invalid","data":{"title":"required"}}`),
-				ParsedError: &APIError{
-					Code:    400,
+				ParsedError: &Error{
+					Status:  400,
+					Code:    "invalid_request_payload",
 					Message: "invalid",
-					Data: map[string]any{
-						"title": "required",
+					Data: map[string]FieldError{
+						"title": {Code: "required", Message: "required"},
 					},
 				},
 			},
@@ -103,7 +104,7 @@ func TestBatchExecutePartialFailure(t *testing.T) {
 	if res[0].Status != http.StatusBadRequest {
 		t.Fatalf("unexpected status: %d", res[0].Status)
 	}
-	if res[0].ParsedError == nil || res[0].ParsedError.Code != 400 {
+	if res[0].ParsedError == nil || res[0].ParsedError.Status != 400 {
 		t.Fatalf("expected parsed error: %+v", res[0])
 	}
 	if res[1].Status != http.StatusNoContent {
@@ -115,7 +116,7 @@ func TestBatchExecutePartialFailure(t *testing.T) {
 func TestBatchExecuteFailure(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
-		_ = json.NewEncoder(w).Encode(APIError{Code: 401, Message: "unauthorized"})
+		_ = json.NewEncoder(w).Encode(map[string]any{"code": 401, "message": "unauthorized"})
 	}))
 	defer srv.Close()
 
@@ -133,10 +134,13 @@ func TestBatchExecuteParsedError(t *testing.T) {
 			{
 				Status: http.StatusBadRequest,
 				Body:   json.RawMessage(`{"code":400,"message":"validation failed","data":{"title":"required"}}`),
-				ParsedError: &APIError{
-					Code:    400,
+				ParsedError: &Error{
+					Status:  400,
+					Code:    "invalid_request_payload",
 					Message: "validation failed",
-					Data:    map[string]any{"title": "required"},
+					Data: map[string]FieldError{
+						"title": {Code: "required", Message: "required"},
+					},
 				},
 			},
 		}
@@ -156,8 +160,8 @@ func TestBatchExecuteParsedError(t *testing.T) {
 	if res[0].ParsedError == nil {
 		t.Fatalf("expected parsed error: %+v", res[0])
 	}
-	if res[0].ParsedError.Code != 400 {
-		t.Fatalf("unexpected code: %d", res[0].ParsedError.Code)
+	if res[0].ParsedError.Status != 400 {
+		t.Fatalf("unexpected status: %d", res[0].ParsedError.Status)
 	}
 }
 
@@ -165,7 +169,7 @@ func TestBatchExecuteParsedError(t *testing.T) {
 func TestBatchExecuteForbidden(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusForbidden)
-		_ = json.NewEncoder(w).Encode(APIError{Code: 403, Message: "Batch requests are not allowed."})
+		_ = json.NewEncoder(w).Encode(map[string]any{"code": 403, "message": "Batch requests are not allowed."})
 	}))
 	defer srv.Close()
 
@@ -174,15 +178,15 @@ func TestBatchExecuteForbidden(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error")
 	}
-	apiErr := &APIError{}
-	if !errors.As(err, &apiErr) {
-		t.Fatalf("expected APIError, got %T", err)
+	pbErr := &Error{}
+	if !errors.As(err, &pbErr) {
+		t.Fatalf("expected Error, got %T", err)
 	}
-	if apiErr.Code != 403 {
-		t.Fatalf("expected status code 403, got %d", apiErr.Code)
+	if pbErr.Status != 403 {
+		t.Fatalf("expected status code 403, got %d", pbErr.Status)
 	}
-	if apiErr.Message != "Batch requests are not allowed." {
-		t.Fatalf("expected message 'Batch requests are not allowed.', got %s", apiErr.Message)
+	if pbErr.Message != "Batch requests are not allowed." {
+		t.Fatalf("expected message 'Batch requests are not allowed.', got %s", pbErr.Message)
 	}
 }
 

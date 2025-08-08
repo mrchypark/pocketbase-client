@@ -64,7 +64,7 @@ func (s *CollectionService) GetList(ctx context.Context, opts *ListOptions) (*Co
 	path := buildPathWithQuery("/api/collections", buildQueryString(opts))
 	var res CollectionListResult
 	if err := s.Client.send(ctx, http.MethodGet, path, nil, &res); err != nil {
-		return nil, wrapError("fetch", "collections list", err)
+		return nil, err
 	}
 	return &res, nil
 }
@@ -74,7 +74,7 @@ func (s *CollectionService) GetOne(ctx context.Context, idOrName string) (*Colle
 	path := fmt.Sprintf("/api/collections/%s", url.PathEscape(idOrName))
 	var col Collection
 	if err := s.Client.send(ctx, http.MethodGet, path, nil, &col); err != nil {
-		return nil, wrapError("fetch", "collection", err)
+		return nil, err
 	}
 	return &col, nil
 }
@@ -83,7 +83,7 @@ func (s *CollectionService) GetOne(ctx context.Context, idOrName string) (*Colle
 func (s *CollectionService) Create(ctx context.Context, col *Collection) (*Collection, error) {
 	var res Collection
 	if err := s.Client.send(ctx, http.MethodPost, "/api/collections", col, &res); err != nil {
-		return nil, wrapError("create", "collection", err)
+		return nil, err
 	}
 	return &res, nil
 }
@@ -93,7 +93,7 @@ func (s *CollectionService) Update(ctx context.Context, idOrName string, col *Co
 	path := fmt.Sprintf("/api/collections/%s", url.PathEscape(idOrName))
 	var res Collection
 	if err := s.Client.send(ctx, http.MethodPatch, path, col, &res); err != nil {
-		return nil, wrapError("update", "collection", err)
+		return nil, err
 	}
 	return &res, nil
 }
@@ -102,7 +102,7 @@ func (s *CollectionService) Update(ctx context.Context, idOrName string, col *Co
 func (s *CollectionService) Delete(ctx context.Context, idOrName string) error {
 	path := fmt.Sprintf("/api/collections/%s", url.PathEscape(idOrName))
 	if err := s.Client.send(ctx, http.MethodDelete, path, nil, nil); err != nil {
-		return wrapError("delete", "collection", err)
+		return err
 	}
 	return nil
 }
@@ -116,7 +116,7 @@ func (s *CollectionService) Import(ctx context.Context, cols []*Collection, dele
 	path := buildPathWithQuery("/api/collections/import", q.Encode())
 	var res []*Collection
 	if err := s.Client.send(ctx, http.MethodPut, path, cols, &res); err != nil {
-		return nil, wrapError("import", "collections", err)
+		return nil, err
 	}
 	return res, nil
 }

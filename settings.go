@@ -26,7 +26,7 @@ var _ SettingServiceAPI = (*SettingService)(nil)
 func (s *SettingService) GetAll(ctx context.Context) (map[string]interface{}, error) {
 	var result map[string]interface{}
 	if err := s.Client.send(ctx, http.MethodGet, "/api/settings", nil, &result); err != nil {
-		return nil, wrapError("get", "settings", err)
+		return nil, err
 	}
 	return result, nil
 }
@@ -35,7 +35,7 @@ func (s *SettingService) GetAll(ctx context.Context) (map[string]interface{}, er
 func (s *SettingService) Update(ctx context.Context, body interface{}) (map[string]interface{}, error) {
 	var result map[string]interface{}
 	if err := s.Client.send(ctx, http.MethodPatch, "/api/settings", body, &result); err != nil {
-		return nil, wrapError("update", "settings", err)
+		return nil, err
 	}
 	return result, nil
 }
@@ -44,7 +44,7 @@ func (s *SettingService) Update(ctx context.Context, body interface{}) (map[stri
 func (s *SettingService) TestS3(ctx context.Context) (map[string]interface{}, error) {
 	var result map[string]interface{}
 	if err := s.Client.send(ctx, http.MethodPost, "/api/settings/test/s3", nil, &result); err != nil {
-		return nil, wrapError("test", "s3", err)
+		return nil, err
 	}
 	return result, nil
 }
@@ -54,7 +54,7 @@ func (s *SettingService) TestEmail(ctx context.Context, toEmail string) (map[str
 	body := map[string]string{"email": toEmail}
 	var result map[string]interface{}
 	if err := s.Client.send(ctx, http.MethodPost, "/api/settings/test/email", body, &result); err != nil {
-		return nil, wrapError("test", "email", err)
+		return nil, err
 	}
 	return result, nil
 }
@@ -63,7 +63,7 @@ func (s *SettingService) TestEmail(ctx context.Context, toEmail string) (map[str
 func (s *SettingService) GenerateAppleClientSecret(ctx context.Context, params interface{}) (map[string]interface{}, error) {
 	var result map[string]interface{}
 	if err := s.Client.send(ctx, http.MethodPost, "/api/settings/apple/generate-client-secret", params, &result); err != nil {
-		return nil, wrapError("generate", "apple client secret", err)
+		return nil, err
 	}
 	return result, nil
 }
