@@ -155,7 +155,7 @@ func (c *Client) sendStream(ctx context.Context, method, path string, body io.Re
 		if err != nil {
 			return nil, fmt.Errorf("pocketbase: failed to read response body: %w", err)
 		}
-		return nil, ParseAPIErrorFromResponse(res, resBody, path)
+		return nil, ParseAPIErrorFromResponse(res, resBody)
 	}
 
 	return res.Body, nil
@@ -201,7 +201,7 @@ func (c *Client) do(ctx context.Context, method, path string, body io.Reader, co
 		}
 
 		// Parse error using new error system
-		return ParseAPIErrorFromResponse(res, resBody, path)
+		return ParseAPIErrorFromResponse(res, resBody)
 	}
 
 	// The success response handling logic

@@ -205,7 +205,7 @@ type rawPocketBaseError struct {
 
 // ParseAPIError converts an HTTP response and body into an *Error. If the response
 // status code is < 400, nil is returned.
-func ParseAPIError(statusCode int, headers http.Header, body []byte, endpoint string) error {
+func ParseAPIError(statusCode int, body []byte) error {
 	if statusCode < 400 {
 		return nil
 	}
@@ -230,11 +230,11 @@ func ParseAPIError(statusCode int, headers http.Header, body []byte, endpoint st
 
 // ParseAPIErrorFromResponse is a convenience wrapper around ParseAPIError that accepts
 // an *http.Response. This maintains backward compatibility with existing code.
-func ParseAPIErrorFromResponse(resp *http.Response, body []byte, endpoint string) error {
+func ParseAPIErrorFromResponse(resp *http.Response, body []byte) error {
 	if resp == nil {
 		return errors.New("pocketbase: nil http.Response")
 	}
-	return ParseAPIError(resp.StatusCode, resp.Header, body, endpoint)
+	return ParseAPIError(resp.StatusCode, body)
 }
 
 // =============================================================================
