@@ -314,6 +314,7 @@ func initializeMessageAliases() {
 	aliases := map[string]string{
 		// Authentication errors
 		"Missing or invalid authentication.":             "invalid_authentication",
+		"Failed to authenticate.":                        "authentication_failed",
 		"Missing or invalid authentication token.":       "invalid_auth_token",
 		"Missing or invalid admin authorization token.":  "invalid_admin_auth_token",
 		"Missing or invalid record authorization token.": "invalid_record_auth_token",
