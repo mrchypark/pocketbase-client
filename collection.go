@@ -88,7 +88,7 @@ func (s *CollectionService) GetOne(ctx context.Context, idOrName string) (*Colle
 func (s *CollectionService) Create(ctx context.Context, col *Collection) (*Collection, error) {
 	path := "/api/collections"
 	var res Collection
-	if err := s.Client.send(ctx, http.MethodPost, "/api/collections", col, &res); err != nil {
+	if err := s.Client.send(ctx, http.MethodPost, path, col, &res); err != nil {
 		return nil, err
 	}
 	return &res, nil

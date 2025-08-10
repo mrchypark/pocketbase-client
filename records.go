@@ -86,28 +86,6 @@ func (s *RecordService) GetOne(ctx context.Context, collection, recordID string,
 	return &rec, nil
 }
 
-func GetOneAs[T any](ctx context.Context, client *Client, collection, recordID string, opts *GetOneOptions) (*T, error) {
-	// API 경로 구성
-	path := fmt.Sprintf("/api/collections/%s/records/%s", url.PathEscape(collection), url.PathEscape(recordID))
-	q := url.Values{}
-	if opts != nil {
-		if opts.Expand != "" {
-			q.Set("expand", opts.Expand)
-		}
-		if opts.Fields != "" {
-			q.Set("fields", opts.Fields)
-		}
-	}
-	if qs := q.Encode(); qs != "" {
-		path += "?" + qs
-	}
-	var result T
-	if err := client.send(ctx, "GET", path, nil, &result); err != nil {
-		return nil, err
-	}
-	return &rec, nil
-}
-
 // Create creates a new record in the specified collection.
 func (s *RecordService) Create(ctx context.Context, collection string, body any) (*Record, error) {
 	return s.CreateWithOptions(ctx, collection, body, nil)
@@ -141,23 +119,6 @@ func (s *RecordService) CreateWithOptions(ctx context.Context, collection string
 	return &rec, nil
 }
 
-func CreateAs[T any](ctx context.Context, s *RecordService, collection string, body *T, opts *WriteOptions) (*T, error) {
-	path := fmt.Sprintf("/api/collections/%s/records", url.PathEscape(collection))
-	q := url.Values{}
-	if opts != nil {
-		opts.apply(q)
-	}
-	if qs := q.Encode(); qs != "" {
-		path += "?" + qs
-	}
-
-	var result T
-	if err := s.Client.send(ctx, http.MethodPost, path, body, &result); err != nil {
-		return nil, fmt.Errorf("pocketbase: create typed record: %w", err)
-	}
-	return &rec, nil
-}
-
 // Update updates an existing record in the specified collection.
 func (s *RecordService) Update(ctx context.Context, collection, recordID string, body any) (*Record, error) {
 	return s.UpdateWithOptions(ctx, collection, recordID, body, nil)
@@ -187,26 +148,6 @@ func (s *RecordService) UpdateWithOptions(ctx context.Context, collection, recor
 	var rec Record
 	if err := s.Client.send(ctx, http.MethodPatch, path, requestBody, &rec); err != nil {
 		return nil, fmt.Errorf("pocketbase: update record: %w", err)
-	}
-	return &rec, nil
-}
-
-// UpdateAs updates an existing record with data from a typed struct `T`.
-// It returns the updated record as a new instance of `*T`.
-// This is the recommended way to update records for maximum type safety.
-func UpdateAs[T any](ctx context.Context, s *RecordService, collection, recordID string, body *T, opts *WriteOptions) (*T, error) {
-	path := fmt.Sprintf("/api/collections/%s/records/%s", url.PathEscape(collection), url.PathEscape(recordID))
-	q := url.Values{}
-	if opts != nil {
-		opts.apply(q)
-	}
-	if qs := q.Encode(); qs != "" {
-		path += "?" + qs
-	}
-
-	var result T
-	if err := s.Client.send(ctx, http.MethodPatch, path, body, &result); err != nil {
-		return nil, fmt.Errorf("pocketbase: update typed record: %w", err)
 	}
 	return &rec, nil
 }
