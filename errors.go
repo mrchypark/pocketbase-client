@@ -416,6 +416,15 @@ func IsAuthError(err error) bool {
 	return errors.Is(err, StatusUnauthorized)
 }
 
+// IsAuthenticationFailed checks if the error is an authentication failure.
+// This covers both 401 errors and 400 errors with authentication_failed code.
+func IsAuthenticationFailed(err error) bool {
+	if errors.Is(err, StatusUnauthorized) {
+		return true
+	}
+	return HasErrorCode(err, "authentication_failed")
+}
+
 // IsForbiddenError checks if the error is a forbidden error (403).
 // This is equivalent to: errors.Is(err, StatusForbidden)
 func IsForbiddenError(err error) bool {
