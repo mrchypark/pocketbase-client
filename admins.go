@@ -51,7 +51,7 @@ func (s *AdminService) GetOne(ctx context.Context, adminID string) (*Admin, erro
 
 // Create creates a new administrator.
 func (s *AdminService) Create(ctx context.Context, body any) (*Admin, error) {
-path := "/api/admins"
+	path := "/api/admins"
 	var adm Admin
 	if err := s.Client.send(ctx, http.MethodPost, path, body, &adm); err != nil {
 		return nil, err
