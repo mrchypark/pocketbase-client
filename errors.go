@@ -313,7 +313,6 @@ func applyKnownAliases(e *Error) {
 func initializeMessageAliases() {
 	aliases := map[string]string{
 		// Authentication errors
-		"Missing or invalid authentication.":             "invalid_authentication",
 		"Failed to authenticate.":                        "authentication_failed",
 		"Missing or invalid authentication token.":       "invalid_auth_token",
 		"Missing or invalid admin authorization token.":  "invalid_admin_auth_token",
@@ -322,7 +321,7 @@ func initializeMessageAliases() {
 		// Authorization errors
 		"You are not allowed to perform this request.":                 "forbidden_generic",
 		"The authorized record is not allowed to perform this action.": "record_forbidden",
-		"The authorized admin is not allowed to perform this action.":  "admin_forbidden",
+		"You are not allowed to perform this action.":                  "action_forbidden",
 
 		// Access control errors
 		"The request can be accessed only by guests.":                "only_guests",
@@ -340,7 +339,7 @@ func initializeMessageAliases() {
 		"Invalid \"perPage\" parameter format.":   "invalid_perpage_param",
 		"Invalid \"skipTotal\" parameter format.": "invalid_skiptotal_param",
 
-		// Missing parameter errors
+		// Missing parameter errors (dynamically generated, but keeping for compatibility)
 		"Missing required \"expand\" parameter.": "missing_expand_param",
 		"Missing required \"filter\" parameter.": "missing_filter_param",
 		"Missing required \"fields\" parameter.": "missing_fields_param",
@@ -362,6 +361,10 @@ func initializeMessageAliases() {
 		"Invalid or missing redirect URL.":           "invalid_redirect_url",
 		"Invalid redirect status code.":              "invalid_redirect_status_code",
 
+		// Authentication specific errors (v0.22.x specific)
+		"The new email address is already in use.": "email_already_in_use",
+		"The provided old password is not valid.":  "invalid_old_password",
+
 		// Resource not found errors
 		"The requested resource wasn't found.": "resource_not_found",
 		"File not found.":                      "file_not_found",
@@ -370,11 +373,6 @@ func initializeMessageAliases() {
 
 		// Context errors
 		"Missing or invalid collection context.": "collection_context_invalid",
-
-		// Service errors
-		"Failed to fetch admins info.":       "failed_fetch_admins",
-		"Failed to fetch records info.":      "failed_fetch_records",
-		"Failed to fetch collection schema.": "failed_fetch_schema",
 
 		// Rate limiting and size errors
 		"Request entity too large": "entity_too_large",

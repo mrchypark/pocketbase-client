@@ -487,6 +487,35 @@ func TestRegisterMessageAlias(t *testing.T) {
 	}
 }
 
+func TestNewErrorAliases(t *testing.T) {
+	tests := []struct {
+		message      string
+		expectedCode string
+	}{
+		{"You are not allowed to perform this action.", "action_forbidden"},
+		{"The new email address is already in use.", "email_already_in_use"},
+		{"The provided old password is not valid.", "invalid_old_password"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.expectedCode, func(t *testing.T) {
+			// Create error with the message
+			err := &Error{
+				Status:  400,
+				Message: tt.message,
+				Data:    make(map[string]FieldError),
+			}
+
+			// Apply aliases
+			applyKnownAliases(err)
+
+			if err.Code != tt.expectedCode {
+				t.Errorf("Expected code '%s', got '%s'", tt.expectedCode, err.Code)
+			}
+		})
+	}
+}
+
 func TestError_ErrorMessage_EdgeCases(t *testing.T) {
 	// Test nil error
 	var nilErr *Error
@@ -838,5 +867,154 @@ func TestError_LogFields(t *testing.T) {
 	}
 	if _, hasFieldErrors := fields["field_errors"]; hasFieldErrors {
 		t.Error("Expected no field_errors field for error without field errors")
+	}
+}
+func TestValidationErrorCodes(t *testing.T) {
+	// Test that validation error codes are properly handled
+	validationCodes := []string{
+		"validation_is_required",
+		"validation_nil_or_not_empty",
+		"validation_in_invalid",
+		"validation_not_in_invalid",
+		"validation_length_too_short",
+		"validation_length_too_long",
+		"validation_length_invalid",
+		"validation_min_greater_equal",
+		"validation_min_invalid",
+		"validation_max_less_equal",
+		"validation_max_invalid",
+		"validation_match_invalid",
+		"validation_invalid_email",
+		"validation_invalid_url",
+		"validation_invalid_ip",
+		"validation_invalid_ipv4",
+		"validation_invalid_ipv6",
+		"validation_date_invalid",
+		"validation_date_too_early",
+		"validation_date_too_late",
+		"validation_invalid_alphanumeric",
+		"validation_invalid_json",
+		"validation_invalid_slug",
+		"validation_not_slug",
+		"validation_invalid_system_collection_name",
+		"validation_unique",
+		"validation_values_exist",
+	}
+
+	for _, code := range validationCodes {
+		t.Run(code, func(t *testing.T) {
+			// Create a validation error with field data
+			fieldError := FieldError{
+				Code:    code,
+				Message: "Test validation error",
+			}
+
+			err := &Error{
+				Status:  400,
+				Message: "Validation failed",
+				Data:    map[string]FieldError{"testField": fieldError},
+			}
+
+			// Test that it's recognized as a validation error
+			if !err.IsValidation() {
+				t.Error("Expected error to be recognized as validation error")
+			}
+
+			// Test that field errors are accessible
+			fieldErrors := GetFieldErrors(err)
+			if fieldErrors == nil {
+				t.Fatal("Expected field errors to be accessible")
+			}
+
+			if fieldErrors["testField"].Code != code {
+				t.Errorf("Expected field error code '%s', got '%s'", code, fieldErrors["testField"].Code)
+			}
+		})
+	}
+}
+
+func TestAllKnownAliases(t *testing.T) {
+	// Test that all known aliases are properly applied
+	knownMessages := []struct {
+		message string
+		alias   string
+	}{
+		{"Failed to authenticate.", "authentication_failed"},
+		{"You are not allowed to perform this action.", "action_forbidden"},
+		{"The new email address is already in use.", "email_already_in_use"},
+		{"The provided old password is not valid.", "invalid_old_password"},
+		{"Invalid \"sort\" parameter format.", "invalid_sort_param"},
+		{"Invalid \"expand\" parameter format.", "invalid_expand_param"},
+		{"Invalid \"filter\" parameter format.", "invalid_filter_param"},
+		{"Invalid \"fields\" parameter format.", "invalid_fields_param"},
+		{"Invalid \"page\" parameter format.", "invalid_page_param"},
+		{"Invalid \"perPage\" parameter format.", "invalid_perpage_param"},
+		{"Invalid \"skipTotal\" parameter format.", "invalid_skiptotal_param"},
+		{"Unsupported Content-Type", "unsupported_content_type"},
+		{"Invalid request payload.", "invalid_request_payload"},
+		{"Invalid request body.", "invalid_request_body"},
+		{"Invalid or missing file.", "invalid_or_missing_file"},
+		{"Invalid or missing record id.", "invalid_record_id"},
+		{"Invalid or missing password reset token.", "invalid_password_reset_token"},
+		{"Invalid or missing verification token.", "invalid_verification_token"},
+		{"Invalid or missing file token.", "invalid_file_token"},
+		{"Invalid or missing OAuth2 state parameter.", "invalid_oauth2_state"},
+		{"Invalid or missing redirect URL.", "invalid_redirect_url"},
+		{"Invalid redirect status code.", "invalid_redirect_status_code"},
+		{"The requested resource wasn't found.", "resource_not_found"},
+		{"File not found.", "file_not_found"},
+		{"Collection not found.", "collection_not_found"},
+		{"Record not found.", "record_not_found"},
+		{"Missing or invalid collection context.", "collection_context_invalid"},
+		{"Request entity too large", "entity_too_large"},
+		{"Missing or invalid authentication token.", "invalid_auth_token"},
+		{"Too Many Requests.", "too_many_requests"},
+		{"Something went wrong while processing your request.", "internal_generic"},
+	}
+
+	for _, test := range knownMessages {
+		t.Run(test.alias, func(t *testing.T) {
+			err := &Error{
+				Status:  400,
+				Message: test.message,
+				Data:    make(map[string]FieldError),
+			}
+
+			applyKnownAliases(err)
+
+			if err.Code != test.alias {
+				t.Errorf("Expected alias '%s' for message '%s', got '%s'", test.alias, test.message, err.Code)
+			}
+		})
+	}
+}
+
+func TestIsAuthenticationFailed(t *testing.T) {
+	// Test with 401 error
+	authErr := &Error{Status: 401}
+	if !IsAuthenticationFailed(authErr) {
+		t.Error("Expected IsAuthenticationFailed to return true for 401 error")
+	}
+
+	// Test with 400 error with authentication_failed code
+	authFailedErr := &Error{
+		Status:  400,
+		Code:    "authentication_failed",
+		Message: "Failed to authenticate.",
+	}
+	if !IsAuthenticationFailed(authFailedErr) {
+		t.Error("Expected IsAuthenticationFailed to return true for authentication_failed code")
+	}
+
+	// Test with other error
+	otherErr := &Error{Status: 404}
+	if IsAuthenticationFailed(otherErr) {
+		t.Error("Expected IsAuthenticationFailed to return false for other error")
+	}
+
+	// Test with generic error
+	genericErr := errors.New("generic error")
+	if IsAuthenticationFailed(genericErr) {
+		t.Error("Expected IsAuthenticationFailed to return false for generic error")
 	}
 }
