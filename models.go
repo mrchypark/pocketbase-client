@@ -48,14 +48,6 @@ type ListResult struct {
 	Items      []*Record `json:"items"`
 }
 
-type ListResultAs[T any] struct {
-	Page       int  `json:"page"`
-	PerPage    int  `json:"perPage"`
-	TotalItems int  `json:"totalItems"`
-	TotalPages int  `json:"totalPages"`
-	Items      []*T `json:"items"`
-}
-
 // ListOptions contains options for listing records.
 type ListOptions struct {
 	Page        int

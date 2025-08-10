@@ -49,21 +49,6 @@ func (s *RecordService) GetList(ctx context.Context, collection string, opts *Li
 	return &result, nil
 }
 
-func GetListAs[T any](ctx context.Context, client *Client, collection string, opts *ListOptions) (*ListResultAs[T], error) {
-	path := fmt.Sprintf("/api/collections/%s/records", url.PathEscape(collection))
-	q := url.Values{}
-	applyListOptions(q, opts)
-	if qs := q.Encode(); qs != "" {
-		path += "?" + qs
-	}
-
-	var result ListResultAs[T]
-	if err := client.send(ctx, http.MethodGet, path, nil, &result); err != nil {
-		return nil, err
-	}
-	return &result, nil
-}
-
 // GetOne retrieves a single record.
 func (s *RecordService) GetOne(ctx context.Context, collection, recordID string, opts *GetOneOptions) (*Record, error) {
 	path := fmt.Sprintf("/api/collections/%s/records/%s", url.PathEscape(collection), url.PathEscape(recordID))
