@@ -133,8 +133,6 @@ func (r *Record) UnmarshalJSON(data []byte) error {
 
 	// Remove common fields and expand from map.
 	delete(allData, "id")
-	delete(allData, "created")
-	delete(allData, "updated")
 	delete(allData, "collectionId")
 	delete(allData, "collectionName")
 	delete(allData, "expand")
