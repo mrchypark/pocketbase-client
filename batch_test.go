@@ -6,9 +6,24 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/goccy/go-json"
 )
+
+type blockingRoundTripper struct {
+	started chan struct{}
+}
+
+func (rt blockingRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	select {
+	case <-rt.started:
+	default:
+		close(rt.started)
+	}
+	<-req.Context().Done()
+	return nil, req.Context().Err()
+}
 
 // TestBatchExecuteSuccess tests the successful execution of batch requests.
 func TestBatchExecuteSuccess(t *testing.T) {
@@ -181,5 +196,41 @@ func TestNewUpsertRequestMissingID(t *testing.T) {
 	c := NewClient("http://example.com")
 	if _, err := c.Records.NewUpsertRequest("posts", map[string]any{"title": "a"}); err == nil {
 		t.Fatal("expected error for missing id")
+	}
+}
+
+func TestBatchExecute_ContextCancellationStopsRequest(t *testing.T) {
+	requestStarted := make(chan struct{})
+
+	c := NewClient("http://example.com")
+	c.HTTPClient = &http.Client{Transport: blockingRoundTripper{started: requestStarted}}
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	errCh := make(chan error, 1)
+	go func() {
+		_, err := c.Batch.Execute(ctx, []*BatchRequest{{Method: http.MethodGet, URL: "/api/health"}})
+		errCh <- err
+	}()
+
+	select {
+	case <-requestStarted:
+	case <-time.After(2 * time.Second):
+		cancel()
+		t.Fatal("timed out waiting for request to start")
+	}
+
+	cancel()
+
+	select {
+	case err := <-errCh:
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("expected context cancellation error, got %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out waiting for client to return after cancellation")
 	}
 }

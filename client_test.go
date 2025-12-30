@@ -168,6 +168,77 @@ func TestSendWithWriter(t *testing.T) {
 	}
 }
 
+func TestSendWithWriter_ContextCancellationStopsStreaming(t *testing.T) {
+	wroteFirstChunk := make(chan struct{})
+	handlerExited := make(chan struct{})
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer close(handlerExited)
+
+		flusher, ok := w.(http.Flusher)
+		if !ok {
+			t.Fatal("no flusher")
+		}
+
+		w.Header().Set("Content-Type", "text/plain")
+		w.WriteHeader(http.StatusOK)
+
+		for i := 0; ; i++ {
+			select {
+			case <-r.Context().Done():
+				return
+			default:
+			}
+
+			_, _ = w.Write([]byte("chunk\n"))
+			flusher.Flush()
+
+			if i == 0 {
+				close(wroteFirstChunk)
+			}
+
+			time.Sleep(10 * time.Millisecond)
+		}
+	}))
+	defer srv.Close()
+
+	c := NewClient(srv.URL)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	var buf bytes.Buffer
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- c.SendWithOptions(ctx, http.MethodGet, "/", nil, nil, WithResponseWriter(&buf))
+	}()
+
+	select {
+	case <-wroteFirstChunk:
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out waiting for server to write first chunk")
+	}
+
+	cancel()
+
+	select {
+	case err := <-errCh:
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("expected context cancellation error, got %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out waiting for client to return after cancellation")
+	}
+
+	select {
+	case <-handlerExited:
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out waiting for server handler to exit after cancellation")
+	}
+}
+
 // flushWriter is an io.Writer that counts each time Flush is called.
 type flushWriter struct {
 	bytes.Buffer
