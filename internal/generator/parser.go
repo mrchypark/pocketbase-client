@@ -70,6 +70,7 @@ func BuildTemplateData(schemas []CollectionSchema, packageName string) TemplateD
 			continue
 		}
 
+		structName := ToPascalCase(s.Name)
 		var fields []FieldData
 		// cs.Fields is always populated thanks to custom UnmarshalJSON logic.
 		for _, f := range s.Fields {
@@ -78,7 +79,7 @@ func BuildTemplateData(schemas []CollectionSchema, packageName string) TemplateD
 				continue
 			}
 
-			goType, _, getterMethod := MapPbTypeToGoType(f, !f.Required)
+			goType, getterMethod := MapPbTypeToGoType(f, !f.Required)
 
 			// 포인터 타입인지 확인하고 기본 타입 추출
 			isPointer := strings.HasPrefix(goType, "*")
@@ -87,20 +88,24 @@ func BuildTemplateData(schemas []CollectionSchema, packageName string) TemplateD
 				baseType = strings.TrimPrefix(goType, "*")
 			}
 
+			goName := ToPascalCase(f.Name)
 			fields = append(fields, FieldData{
 				JSONName:     f.Name,
-				GoName:       ToPascalCase(f.Name),
+				GoName:       goName,
 				GoType:       goType,
+				StructTag:    BuildJSONTag(f.Name, !f.Required),
 				OmitEmpty:    !f.Required, // Use 'required' field directly
 				GetterMethod: getterMethod,
 				IsPointer:    isPointer,
 				BaseType:     baseType,
+				ToMapBlock:   BuildToMapBlock(f.Name, goName, !f.Required),
+				ValueOrBlock: BuildValueOrBlock(structName, goName, f.Name, baseType, isPointer),
 			})
 		}
 
 		collections = append(collections, CollectionData{
 			CollectionName: s.Name,
-			StructName:     ToPascalCase(s.Name),
+			StructName:     structName,
 			Fields:         fields,
 		})
 	}

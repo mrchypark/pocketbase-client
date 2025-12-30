@@ -46,7 +46,7 @@ func BenchmarkCodeGeneration(b *testing.B) {
 				if field.System {
 					continue
 				}
-				goType, _, getter := generator.MapPbTypeToGoType(field, !field.Required)
+				goType, getter := generator.MapPbTypeToGoType(field, !field.Required)
 				collectionData.Fields = append(collectionData.Fields, generator.FieldData{
 					JSONName:     field.Name,
 					GoName:       generator.ToPascalCase(field.Name),
@@ -327,7 +327,7 @@ func BenchmarkMemoryUsage(b *testing.B) {
 				if field.System {
 					continue
 				}
-				goType, _, getter := generator.MapPbTypeToGoType(field, !field.Required)
+				goType, getter := generator.MapPbTypeToGoType(field, !field.Required)
 				collectionData.Fields = append(collectionData.Fields, generator.FieldData{
 					JSONName:     field.Name,
 					GoName:       generator.ToPascalCase(field.Name),

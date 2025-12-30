@@ -169,7 +169,7 @@ func TestLegacyFieldTypeMapping(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			goType, _, _ := MapPbTypeToGoType(tt.fieldSchema, tt.optional)
+			goType, _ := MapPbTypeToGoType(tt.fieldSchema, tt.optional)
 
 			if goType != tt.expectedType {
 				t.Errorf("필드 타입 매핑 오류: 예상 %s, 실제 %s", tt.expectedType, goType)

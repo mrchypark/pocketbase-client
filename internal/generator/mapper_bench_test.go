@@ -58,7 +58,7 @@ func BenchmarkMapPbTypeToGoType(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		for _, field := range testFields {
-			_, _, _ = MapPbTypeToGoType(field, !field.Required)
+			_, _ = MapPbTypeToGoType(field, !field.Required)
 		}
 	}
 }

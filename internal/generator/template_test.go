@@ -10,6 +10,31 @@ import (
 	"text/template"
 )
 
+func populateFieldBlocks(data *EnhancedTemplateData) {
+	for ci := range data.Collections {
+		collection := &data.Collections[ci]
+		for fi := range collection.Fields {
+			field := &collection.Fields[fi]
+			if field.GoName == "" {
+				field.GoName = ToPascalCase(field.JSONName)
+			}
+			if field.ToMapBlock == "" {
+				field.ToMapBlock = BuildToMapBlock(field.JSONName, field.GoName, field.OmitEmpty)
+			}
+
+			if field.BaseType == "" {
+				field.BaseType = strings.TrimPrefix(field.GoType, "*")
+			}
+			if !field.IsPointer && strings.HasPrefix(field.GoType, "*") {
+				field.IsPointer = true
+			}
+			if field.ValueOrBlock == "" {
+				field.ValueOrBlock = BuildValueOrBlock(collection.StructName, field.GoName, field.JSONName, field.BaseType, field.IsPointer)
+			}
+		}
+	}
+}
+
 func TestTemplateExecution(t *testing.T) {
 	// 템플릿 파일 읽기
 	templatePath := "../../cmd/pbc-gen/template.go.tpl"
@@ -261,9 +286,12 @@ func TestTemplateExecution(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			data := tt.data
+			populateFieldBlocks(&data)
+
 			// 템플릿 실행
 			var buf bytes.Buffer
-			err := tmpl.Execute(&buf, tt.data)
+			err := tmpl.Execute(&buf, data)
 			if err != nil {
 				t.Fatalf("Template execution failed: %v", err)
 			}
@@ -490,6 +518,7 @@ func TestTemplateCompilation(t *testing.T) {
 
 	// 템플릿 실행
 	var buf bytes.Buffer
+	populateFieldBlocks(&testData)
 	err = tmpl.Execute(&buf, testData)
 	if err != nil {
 		t.Fatalf("Template execution failed: %v", err)
@@ -700,9 +729,12 @@ func TestTemplateWithDifferentSchemaPatterns(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Logf("Testing: %s", tt.description)
 
+			data := tt.data
+			populateFieldBlocks(&data)
+
 			// 템플릿 실행
 			var buf bytes.Buffer
-			err := tmpl.Execute(&buf, tt.data)
+			err := tmpl.Execute(&buf, data)
 			if err != nil {
 				t.Fatalf("Template execution failed: %v", err)
 			}

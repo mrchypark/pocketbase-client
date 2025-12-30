@@ -50,7 +50,7 @@ func BenchmarkLargeSchemaProcessing(b *testing.B) {
 				if field.System {
 					continue
 				}
-				goType, _, getter := MapPbTypeToGoType(field, !field.Required)
+				goType, getter := MapPbTypeToGoType(field, !field.Required)
 				collectionData.Fields = append(collectionData.Fields, FieldData{
 					JSONName:     field.Name,
 					GoName:       ToPascalCase(field.Name),
@@ -188,7 +188,7 @@ func TestLargeSchemaGeneration(t *testing.T) {
 			if field.System {
 				continue
 			}
-			goType, _, getter := MapPbTypeToGoType(field, !field.Required)
+			goType, getter := MapPbTypeToGoType(field, !field.Required)
 			collectionData.Fields = append(collectionData.Fields, FieldData{
 				JSONName:     field.Name,
 				GoName:       ToPascalCase(field.Name),
@@ -327,7 +327,7 @@ func TestPerformanceBottlenecks(t *testing.T) {
 			if field.System {
 				continue
 			}
-			goType, _, getter := MapPbTypeToGoType(field, !field.Required)
+			goType, getter := MapPbTypeToGoType(field, !field.Required)
 			collectionData.Fields = append(collectionData.Fields, FieldData{
 				JSONName:     field.Name,
 				GoName:       ToPascalCase(field.Name),
@@ -547,7 +547,7 @@ func processSchemas(schemas []CollectionSchema) {
 			if field.System {
 				continue
 			}
-			goType, _, getter := MapPbTypeToGoType(field, !field.Required)
+			goType, getter := MapPbTypeToGoType(field, !field.Required)
 			collectionData.Fields = append(collectionData.Fields, FieldData{
 				JSONName:     field.Name,
 				GoName:       ToPascalCase(field.Name),

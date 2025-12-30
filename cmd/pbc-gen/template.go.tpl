@@ -96,7 +96,7 @@ func (r {{$relation.TypeName}}s) LoadAll(ctx context.Context, client pocketbase.
 	if len(r) == 0 {
 		return nil, nil
 	}
-	
+
 	var results []*{{$relation.TargetTypeName}}
 	for _, rel := range r {
 		record, err := rel.Load(ctx, client)
@@ -246,18 +246,10 @@ func To{{$collection.StructName}}(r *pocketbase.Record) *{{$collection.StructNam
 // It omits empty or zero-value fields to support PATCH operations.
 func (m *{{$collection.StructName}}) ToMap() map[string]any {
 	data := make(map[string]any)
-    
+
 	// non-zero, non-empty, and non-nil values will be added to the map.
 	{{- range .Fields}}
-	{{- if .OmitEmpty}}
-	if val := m.{{.GoName}}(); val != nil {
-		data["{{.JSONName}}"] = val
-	}
-	{{- else}}
-	// For required fields, we always include them.
-	// You can add more complex logic here if needed, e.g., checking for zero values.
-	data["{{.JSONName}}"] = m.{{.GoName}}()
-	{{- end}}
+	{{.ToMapBlock}}
     {{- end}}
 
 	return data
@@ -269,15 +261,7 @@ func (m *{{$collection.StructName}}) {{.GoName}}() {{.GoType}} {
 	return m.{{.GetterMethod}}("{{.JSONName}}")
 }
 
-{{if .IsPointer}}
-// {{.GoName}}ValueOr returns the value of the '{{.JSONName}}' field or the provided default value if nil.
-func (m *{{$collection.StructName}}) {{.GoName}}ValueOr(defaultValue {{.BaseType}}) {{.BaseType}} {
-	if val := m.{{.GoName}}(); val != nil {
-		return *val
-	}
-	return defaultValue
-}
-{{end}}
+{{.ValueOrBlock}}
 
 // Set{{.GoName}} sets the value of the '{{.JSONName}}' field.
 func (m *{{$collection.StructName}}) Set{{.GoName}}(value {{.GoType}}) {

@@ -136,7 +136,7 @@ func TestMapPbTypeToGoType(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			goType, _, _ := MapPbTypeToGoType(tt.field, tt.omitEmpty)
+			goType, _ := MapPbTypeToGoType(tt.field, tt.omitEmpty)
 			if goType != tt.wantGoType {
 				t.Errorf("MapPbTypeToGoType() got %q, want %q", goType, tt.wantGoType)
 			}

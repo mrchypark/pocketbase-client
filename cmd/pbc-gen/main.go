@@ -69,9 +69,8 @@ func main() {
 				continue
 			}
 			// --- ✨ Modified part ---
-			// Receive all 3 return values as goType, _, getter.
-			// Comment is currently not used, so ignore with '_'.
-			goType, _, getter := generator.MapPbTypeToGoType(field, !field.Required)
+			// Receive return values as goType, getter.
+			goType, getter := generator.MapPbTypeToGoType(field, !field.Required)
 
 			// 포인터 타입인지 확인하고 기본 타입 추출
 			isPointer := strings.HasPrefix(goType, "*")
@@ -80,14 +79,18 @@ func main() {
 				baseType = strings.TrimPrefix(goType, "*")
 			}
 
+			goName := generator.ToPascalCase(field.Name)
 			collectionData.Fields = append(collectionData.Fields, generator.FieldData{
 				JSONName:     field.Name,
-				GoName:       generator.ToPascalCase(field.Name),
+				GoName:       goName,
 				GoType:       goType,
+				StructTag:    generator.BuildJSONTag(field.Name, !field.Required),
 				OmitEmpty:    !field.Required,
 				GetterMethod: getter, // Assign value to the newly added GetterMethod field.
 				IsPointer:    isPointer,
 				BaseType:     baseType,
+				ToMapBlock:   generator.BuildToMapBlock(field.Name, goName, !field.Required),
+				ValueOrBlock: generator.BuildValueOrBlock(collectionData.StructName, goName, field.Name, baseType, isPointer),
 			})
 		}
 		baseTplData.Collections = append(baseTplData.Collections, collectionData)

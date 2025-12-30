@@ -27,10 +27,13 @@ type FieldData struct {
 	JSONName     string // JSON field name as it appears in PocketBase (e.g., 'is_published')
 	GoName       string // Go field name in PascalCase (e.g., 'IsPublished')
 	GoType       string // Go type for the field (e.g., 'bool')
+	StructTag    string // Preformatted struct tag (e.g., `json:"is_published,omitempty"`)
 	OmitEmpty    bool   // Whether to add omitempty tag for optional fields
 	GetterMethod string // Getter method name (e.g., GetString, GetBool)
 	IsPointer    bool   // Whether this field is a pointer type (for ValueOr method generation)
 	BaseType     string // Base type without pointer (e.g., 'string' for '*string')
+	ToMapBlock   string // Preformatted ToMap field block
+	ValueOrBlock string // Preformatted ValueOr method block (empty for non-pointer fields)
 }
 
 // EnhancedFieldInfo contains additional information for enhanced code generation.

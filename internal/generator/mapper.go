@@ -1,13 +1,14 @@
 package generator
 
 import (
+	"fmt"
 	"strings"
 )
 
 // MapPbTypeToGoType maps PocketBase field types to Go types and their corresponding getter methods.
-// It returns the Go type, a comment (currently unused), and the getter method name.
-func MapPbTypeToGoType(field FieldSchema, omitEmpty bool) (string, string, string) {
-	var goType, comment, getterMethod string
+// It returns the Go type and the getter method name.
+func MapPbTypeToGoType(field FieldSchema, omitEmpty bool) (string, string) {
+	var goType, getterMethod string
 
 	// Pre-determine whether it's a multi-select field based on MaxSelect option
 	isMulti := false
@@ -72,7 +73,7 @@ func MapPbTypeToGoType(field FieldSchema, omitEmpty bool) (string, string, strin
 		goType = "*" + goType
 	}
 
-	return goType, comment, getterMethod
+	return goType, getterMethod
 }
 
 // ToPascalCase converts a string to PascalCase format.
@@ -105,6 +106,31 @@ func ToPascalCase(s string) string {
 	}
 
 	return strings.Join(parts, "")
+}
+
+// BuildJSONTag returns a preformatted struct tag string for a JSON field.
+func BuildJSONTag(name string, omitEmpty bool) string {
+	if omitEmpty {
+		return fmt.Sprintf("`json:\"%s,omitempty\"`", name)
+	}
+	return fmt.Sprintf("`json:\"%s\"`", name)
+}
+
+// BuildToMapBlock returns the ToMap assignment block for a field.
+func BuildToMapBlock(jsonName, goName string, omitEmpty bool) string {
+	if omitEmpty {
+		return fmt.Sprintf("\tif val := m.%s(); val != nil {\n\t\tdata[\"%s\"] = val\n\t}\n", goName, jsonName)
+	}
+	return fmt.Sprintf("\t// For required fields, we always include them.\n\t// You can add more complex logic here if needed, e.g., checking for zero values.\n\tdata[\"%s\"] = m.%s()\n", jsonName, goName)
+}
+
+// BuildValueOrBlock returns the ValueOr method block for pointer fields.
+func BuildValueOrBlock(structName, goName, jsonName, baseType string, isPointer bool) string {
+	if !isPointer {
+		return ""
+	}
+	return fmt.Sprintf("\n// %sValueOr returns the value of the '%s' field or the provided default value if nil.\nfunc (m *%s) %sValueOr(defaultValue %s) %s {\n\tif val := m.%s(); val != nil {\n\t\treturn *val\n\t}\n\treturn defaultValue\n}\n",
+		goName, jsonName, structName, goName, baseType, baseType, goName)
 }
 
 // AnalyzeEnhancedField analyzes a field and returns enhanced information for code generation

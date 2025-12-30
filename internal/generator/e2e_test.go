@@ -83,7 +83,7 @@ func TestEndToEndCodeGeneration(t *testing.T) {
 					if field.System {
 						continue
 					}
-					goType, _, getter := MapPbTypeToGoType(field, !field.Required)
+					goType, getter := MapPbTypeToGoType(field, !field.Required)
 					collectionData.Fields = append(collectionData.Fields, FieldData{
 						JSONName:     field.Name,
 						GoName:       ToPascalCase(field.Name),
@@ -206,7 +206,7 @@ func TestGeneratedCodeUsability(t *testing.T) {
 			if field.System {
 				continue
 			}
-			goType, _, getter := MapPbTypeToGoType(field, !field.Required)
+			goType, getter := MapPbTypeToGoType(field, !field.Required)
 			collectionData.Fields = append(collectionData.Fields, FieldData{
 				JSONName:     field.Name,
 				GoName:       ToPascalCase(field.Name),
