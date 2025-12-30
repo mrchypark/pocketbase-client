@@ -78,6 +78,34 @@ type Error struct {
 }
 
 // =============================================================================
+// Sentinel Errors (errors.Is)
+// =============================================================================
+
+// The following sentinel errors are intended to improve ergonomics with the
+// standard library's errors.Is. They match PocketBase errors by their stable
+// alias Code (derived from the server's message).
+//
+// Example:
+//
+//	if errors.Is(err, pocketbase.ErrRecordNotFound) { ... }
+//
+// Note: These sentinels only specify Code (Status=0), so they match regardless
+// of HTTP status as long as the parsed error alias matches.
+var (
+	ErrAuthenticationFailed  = &Error{Code: "authentication_failed"}
+	ErrInvalidAuthToken      = &Error{Code: "invalid_auth_token"}
+	ErrInvalidAdminAuthToken = &Error{Code: "invalid_admin_auth_token"}
+	ErrInvalidRecordAuth     = &Error{Code: "invalid_record_auth_token"}
+
+	ErrForbiddenGeneric = &Error{Code: "forbidden_generic"}
+
+	ErrResourceNotFound   = &Error{Code: "resource_not_found"}
+	ErrCollectionNotFound = &Error{Code: "collection_not_found"}
+	ErrRecordNotFound     = &Error{Code: "record_not_found"}
+	ErrFileNotFound       = &Error{Code: "file_not_found"}
+)
+
+// =============================================================================
 // Error Interface Implementation
 // =============================================================================
 

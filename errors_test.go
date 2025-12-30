@@ -1018,3 +1018,25 @@ func TestIsAuthenticationFailed(t *testing.T) {
 		t.Error("Expected IsAuthenticationFailed to return false for generic error")
 	}
 }
+
+func TestSentinelErrors(t *testing.T) {
+	t.Run("record not found", func(t *testing.T) {
+		err := ParseAPIError(http.StatusNotFound, []byte(`{"message":"Record not found.","data":{}}`))
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		if !errors.Is(err, ErrRecordNotFound) {
+			t.Fatalf("expected errors.Is(err, ErrRecordNotFound) to be true; got %v", err)
+		}
+	})
+
+	t.Run("authentication failed", func(t *testing.T) {
+		err := ParseAPIError(http.StatusBadRequest, []byte(`{"message":"Failed to authenticate.","data":{}}`))
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		if !errors.Is(err, ErrAuthenticationFailed) {
+			t.Fatalf("expected errors.Is(err, ErrAuthenticationFailed) to be true; got %v", err)
+		}
+	})
+}
