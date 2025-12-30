@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"sync"
+	"time"
 
 	"github.com/goccy/go-json"
 	"github.com/tmaxmax/go-sse"
@@ -52,9 +52,6 @@ func (s *RealtimeService) Subscribe(ctx context.Context, topics []string, callba
 	sseClient := sse.Client{HTTPClient: &sseHTTPClient}
 	conn := sseClient.NewConnection(req)
 
-	var wg sync.WaitGroup
-	wg.Add(1) // Wait for the initial connection and subscription
-
 	connectErrChan := make(chan error, 1)
 
 	// Register event handler
@@ -66,12 +63,10 @@ func (s *RealtimeService) Subscribe(ctx context.Context, topics []string, callba
 			}
 			if err := json.Unmarshal([]byte(event.Data), &connectEvent); err != nil {
 				connectErrChan <- fmt.Errorf("pocketbase: failed to unmarshal PB_CONNECT event: %w", err)
-				wg.Done()
 				return
 			}
 			if connectEvent.ClientID == "" {
 				connectErrChan <- fmt.Errorf("pocketbase: PB_CONNECT event missing clientId")
-				wg.Done()
 				return
 			}
 
@@ -82,7 +77,6 @@ func (s *RealtimeService) Subscribe(ctx context.Context, topics []string, callba
 			} else {
 				connectErrChan <- nil // Success
 			}
-			wg.Done() // Signal that the subscription attempt is complete
 			return
 		}
 
@@ -108,11 +102,18 @@ func (s *RealtimeService) Subscribe(ctx context.Context, topics []string, callba
 	}()
 
 	// Wait for the subscription to be confirmed or fail
-	wg.Wait()
-	close(connectErrChan)
-	if err := <-connectErrChan; err != nil {
+	select {
+	case err := <-connectErrChan:
+		if err != nil {
+			cancel() // Clean up context on failure
+			return nil, err
+		}
+	case <-ctx.Done():
 		cancel() // Clean up context on failure
-		return nil, err
+		return nil, ctx.Err()
+	case <-time.After(30 * time.Second):
+		cancel() // Clean up context on timeout
+		return nil, fmt.Errorf("pocketbase: subscribe timeout waiting for PB_CONNECT")
 	}
 
 	// Unsubscribe function to be returned to the caller
