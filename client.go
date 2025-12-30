@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 
 	"github.com/goccy/go-json"
 )
@@ -30,6 +31,8 @@ import (
 // HTTPClient is used for all requests and can be customized as needed.
 // Service fields like Records provide specific endpoint operations.
 type Client struct {
+	mu sync.RWMutex
+
 	BaseURL    string       // Base URL of the PocketBase server
 	HTTPClient *http.Client // HTTP client used for requests
 
@@ -52,11 +55,23 @@ type authInjector struct {
 }
 
 func (t *authInjector) RoundTrip(req *http.Request) (*http.Response, error) {
-	if strings.Contains(req.URL.Path, "auth-with-password") {
+	// Avoid injecting a (possibly stale) token into auth bootstrap endpoints.
+	// Ex: /auth-with-password, /auth-with-oauth2, /auth-with-otp.
+	if strings.Contains(req.URL.Path, "/auth-with-") {
 		return t.next.RoundTrip(req)
 	}
-	if t.client.AuthStore != nil {
-		tok, err := t.client.AuthStore.Token(t.client)
+	t.client.mu.RLock()
+	authStore := t.client.AuthStore
+	t.client.mu.RUnlock()
+
+	if authStore != nil {
+		var tok string
+		var err error
+		if withCtx, ok := authStore.(AuthStrategyWithContext); ok {
+			tok, err = withCtx.TokenWithContext(req.Context(), t.client)
+		} else {
+			tok, err = authStore.Token(t.client)
+		}
 		if err != nil {
 			return nil, err
 		}
@@ -98,6 +113,9 @@ func NewClient(baseURL string, opts ...ClientOption) *Client {
 
 // ClearAuthStore removes the stored authentication information, effectively logging out.
 func (c *Client) ClearAuthStore() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	if c.AuthStore != nil {
 		c.AuthStore.Clear()
 		// Replace with NilAuth again to make it unauthenticated state.
@@ -231,10 +249,12 @@ func (c *Client) do(ctx context.Context, method, path string, body io.Reader, co
 func (c *Client) WithPassword(ctx context.Context, collection, identity, password string) (*AuthResponse, error) {
 	// Set new PasswordAuth strategy
 	authStrategy := NewPasswordAuth(c, collection, identity, password)
+	c.mu.Lock()
 	c.AuthStore = authStrategy
+	c.mu.Unlock()
 
 	// Get the first authentication token immediately.
-	token, err := authStrategy.Token(c)
+	token, err := authStrategy.TokenWithContext(ctx, c)
 	if err != nil {
 		c.ClearAuthStore() // Clear auth info on failure
 		return nil, err
@@ -266,14 +286,42 @@ func (c *Client) WithAdminPassword(ctx context.Context, identity, password strin
 
 // WithToken sets a TokenAuth strategy to the client.
 func (c *Client) WithToken(token string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	c.AuthStore = NewTokenAuth(token)
+}
+
+// WithAuthStrategy sets a custom auth strategy to the client.
+// If nil is provided, the client falls back to an unauthenticated strategy.
+//
+// This is useful when you don't want the built-in PasswordAuth to keep credentials
+// in memory, or when you have a custom token refresh flow.
+func (c *Client) WithAuthStrategy(strategy AuthStrategy) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if c.AuthStore != nil {
+		c.AuthStore.Clear()
+	}
+	if strategy == nil {
+		c.AuthStore = &NilAuth{}
+		return
+	}
+	c.AuthStore = strategy
 }
 
 // UseAuthResponse receives an AuthResponse and sets the client authentication state.
 // Use this method to configure the client when you already have a token from OAuth2 or token refresh.
 func (c *Client) UseAuthResponse(res *AuthResponse) *Client {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	if res == nil || res.Token == "" {
-		c.ClearAuthStore()
+		if c.AuthStore != nil {
+			c.AuthStore.Clear()
+		}
+		c.AuthStore = &NilAuth{}
 		return c
 	}
 

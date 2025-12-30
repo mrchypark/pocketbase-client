@@ -40,14 +40,22 @@ func TestTokenAuth(t *testing.T) {
 
 func TestTokenAuth_Clear(t *testing.T) {
 	auth := NewTokenAuth("test-token")
-	if auth.token != "test-token" {
-		t.Fatalf("Expected initial token to be 'test-token', got '%s'", auth.token)
+	tok, err := auth.Token(nil)
+	if err != nil {
+		t.Fatalf("TokenAuth.Token() should not return an error, but got: %v", err)
+	}
+	if tok != "test-token" {
+		t.Fatalf("Expected initial token to be 'test-token', got '%s'", tok)
 	}
 
 	auth.Clear()
 
-	if auth.token != "" {
-		t.Errorf("Expected token to be empty after Clear, got '%s'", auth.token)
+	tok, err = auth.Token(nil)
+	if err != nil {
+		t.Fatalf("TokenAuth.Token() should not return an error, but got: %v", err)
+	}
+	if tok != "" {
+		t.Errorf("Expected token to be empty after Clear, got '%s'", tok)
 	}
 }
 

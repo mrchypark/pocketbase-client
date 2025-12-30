@@ -20,25 +20,44 @@ type AuthStrategy interface {
 	Clear()
 }
 
+// AuthStrategyWithContext is an optional extension interface for AuthStrategy implementations
+// that want to respect request cancellation and deadlines during token acquisition/refresh.
+//
+// If the configured strategy implements this interface, the client will prefer TokenWithContext
+// over Token when injecting Authorization headers.
+type AuthStrategyWithContext interface {
+	AuthStrategy
+	TokenWithContext(ctx context.Context, client *Client) (string, error)
+}
+
 type NilAuth struct{}
 
 func (a *NilAuth) Token(client *Client) (string, error) { return "", nil }
 func (a *NilAuth) Clear()                               {}
 
 type TokenAuth struct {
-	token string
+	token atomic.Value // stores string
 }
 
 func NewTokenAuth(token string) *TokenAuth {
-	return &TokenAuth{token: token}
+	a := &TokenAuth{}
+	a.token.Store(token)
+	return a
 }
 
 func (a *TokenAuth) Token(client *Client) (string, error) {
-	return a.token, nil
+	if v := a.token.Load(); v != nil {
+		return v.(string), nil
+	}
+	return "", nil
+}
+
+func (a *TokenAuth) TokenWithContext(ctx context.Context, client *Client) (string, error) {
+	return a.Token(client)
 }
 
 func (a *TokenAuth) Clear() {
-	a.token = ""
+	a.token.Store("")
 }
 
 type PasswordAuth struct {
@@ -50,6 +69,8 @@ type PasswordAuth struct {
 
 	refreshSingle singleflight.Group
 }
+
+const tokenExpiryLeeway = 30 * time.Second
 
 type authToken struct {
 	token    string
@@ -67,16 +88,20 @@ func NewPasswordAuth(client *Client, collection, identity, password string) *Pas
 }
 
 func (a *PasswordAuth) Token(client *Client) (string, error) {
+	return a.TokenWithContext(context.Background(), client)
+}
+
+func (a *PasswordAuth) TokenWithContext(ctx context.Context, client *Client) (string, error) {
 	currentAuth := a.auth.Load()
 
 	// Return immediately if token is valid (no lock)
-	if currentAuth != nil && time.Now().Before(currentAuth.tokenExp) {
+	if currentAuth != nil && time.Now().Add(tokenExpiryLeeway).Before(currentAuth.tokenExp) {
 		return currentAuth.token, nil
 	}
 
 	// If token is missing or expired, execute refresh only once with singleflight
 	_, err, _ := a.refreshSingle.Do("refresh", func() (any, error) {
-		return nil, a.refreshToken(client)
+		return nil, a.refreshToken(ctx, client)
 	})
 	if err != nil {
 		return "", err
@@ -91,12 +116,12 @@ func (a *PasswordAuth) Token(client *Client) (string, error) {
 	return refreshedAuth.token, nil
 }
 
-func (a *PasswordAuth) refreshToken(client *Client) error {
+func (a *PasswordAuth) refreshToken(ctx context.Context, client *Client) error {
 	path := fmt.Sprintf("/api/collections/%s/auth-with-password", url.PathEscape(a.collection))
 	body := map[string]string{"identity": a.identity, "password": a.password}
 
 	var authResponse AuthResponse
-	if err := client.send(context.Background(), http.MethodPost, path, body, &authResponse); err != nil {
+	if err := client.send(ctx, http.MethodPost, path, body, &authResponse); err != nil {
 		return err
 	}
 

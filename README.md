@@ -84,6 +84,14 @@ client := pocketbase.NewClient("http://127.0.0.1:8090", pocketbase.WithHTTPClien
 
 The client supports authentication for both admins and regular users. Once authenticated, the client will automatically handle token refreshes and include the auth token in subsequent requests.
 
+#### Security Note (Plaintext Credentials in Memory)
+
+`client.WithPassword(...)` / `client.WithAdminPassword(...)` use an internal `PasswordAuth` strategy that stores the provided `identity` and `password` in memory (plaintext) so it can transparently refresh tokens when they expire.
+
+If you operate in a high-sensitivity environment, prefer token-based auth (`client.WithToken(...)`) or provide your own `AuthStrategy` implementation so you can control where/how secrets are stored (env/OS keychain/HSM/sidecar, etc.).
+
+The client supports custom strategies via `client.WithAuthStrategy(...)` or `pocketbase.WithAuthStrategy(...)` (client option).
+
 ```go
 ctx := context.Background()
 
@@ -137,6 +145,12 @@ _, err := client.WithPassword(ctx, "users", "user@example.com", "password")
 
 // Token auth
 client.WithToken("your-auth-token")
+
+// Custom auth strategy (example)
+type EnvTokenAuth struct{}
+func (EnvTokenAuth) Token(_ *pocketbase.Client) (string, error) { return "Bearer " + os.Getenv("PB_TOKEN"), nil }
+func (EnvTokenAuth) Clear() {}
+client.WithAuthStrategy(EnvTokenAuth{})
 ```
 
 ### CRUD Operations

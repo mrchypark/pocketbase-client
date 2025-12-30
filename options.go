@@ -16,6 +16,18 @@ func WithHTTPClient(hc *http.Client) ClientOption {
 	}
 }
 
+// WithAuthStrategy sets the auth strategy used for requests.
+// If nil is provided, the client falls back to an unauthenticated strategy.
+func WithAuthStrategy(strategy AuthStrategy) ClientOption {
+	return func(c *Client) {
+		if strategy == nil {
+			c.AuthStore = &NilAuth{}
+			return
+		}
+		c.AuthStore = strategy
+	}
+}
+
 type requestOptions struct {
 	writer io.Writer
 }
