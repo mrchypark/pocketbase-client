@@ -105,30 +105,25 @@ type RealtimeEvent struct {
 
 // UnmarshalJSON deserializes JSON data into the Record struct efficiently.
 func (r *Record) UnmarshalJSON(data []byte) error {
-	// Decode all JSON data into temporary map at once.
-	var allData map[string]any
+	// Decode all JSON data into raw fields to avoid re-marshaling.
+	var allData map[string]json.RawMessage
 	if err := json.Unmarshal(data, &allData); err != nil {
 		return err
 	}
 
 	// Assign common fields directly to Record struct.
-	if id, ok := allData["id"].(string); ok {
-		r.ID = id
+	if raw, ok := allData["id"]; ok {
+		_ = json.Unmarshal(raw, &r.ID)
 	}
-	if colID, ok := allData["collectionId"].(string); ok {
-		r.CollectionID = colID
+	if raw, ok := allData["collectionId"]; ok {
+		_ = json.Unmarshal(raw, &r.CollectionID)
 	}
-	if colName, ok := allData["collectionName"].(string); ok {
-		r.CollectionName = colName
+	if raw, ok := allData["collectionName"]; ok {
+		_ = json.Unmarshal(raw, &r.CollectionName)
 	}
 	// Also handle Expand field.
-	if expandData, ok := allData["expand"]; ok {
-		// Re-serialize expand data to JSON then decode to Record's Expand field.
-		// This is the safest method because expand can have complex nested structures.
-		expandBytes, err := json.Marshal(expandData)
-		if err == nil {
-			json.Unmarshal(expandBytes, &r.Expand)
-		}
+	if raw, ok := allData["expand"]; ok {
+		_ = json.Unmarshal(raw, &r.Expand)
 	}
 
 	// Remove common fields and expand from map.
@@ -138,7 +133,14 @@ func (r *Record) UnmarshalJSON(data []byte) error {
 	delete(allData, "expand")
 
 	// Store remaining data in deserializedData.
-	r.deserializedData = allData
+	r.deserializedData = make(map[string]any, len(allData))
+	for key, raw := range allData {
+		var value any
+		if err := json.Unmarshal(raw, &value); err != nil {
+			continue
+		}
+		r.deserializedData[key] = value
+	}
 
 	return nil
 }
