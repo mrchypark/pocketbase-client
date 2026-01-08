@@ -1,8 +1,3 @@
-// Package pocketbase provides a Go client for interacting with the PocketBase backend.
-//
-// This client covers almost all API endpoints exposed by PocketBase, including authentication,
-// record CRUD, real-time subscriptions, and file management. All network requests can be
-// controlled via context.Context, allowing callers to easily set timeouts or cancel requests.
 package pocketbase
 
 import (
@@ -19,17 +14,6 @@ import (
 )
 
 // Client interacts with the PocketBase API.
-//
-// Client is the primary object for interacting with the PocketBase API.
-//
-// BaseURL represents the root URL of the PocketBase server.
-// HTTPClient is used for all requests and can be customized as needed.
-// Service fields like Records provide specific endpoint operations.
-// Client is the primary object for interacting with the PocketBase API.
-//
-// BaseURL represents the root URL of the PocketBase server.
-// HTTPClient is used for all requests and can be customized as needed.
-// Service fields like Records provide specific endpoint operations.
 type Client struct {
 	mu sync.RWMutex
 
@@ -111,14 +95,13 @@ func NewClient(baseURL string, opts ...ClientOption) *Client {
 	return c
 }
 
-// ClearAuthStore removes the stored authentication information, effectively logging out.
+// ClearAuthStore removes the stored authentication information.
 func (c *Client) ClearAuthStore() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	if c.AuthStore != nil {
 		c.AuthStore.Clear()
-		// Replace with NilAuth again to make it unauthenticated state.
 		c.AuthStore = &NilAuth{}
 	}
 }
@@ -147,7 +130,7 @@ func (c *Client) newRequest(ctx context.Context, method, path string, body io.Re
 	return req, nil
 }
 
-// Send is a wrapper used by external service implementations like RecordService.
+// Send is a wrapper used by external service implementations.
 func (c *Client) Send(ctx context.Context, method, path string, body, responseData any) error {
 	return c.send(ctx, method, path, body, responseData)
 }
@@ -219,11 +202,9 @@ func (c *Client) do(ctx context.Context, method, path string, body io.Reader, co
 			return fmt.Errorf("pocketbase: failed to read error response body: %w", err)
 		}
 
-		// Parse error using new error system
 		return ParseAPIErrorFromResponse(res, resBody)
 	}
 
-	// The success response handling logic
 	if ropts.writer != nil {
 		if _, err := copyWithFlush(ropts.writer, res.Body); err != nil {
 			return fmt.Errorf("pocketbase: failed to stream response: %w", err)
@@ -247,7 +228,6 @@ func (c *Client) do(ctx context.Context, method, path string, body io.Reader, co
 
 // WithPassword creates a PasswordAuth strategy and sets it to the client.
 func (c *Client) WithPassword(ctx context.Context, collection, identity, password string) (*AuthResponse, error) {
-	// Set new PasswordAuth strategy
 	authStrategy := NewPasswordAuth(c, collection, identity, password)
 	c.mu.Lock()
 	c.AuthStore = authStrategy
@@ -256,15 +236,12 @@ func (c *Client) WithPassword(ctx context.Context, collection, identity, passwor
 	// Get the first authentication token immediately.
 	token, err := authStrategy.TokenWithContext(ctx, c)
 	if err != nil {
-		c.ClearAuthStore() // Clear auth info on failure
+		c.ClearAuthStore()
 		return nil, err
 	}
 
-	// ✅ Modified part: Instead of getting model directly from authStrategy,
-	// load the internal authToken pointer to get model information.
 	currentAuth := authStrategy.auth.Load()
 	if currentAuth == nil {
-		// Abnormal situation where token was obtained but no auth data is available
 		return nil, fmt.Errorf("authentication succeeded but no auth data is available")
 	}
 
@@ -312,7 +289,6 @@ func (c *Client) WithAuthStrategy(strategy AuthStrategy) {
 }
 
 // UseAuthResponse receives an AuthResponse and sets the client authentication state.
-// Use this method to configure the client when you already have a token from OAuth2 or token refresh.
 func (c *Client) UseAuthResponse(res *AuthResponse) *Client {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -325,7 +301,6 @@ func (c *Client) UseAuthResponse(res *AuthResponse) *Client {
 		return c
 	}
 
-	// Use TokenAuth strategy since the received token is static.
 	c.AuthStore = NewTokenAuth(res.Token)
 
 	return c

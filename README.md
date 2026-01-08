@@ -131,7 +131,50 @@ func NewPostService(client *pocketbase.Client) pocketbase.RecordServiceAPI[Post]
 }
 ```
 
+```
+
 ## 📚 Core Operations
+
+### Type-Safe Generic Services (NEW!)
+
+The new `TypedRecordService` provides fully type-safe CRUD operations with automatic type conversion:
+
+```go
+// Create a type-safe service for your model
+postService := pocketbase.NewTypedRecordService[Post](client, "posts")
+
+// Create - accepts *Post, returns *Post
+newPost := &Post{}
+newPost.SetTitle("My Post")
+newPost.SetContent("Content")
+created, err := postService.Create(ctx, newPost)
+
+// Read one - returns *Post directly
+post, err := postService.GetOne(ctx, "RECORD_ID", nil)
+fmt.Printf("Title: %s\n", post.Title())
+
+// Read list - returns *TypedListResult[Post]
+posts, err := postService.GetList(ctx, &pocketbase.ListOptions{
+    Page:    1,
+    PerPage: 20,
+    Filter:  "published = true",
+})
+for _, p := range posts.Items {
+    fmt.Printf("- %s\n", p.Title())
+}
+
+// Get all - auto-pagination with typed results
+allPosts, err := postService.GetAll(ctx, &pocketbase.ListOptions{
+    Filter: "published = true",
+})
+
+// Update - returns updated *Post
+post.SetViewCount(100)
+updated, err := postService.Update(ctx, post.ID, post)
+
+// Delete
+err = postService.RecordService.Delete(ctx, postService.Collection, post.ID)
+```
 
 ### Authentication
 ```go
@@ -153,37 +196,16 @@ func (EnvTokenAuth) Clear() {}
 client.WithAuthStrategy(EnvTokenAuth{})
 ```
 
-### CRUD Operations
+### CRUD Operations (Legacy)
 ```go
+// Legacy API using RecordService (still supported)
 service := pocketbase.NewRecordService[Post](client, "posts")
 
-// Create
-post := &Post{Title: "New Post", Content: "Content here"}
-created, err := service.Create(ctx, post)
+// Read one - returns *Record
+record, err := service.GetOne(ctx, "RECORD_ID", nil)
 
-// Read one
-post, err := service.GetOne(ctx, "RECORD_ID", nil)
-
-// Read list with options
-posts, err := service.GetList(ctx, &pocketbase.ListOptions{
-    Page:    1,
-    PerPage: 20,
-    Sort:    "-created",
-    Filter:  "published = true",
-    Expand:  "author",
-})
-
-// Get all records (auto-pagination)
-allPosts, err := service.GetAll(ctx, &pocketbase.ListOptions{
-    Filter: "published = true",
-})
-
-// Update
-post.Title = "Updated Title"
-updated, err := service.Update(ctx, post.ID, post)
-
-// Delete
-err = service.Delete(ctx, post.ID)
+// Access via generic methods
+title := record.GetString("title")
 ```
 
 ### File Management
@@ -399,7 +421,8 @@ See the [full list of error codes](./errors.md) in the source code.
 Comprehensive examples in the [`examples/`](./examples/) directory:
 
 - **[`basic_crud`](./examples/basic_crud/)** - Essential CRUD operations
-- **[`auth`](./examples/auth/)** - Authentication patterns  
+- **[`generic_usage`](./examples/generic_usage/)** - Type-safe generic services with `TypedRecordService`
+- **[`auth`](./examples/auth/)** - Authentication patterns
 - **[`batch`](./examples/batch/)** - Batch operations
 - **[`file_management`](./examples/file_management/)** - File upload/download
 - **[`realtime_subscriptions`](./examples/realtime_subscriptions/)** - Real-time events
