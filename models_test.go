@@ -27,7 +27,7 @@ var sampleRecordJSON = []byte(`{
 // Define the existing lazy parsing implementation as a separate struct for comparison.
 
 type RecordLazy struct {
-	BaseModel
+	ID               string
 	CollectionID     string
 	CollectionName   string
 	Expand           map[string][]*Record

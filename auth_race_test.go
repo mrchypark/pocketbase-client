@@ -16,7 +16,7 @@ func TestPasswordAuthRace(t *testing.T) {
 		time.Sleep(10 * time.Millisecond)
 		_ = json.NewEncoder(w).Encode(AuthResponse{
 			Token:  "new-token",
-			Record: &Record{BaseModel: BaseModel{ID: "user1"}},
+			Record: &Record{ID: "user1"},
 		})
 	}))
 	defer srv.Close()

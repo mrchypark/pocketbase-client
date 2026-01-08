@@ -4,19 +4,18 @@ import (
 	"maps"
 	"net/url"
 
-	"github.com/goccy/go-json" // Modified to use goccy/go-json directly
+	"github.com/goccy/go-json"
 	"github.com/pocketbase/pocketbase/tools/types"
 )
 
-// BaseModel provides common fields for all PocketBase models.
-type BaseModel struct {
-	ID             string `json:"id"`
-	CollectionID   string `json:"collectionId"`
-	CollectionName string `json:"collectionName"`
+// BaseModel is the interface that all PocketBase models must implement.
+// It provides common accessors for shared fields.
+type BaseModel interface {
+	GetID() string
+	GetCollectionName() string
 }
 
 // BaseDatetime provides common datetime fields for PocketBase models.
-// Note: Since PocketBase 0.22+, these fields are not automatically included in all records.
 type BaseDatetime struct {
 	Created types.DateTime `json:"created"`
 	Updated types.DateTime `json:"updated"`
@@ -24,20 +23,29 @@ type BaseDatetime struct {
 
 // Admin represents a PocketBase administrator.
 type Admin struct {
-	BaseModel
-	Avatar int    `json:"avatar"`
-	Email  string `json:"email"`
+	ID             string `json:"id"`
+	CollectionID   string `json:"collectionId"`
+	CollectionName string `json:"collectionName"`
+	Avatar         int    `json:"avatar"`
+	Email          string `json:"email"`
 }
 
-// Record represents a PocketBase record.
-// ✅ Modified: Remove Data field and use deserializedData directly.
+func (a *Admin) GetID() string             { return a.ID }
+func (a *Admin) GetCollectionName() string { return "_superusers" }
+
+// Record represents a PocketBase record with type-safe accessors.
 type Record struct {
-	BaseModel
-	Expand map[string][]*Record `json:"expand,omitempty"`
+	ID             string               `json:"id"`
+	CollectionID   string               `json:"collectionId"`
+	CollectionName string               `json:"collectionName"`
+	Expand         map[string][]*Record `json:"expand,omitempty"`
 
 	// Map to store data. From now on, this field is the only data source.
 	deserializedData map[string]any
 }
+
+func (r *Record) GetID() string             { return r.ID }
+func (r *Record) GetCollectionName() string { return r.CollectionName }
 
 // ListResult is a struct containing a list of records along with pagination information.
 type ListResult struct {
@@ -126,7 +134,6 @@ func (r *Record) UnmarshalJSON(data []byte) error {
 		_ = json.Unmarshal(raw, &r.Expand)
 	}
 
-	// Remove common fields and expand from map.
 	delete(allData, "id")
 	delete(allData, "collectionId")
 	delete(allData, "collectionName")
@@ -203,7 +210,6 @@ func (r *Record) GetFloat(key string) float64 {
 	if i, ok := val.(int); ok {
 		return float64(i)
 	}
-	// For JSON numbers
 	if num, ok := val.(json.Number); ok {
 		f, _ := num.Float64()
 		return f
@@ -251,8 +257,6 @@ func (r *Record) GetRawMessage(key string) json.RawMessage {
 	if raw, ok := val.(json.RawMessage); ok {
 		return raw
 	}
-	// If it was parsed into a map/slice, re-marshal it.
-	// This can happen if Set() was called before.
 	if val != nil {
 		bytes, err := json.Marshal(val)
 		if err == nil {
@@ -263,7 +267,6 @@ func (r *Record) GetRawMessage(key string) json.RawMessage {
 }
 
 // GetStringPointer returns a pointer to a string value for a given key.
-// Returns nil if the key is not present or the value is not a string.
 func (r *Record) GetStringPointer(key string) *string {
 	val := r.Get(key)
 	if val == nil {
@@ -279,7 +282,6 @@ func (r *Record) GetStringPointer(key string) *string {
 }
 
 // GetBoolPointer returns a pointer to a boolean value for a given key.
-// Returns nil if the key is not present or the value is not a bool.
 func (r *Record) GetBoolPointer(key string) *bool {
 	val := r.Get(key)
 	if val == nil {
@@ -295,7 +297,6 @@ func (r *Record) GetBoolPointer(key string) *bool {
 }
 
 // GetFloatPointer returns a pointer to a float64 value for a given key.
-// Returns nil if the key is not present or the value is not a number.
 func (r *Record) GetFloatPointer(key string) *float64 {
 	val := r.Get(key)
 	if val == nil {
@@ -327,7 +328,6 @@ func (r *Record) GetFloatPointer(key string) *float64 {
 }
 
 // GetDateTimePointer returns a pointer to a types.DateTime value for a given key.
-// Returns nil if the key is not present or the value cannot be parsed as a DateTime.
 func (r *Record) GetDateTimePointer(key string) *types.DateTime {
 	val := r.Get(key)
 	if val == nil {

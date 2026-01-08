@@ -34,7 +34,7 @@ func TestAdminServiceGetOne(t *testing.T) {
 		if r.URL.Path != "/api/admins/1" {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
-		_ = json.NewEncoder(w).Encode(Admin{BaseModel: BaseModel{ID: "1"}})
+		_ = json.NewEncoder(w).Encode(Admin{ID: "1"})
 	}))
 	defer srv.Close()
 
@@ -53,7 +53,7 @@ func TestAdminServiceCreate(t *testing.T) {
 		if r.Method != http.MethodPost {
 			t.Fatalf("unexpected method: %s", r.Method)
 		}
-		_ = json.NewEncoder(w).Encode(Admin{BaseModel: BaseModel{ID: "2"}})
+		_ = json.NewEncoder(w).Encode(Admin{ID: "2"})
 	}))
 	defer srv.Close()
 
@@ -75,7 +75,7 @@ func TestAdminServiceUpdate(t *testing.T) {
 		if r.Method != http.MethodPatch {
 			t.Fatalf("unexpected method: %s", r.Method)
 		}
-		_ = json.NewEncoder(w).Encode(Admin{BaseModel: BaseModel{ID: "1"}})
+		_ = json.NewEncoder(w).Encode(Admin{ID: "1"})
 	}))
 	defer srv.Close()
 

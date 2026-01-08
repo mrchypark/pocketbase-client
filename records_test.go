@@ -267,7 +267,7 @@ func TestRecordServiceGetOne(t *testing.T) {
 		if r.URL.Path != "/api/collections/posts/records/1" {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
-		_ = json.NewEncoder(w).Encode(Record{BaseModel: BaseModel{ID: "1"}})
+		_ = json.NewEncoder(w).Encode(Record{ID: "1"})
 	}))
 	defer srv.Close()
 
@@ -287,7 +287,7 @@ func TestRecordServiceGetOneFields(t *testing.T) {
 		if r.URL.Query().Get("fields") != "id,title" {
 			t.Fatalf("unexpected fields: %s", r.URL.Query().Get("fields"))
 		}
-		_ = json.NewEncoder(w).Encode(Record{BaseModel: BaseModel{ID: "1"}})
+		_ = json.NewEncoder(w).Encode(Record{ID: "1"})
 	}))
 	defer srv.Close()
 
@@ -307,7 +307,7 @@ func TestRecordServiceCreate(t *testing.T) {
 		if r.URL.Path != "/api/collections/posts/records" {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
-		_ = json.NewEncoder(w).Encode(Record{BaseModel: BaseModel{ID: "1"}})
+		_ = json.NewEncoder(w).Encode(Record{ID: "1"})
 	}))
 	defer srv.Close()
 
@@ -330,7 +330,7 @@ func TestRecordServiceCreateWithQuery(t *testing.T) {
 		if r.URL.Query().Get("fields") != "id" {
 			t.Fatalf("unexpected fields: %s", r.URL.Query().Get("fields"))
 		}
-		_ = json.NewEncoder(w).Encode(Record{BaseModel: BaseModel{ID: "1"}})
+		_ = json.NewEncoder(w).Encode(Record{ID: "1"})
 	}))
 	defer srv.Close()
 
@@ -350,7 +350,7 @@ func TestRecordServiceUpdate(t *testing.T) {
 		if r.URL.Path != "/api/collections/posts/records/1" {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
-		_ = json.NewEncoder(w).Encode(Record{BaseModel: BaseModel{ID: "1"}})
+		_ = json.NewEncoder(w).Encode(Record{ID: "1"})
 	}))
 	defer srv.Close()
 
@@ -372,7 +372,7 @@ func TestRecordServiceUpdateWithQuery(t *testing.T) {
 		if r.URL.Query().Get("fields") != "id" {
 			t.Fatalf("unexpected fields: %s", r.URL.Query().Get("fields"))
 		}
-		_ = json.NewEncoder(w).Encode(Record{BaseModel: BaseModel{ID: "1"}})
+		_ = json.NewEncoder(w).Encode(Record{ID: "1"})
 	}))
 	defer srv.Close()
 
@@ -478,18 +478,14 @@ func TestBackwardCompatibility(t *testing.T) {
 				TotalPages: 3,
 				Items: []*Record{
 					{
-						BaseModel: BaseModel{
-							ID:             "test1",
-							CollectionID:   "posts_col",
-							CollectionName: "posts",
-						},
+						ID:             "test1",
+						CollectionID:   "posts_col",
+						CollectionName: "posts",
 					},
 					{
-						BaseModel: BaseModel{
-							ID:             "test2",
-							CollectionID:   "posts_col",
-							CollectionName: "posts",
-						},
+						ID:             "test2",
+						CollectionID:   "posts_col",
+						CollectionName: "posts",
 					},
 				},
 			}
