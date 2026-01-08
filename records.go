@@ -93,7 +93,6 @@ func (s *RecordService) CreateWithOptions(ctx context.Context, collection string
 	}
 	requestBody := body
 	if mappable, ok := body.(Mappable); ok {
-		// If implemented, call ToMap() to convert to map
 		requestBody = mappable.ToMap()
 	}
 
@@ -126,7 +125,6 @@ func (s *RecordService) UpdateWithOptions(ctx context.Context, collection, recor
 	}
 	requestBody := body
 	if mappable, ok := body.(Mappable); ok {
-		// If implemented, call ToMap() to convert to map
 		requestBody = mappable.ToMap()
 	}
 
@@ -169,6 +167,7 @@ func (s *RecordService) NewDeleteRequest(collection, recordID string) (*BatchReq
 	return &BatchRequest{
 		Method: http.MethodDelete,
 		URL:    fmt.Sprintf("/api/collections/%s/records/%s", url.PathEscape(collection), url.PathEscape(recordID)),
+		Body:   nil,
 	}, nil
 }
 
@@ -182,4 +181,119 @@ func (s *RecordService) NewUpsertRequest(collection string, body map[string]any)
 		URL:    fmt.Sprintf("/api/collections/%s/records", url.PathEscape(collection)),
 		Body:   body,
 	}, nil
+}
+
+// TypedRecordService provides type-safe record operations.
+// T must be a pointer type that embeds Record or implements compatible interface.
+type TypedRecordService[T any] struct {
+	*RecordService
+	Collection string
+}
+
+// NewTypedRecordService creates a new TypedRecordService for the given collection.
+func NewTypedRecordService[T any](client *Client, collection string) *TypedRecordService[T] {
+	return &TypedRecordService[T]{
+		RecordService: &RecordService{Client: client},
+		Collection:    collection,
+	}
+}
+
+// GetOne retrieves a single record and converts it to type T.
+func (s *TypedRecordService[T]) GetOne(ctx context.Context, recordID string, opts *GetOneOptions) (*T, error) {
+	rec, err := s.RecordService.GetOne(ctx, s.Collection, recordID, opts)
+	if err != nil {
+		return nil, err
+	}
+	return convertRecord[T](rec)
+}
+
+// Create creates a new record from type T.
+func (s *TypedRecordService[T]) Create(ctx context.Context, body *T) (*T, error) {
+	rec, err := s.RecordService.Create(ctx, s.Collection, body)
+	if err != nil {
+		return nil, err
+	}
+	return convertRecord[T](rec)
+}
+
+// Update updates an existing record.
+func (s *TypedRecordService[T]) Update(ctx context.Context, recordID string, body *T) (*T, error) {
+	rec, err := s.RecordService.Update(ctx, s.Collection, recordID, body)
+	if err != nil {
+		return nil, err
+	}
+	return convertRecord[T](rec)
+}
+
+// GetList retrieves a list of records.
+func (s *TypedRecordService[T]) GetList(ctx context.Context, opts *ListOptions) (*TypedListResult[T], error) {
+	res, err := s.RecordService.GetList(ctx, s.Collection, opts)
+	if err != nil {
+		return nil, err
+	}
+	items := make([]*T, len(res.Items))
+	for i, rec := range res.Items {
+		item, err := convertRecord[T](rec)
+		if err != nil {
+			return nil, err
+		}
+		items[i] = item
+	}
+	return &TypedListResult[T]{
+		Page:       res.Page,
+		PerPage:    res.PerPage,
+		TotalItems: res.TotalItems,
+		TotalPages: res.TotalPages,
+		Items:      items,
+	}, nil
+}
+
+// GetAll retrieves all records (auto-pagination).
+func (s *TypedRecordService[T]) GetAll(ctx context.Context, opts *ListOptions) ([]*T, error) {
+	var all []*T
+	page := 1
+	perPage := 100
+	if opts != nil && opts.PerPage > 0 {
+		perPage = opts.PerPage
+	}
+
+	for {
+		res, err := s.GetList(ctx, &ListOptions{
+			Page:      page,
+			PerPage:   perPage,
+			Filter:    opts.Filter,
+			Sort:      opts.Sort,
+			Expand:    opts.Expand,
+			Fields:    opts.Fields,
+			SkipTotal: opts.SkipTotal,
+		})
+		if err != nil {
+			return nil, err
+		}
+		all = append(all, res.Items...)
+		if page >= res.TotalPages {
+			break
+		}
+		page++
+	}
+	return all, nil
+}
+
+// TypedListResult is a typed version of ListResult.
+type TypedListResult[T any] struct {
+	Page       int  `json:"page"`
+	PerPage    int  `json:"perPage"`
+	TotalItems int  `json:"totalItems"`
+	TotalPages int  `json:"totalPages"`
+	Items      []*T `json:"items"`
+}
+
+// convertRecord converts a Record to type T.
+func convertRecord[T any](rec *Record) (*T, error) {
+	var t T
+	if ptr, ok := any(&t).(**Record); ok {
+		*ptr = rec
+		return &t, nil
+	}
+	return nil, fmt.Errorf("pocketbase: cannot convert Record to %T", t)
 }
