@@ -237,9 +237,31 @@ func (m *{{$collection.StructName}}) ToMap() map[string]any {
 	data := make(map[string]any)
 	{{- range .Fields}}
 	{{- if .OmitEmpty}}
-	if m.{{.GoName}} != {{if eq .BaseType "string"}}""{{else if eq .BaseType "bool"}}false{{else if eq .BaseType "float64"}}0{{else}}nil{{end}} {
+	{{- if .IsPointer}}
+	if m.{{.GoName}} != nil {
 		data["{{.JSONName}}"] = m.{{.GoName}}
 	}
+	{{- else if eq .GoType "[]string"}}
+	if m.{{.GoName}} != nil {
+		data["{{.JSONName}}"] = m.{{.GoName}}
+	}
+	{{- else if eq .BaseType "string"}}
+	if m.{{.GoName}} != "" {
+		data["{{.JSONName}}"] = m.{{.GoName}}
+	}
+	{{- else if eq .BaseType "bool"}}
+	if m.{{.GoName}} {
+		data["{{.JSONName}}"] = m.{{.GoName}}
+	}
+	{{- else if eq .BaseType "float64"}}
+	if m.{{.GoName}} != 0 {
+		data["{{.JSONName}}"] = m.{{.GoName}}
+	}
+	{{- else}}
+	if m.{{.GoName}} != nil {
+		data["{{.JSONName}}"] = m.{{.GoName}}
+	}
+	{{- end}}
 	{{- else}}
 	data["{{.JSONName}}"] = m.{{.GoName}}
 	{{- end}}
