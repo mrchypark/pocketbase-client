@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+
+	"github.com/goccy/go-json"
 )
 
 // RecordServiceAPI defines the API operations related to records.
@@ -289,11 +291,33 @@ type TypedListResult[T any] struct {
 }
 
 // convertRecord converts a Record to type T.
+// It supports types that implement RecordModel interface (generated types)
+// or types that are *Record itself.
 func convertRecord[T any](rec *Record) (*T, error) {
 	var t T
+
+	// Case 1: T is *Record itself
 	if ptr, ok := any(&t).(**Record); ok {
 		*ptr = rec
 		return &t, nil
 	}
-	return nil, fmt.Errorf("pocketbase: cannot convert Record to %T", t)
+
+	// Case 2: T implements RecordModel (generated types with direct fields)
+	if model, ok := any(&t).(RecordModel); ok {
+		model.SetID(rec.ID)
+		model.SetCollectionID(rec.CollectionID)
+		model.SetCollectionName(rec.CollectionName)
+
+		// Marshal record to JSON and unmarshal into the model
+		data, err := json.Marshal(rec)
+		if err != nil {
+			return nil, fmt.Errorf("pocketbase: failed to marshal record: %w", err)
+		}
+		if err := json.Unmarshal(data, &t); err != nil {
+			return nil, fmt.Errorf("pocketbase: failed to unmarshal into %T: %w", t, err)
+		}
+		return &t, nil
+	}
+
+	return nil, fmt.Errorf("pocketbase: cannot convert Record to %T (must implement RecordModel)", t)
 }

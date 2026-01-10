@@ -15,6 +15,20 @@ type BaseModel interface {
 	GetCollectionName() string
 }
 
+// RecordModel is the interface for generated record types.
+// It extends BaseModel with methods for Record conversion.
+// Generated types should implement this interface to enable
+// seamless integration with TypedRecordService.
+type RecordModel interface {
+	BaseModel
+	// SetID sets the record ID (used when populating from API response)
+	SetID(id string)
+	// SetCollectionID sets the collection ID
+	SetCollectionID(id string)
+	// SetCollectionName sets the collection name
+	SetCollectionName(name string)
+}
+
 // BaseDatetime provides common datetime fields for PocketBase models.
 type BaseDatetime struct {
 	Created types.DateTime `json:"created"`

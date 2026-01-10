@@ -307,8 +307,8 @@ func TestTemplateExecution(t *testing.T) {
 			expectedParts := []string{
 				"package " + tt.data.PackageName,
 				"import (",
-				tt.data.JSONLibrary,
 				"github.com/mrchypark/pocketbase-client",
+				"github.com/pocketbase/pocketbase/tools/types",
 			}
 
 			for _, part := range expectedParts {
@@ -322,28 +322,17 @@ func TestTemplateExecution(t *testing.T) {
 				expectedStructParts := []string{
 					"type " + collection.StructName + " struct",
 					"func New" + collection.StructName + "()",
-					"func To" + collection.StructName + "(",
+					"func New" + collection.StructName + "Service(",
 					"func Get" + collection.StructName + "(",
 					"func Get" + collection.StructName + "List(",
+					"var _ pocketbase.RecordModel = (*" + collection.StructName + ")(nil)",
+					"func (m *" + collection.StructName + ") GetID()",
+					"func (m *" + collection.StructName + ") GetCollectionName()",
 				}
 
 				for _, part := range expectedStructParts {
 					if !strings.Contains(generatedCode, part) {
 						t.Errorf("Generated code missing expected struct part for %s: %s", collection.StructName, part)
-					}
-				}
-
-				// 각 필드에 대한 getter/setter가 생성되었는지 확인
-				for _, field := range collection.Fields {
-					expectedFieldParts := []string{
-						"func (m *" + collection.StructName + ") " + field.GoName + "()",
-						"func (m *" + collection.StructName + ") Set" + field.GoName + "(",
-					}
-
-					for _, part := range expectedFieldParts {
-						if !strings.Contains(generatedCode, part) {
-							t.Errorf("Generated code missing expected field part for %s.%s: %s", collection.StructName, field.GoName, part)
-						}
 					}
 				}
 			}
@@ -577,6 +566,9 @@ replace github.com/pocketbase/pocketbase => github.com/pocketbase/pocketbase v0.
 		"func (r ProfileRelation) Load(",
 		"type FileReference struct",
 		"func (f FileReference) URL(",
+		"var _ pocketbase.RecordModel = (*User)(nil)",
+		"func (m *User) GetID()",
+		"func (m *User) GetCollectionName()",
 	}
 
 	for _, expected := range expectedStructures {

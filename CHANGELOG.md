@@ -1,5 +1,66 @@
 # Changelog
 
+## [v0.3.1] - 2026-01-10
+
+### Breaking Changes
+
+- **pbc-gen Template Redesign**: Generated models now use direct struct fields instead of embedding `pocketbase.Record`
+  - Models implement `RecordModel` interface for seamless client integration
+  - Fields are directly accessible (e.g., `post.Title` instead of `post.GetString("title")`)
+  - Setter methods generated for all fields (e.g., `post.SetTitle("value")`)
+  - Pointer fields accept value types in setters for convenience (e.g., `post.SetContent("text")` instead of `post.Content = &text`)
+
+### Features
+
+- **RecordModel Interface**: New interface for generated record types
+  - Extends `BaseModel` with `SetID()`, `SetCollectionID()`, `SetCollectionName()` methods
+  - Enables automatic conversion in `TypedRecordService`
+- **Setter Methods for All Fields**: Generated models include setter methods
+  - Pointer fields: `SetField(v BaseType)` - automatically converts to pointer
+  - Value fields: `SetField(v Type)` - direct assignment
+- **Service Factory Functions**: Each collection gets `New{Collection}Service(client)` factory
+
+### Improvements
+
+- `convertRecord[T]` now supports `RecordModel` interface for seamless type conversion
+- Generated code includes `var _ pocketbase.RecordModel = (*Type)(nil)` for compile-time interface verification
+- Template tests updated for new structure
+
+### Migration Guide
+
+#### Before (v0.3.0)
+```go
+type Post struct {
+    pocketbase.Record
+}
+
+func (p *Post) Title() string { return p.GetString("title") }
+func (p *Post) SetTitle(v string) { p.Set("title", v) }
+
+// Usage
+title := post.Title()
+post.SetTitle("New Title")
+```
+
+#### After (v0.3.1)
+```go
+type Post struct {
+    ID             string         `json:"id"`
+    CollectionID   string         `json:"collectionId"`
+    CollectionName string         `json:"collectionName"`
+    Created        types.DateTime `json:"created"`
+    Updated        types.DateTime `json:"updated"`
+    Title          string         `json:"title"`
+    Content        *string        `json:"content,omitempty"`
+}
+
+// Usage - direct field access!
+title := post.Title
+post.Title = "New Title"
+post.SetTitle("New Title")      // Also works
+post.SetContent("My content")   // Pointer field - no &v needed!
+```
+
 ## [Unreleased]
 
 ### Breaking Changes
