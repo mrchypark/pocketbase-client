@@ -20,8 +20,39 @@ A robust, type-safe Go client for the [PocketBase API](https://pocketbase.io/). 
 
 ## 💾 Installation
 
+### Client Library
+
 ```bash
 go get github.com/mrchypark/pocketbase-client
+```
+
+### Code Generator (pbc-gen)
+
+**Option 1: Install script (recommended)**
+```bash
+# Install latest version
+curl -sL https://raw.githubusercontent.com/mrchypark/pocketbase-client/main/install.sh | sh
+
+# Install specific version
+curl -sL https://raw.githubusercontent.com/mrchypark/pocketbase-client/main/install.sh | sh -s v0.3.3
+
+# Move to PATH
+sudo mv ./pbc-gen /usr/local/bin/
+```
+
+**Option 2: Go install**
+```bash
+go install github.com/mrchypark/pocketbase-client/cmd/pbc-gen@latest
+```
+
+**Option 3: Download from [Releases](https://github.com/mrchypark/pocketbase-client/releases)**
+
+Verify installation:
+```bash
+pbc-gen --version
+# pbc-gen 0.3.3
+#   commit: c536d13
+#   built:  2026-01-10T03:49:17Z
 ```
 
 ## 🚀 Quick Start
