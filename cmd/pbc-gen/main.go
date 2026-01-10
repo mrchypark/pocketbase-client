@@ -4,6 +4,7 @@ import (
 	// 1. Add embed package.
 	_ "embed"
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -12,6 +13,13 @@ import (
 
 	"github.com/mrchypark/pocketbase-client/internal/generator"
 	"golang.org/x/tools/imports"
+)
+
+// Version information injected at build time via ldflags
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
 )
 
 // 2. Use go:embed directive to store template file content in a variable.
@@ -26,12 +34,17 @@ func main() {
 	pkgName := flag.String("pkgname", "models", "Package name for the generated file")
 	jsonLib := flag.String("jsonlib", "encoding/json", "JSON library to use (e.g., github.com/goccy/go-json)")
 
-	// 새로운 enhanced 기능 플래그들
 	generateEnums := flag.Bool("enums", true, "Generate enum constants for select fields")
 	generateRelations := flag.Bool("relations", true, "Generate enhanced relation types")
 	generateFiles := flag.Bool("files", true, "Generate enhanced file types")
+	showVersion := flag.Bool("version", false, "Print version information and exit")
 
 	flag.Parse()
+
+	if *showVersion {
+		fmt.Printf("pbc-gen %s\n  commit: %s\n  built:  %s\n", version, commit, date)
+		return
+	}
 
 	log.Printf("Generating Go models from schema: %s\n", *schemaPath)
 
