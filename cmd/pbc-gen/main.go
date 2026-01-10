@@ -1,13 +1,13 @@
 package main
 
 import (
-	// 1. Add embed package.
 	_ "embed"
 	"flag"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
+	"runtime/debug"
 	"strings"
 	"text/template"
 
@@ -15,12 +15,30 @@ import (
 	"golang.org/x/tools/imports"
 )
 
-// Version information injected at build time via ldflags
 var (
 	version = "dev"
 	commit  = "none"
 	date    = "unknown"
 )
+
+func init() {
+	if version != "dev" {
+		return
+	}
+	info, ok := debug.ReadBuildInfo()
+	if !ok {
+		return
+	}
+	version = info.Main.Version
+	for _, s := range info.Settings {
+		if s.Key == "vcs.revision" && len(s.Value) >= 7 {
+			commit = s.Value[:7]
+		}
+		if s.Key == "vcs.time" {
+			date = s.Value
+		}
+	}
+}
 
 // 2. Use go:embed directive to store template file content in a variable.
 // This code must specify the relative path of the template file based on the main.go file.
