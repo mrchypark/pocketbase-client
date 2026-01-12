@@ -7,9 +7,6 @@ type TemplateData struct {
 	JSONLibrary string // JSON library import path (e.g., "encoding/json")
 	Collections []CollectionData
 
-	// Generation options (controlled via CLI flags)
-	GenerateServices bool // generate typed collection services
-
 	// Enhanced 기능을 위한 필드들 (기본값은 빈 슬라이스)
 	Enums         []EnumData         `json:"enums,omitempty"`
 	RelationTypes []RelationTypeData `json:"relationTypes,omitempty"`

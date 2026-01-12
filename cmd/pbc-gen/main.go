@@ -55,7 +55,6 @@ func main() {
 	generateEnums := flag.Bool("enums", true, "Generate enum constants for select fields")
 	generateRelations := flag.Bool("relations", true, "Generate enhanced relation types")
 	generateFiles := flag.Bool("files", true, "Generate enhanced file types")
-	generateServices := flag.Bool("services", true, "Generate typed collection services (pocketbase.Service[T])")
 	showVersion := flag.Bool("version", false, "Print version information and exit")
 
 	flag.Parse()
@@ -83,8 +82,6 @@ func main() {
 		PackageName: *pkgName,
 		JSONLibrary: *jsonLib,
 		Collections: make([]generator.CollectionData, 0, len(schemas)),
-		// New option flags
-		GenerateServices: *generateServices,
 	}
 
 	for _, s := range schemas {

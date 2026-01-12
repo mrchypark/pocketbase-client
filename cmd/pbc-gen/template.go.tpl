@@ -270,7 +270,6 @@ func (m *{{$collection.StructName}}) ToMap() map[string]any {
 }
 {{end}}
 
-{{if .GenerateServices}}
 // ==============
 //  Collection Services
 // ==============
@@ -280,7 +279,6 @@ func (m *{{$collection.StructName}}) ToMap() map[string]any {
 func New{{.StructName}}Service(client *pocketbase.Client) *pocketbase.Service[*{{.StructName}}] {
 	return pocketbase.NewService[*{{.StructName}}](client, "{{.CollectionName}}", New{{.StructName}})
 }
-{{end}}
 {{end}}
 
 // ==============
