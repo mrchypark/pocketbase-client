@@ -57,8 +57,9 @@ func TestTemplateExecution(t *testing.T) {
 			name: "basic template with all features",
 			data: EnhancedTemplateData{
 				TemplateData: TemplateData{
-					PackageName: "models",
-					JSONLibrary: "encoding/json",
+					PackageName:      "models",
+					JSONLibrary:      "encoding/json",
+					GenerateServices: true,
 					Collections: []CollectionData{
 						{
 							CollectionName: "users",
@@ -151,8 +152,9 @@ func TestTemplateExecution(t *testing.T) {
 			name: "template with enums only",
 			data: EnhancedTemplateData{
 				TemplateData: TemplateData{
-					PackageName: "models",
-					JSONLibrary: "encoding/json",
+					PackageName:      "models",
+					JSONLibrary:      "encoding/json",
+					GenerateServices: true,
 					Collections: []CollectionData{
 						{
 							CollectionName: "devices",
@@ -189,8 +191,9 @@ func TestTemplateExecution(t *testing.T) {
 			name: "template with relations only",
 			data: EnhancedTemplateData{
 				TemplateData: TemplateData{
-					PackageName: "models",
-					JSONLibrary: "encoding/json",
+					PackageName:      "models",
+					JSONLibrary:      "encoding/json",
+					GenerateServices: true,
 					Collections: []CollectionData{
 						{
 							CollectionName: "posts",
@@ -224,8 +227,9 @@ func TestTemplateExecution(t *testing.T) {
 			name: "template with files only",
 			data: EnhancedTemplateData{
 				TemplateData: TemplateData{
-					PackageName: "models",
-					JSONLibrary: "encoding/json",
+					PackageName:      "models",
+					JSONLibrary:      "encoding/json",
+					GenerateServices: true,
 					Collections: []CollectionData{
 						{
 							CollectionName: "gallery",
@@ -259,8 +263,9 @@ func TestTemplateExecution(t *testing.T) {
 			name: "minimal template without enhanced features",
 			data: EnhancedTemplateData{
 				TemplateData: TemplateData{
-					PackageName: "models",
-					JSONLibrary: "encoding/json",
+					PackageName:      "models",
+					JSONLibrary:      "encoding/json",
+					GenerateServices: true,
 					Collections: []CollectionData{
 						{
 							CollectionName: "simple",
@@ -670,9 +675,10 @@ func TestTemplateWithDifferentSchemaPatterns(t *testing.T) {
 			description: "엣지 케이스 - 빈 컬렉션",
 			data: EnhancedTemplateData{
 				TemplateData: TemplateData{
-					PackageName: "models",
-					JSONLibrary: "encoding/json",
-					Collections: []CollectionData{},
+					PackageName:      "models",
+					JSONLibrary:      "encoding/json",
+					GenerateServices: true,
+					Collections:      []CollectionData{},
 				},
 				GenerateEnums:     false,
 				GenerateRelations: false,
@@ -684,8 +690,9 @@ func TestTemplateWithDifferentSchemaPatterns(t *testing.T) {
 			description: "특수 문자가 포함된 이름들",
 			data: EnhancedTemplateData{
 				TemplateData: TemplateData{
-					PackageName: "models",
-					JSONLibrary: "encoding/json",
+					PackageName:      "models",
+					JSONLibrary:      "encoding/json",
+					GenerateServices: true,
 					Collections: []CollectionData{
 						{
 							CollectionName: "special_chars_test",

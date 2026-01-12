@@ -270,16 +270,6 @@ func (m *{{$collection.StructName}}) ToMap() map[string]any {
 }
 {{end}}
 
-// ==============
-//  Typed Service Factory
-// ==============
-{{range .Collections}}
-
-func New{{.StructName}}Service(client *pocketbase.Client) *pocketbase.TypedRecordService[{{.StructName}}] {
-	return pocketbase.NewTypedRecordService[{{.StructName}}](client, "{{.CollectionName}}")
-}
-{{end}}
-
 {{if .GenerateServices}}
 // ==============
 //  Collection Services
