@@ -280,6 +280,19 @@ func New{{.StructName}}Service(client *pocketbase.Client) *pocketbase.TypedRecor
 }
 {{end}}
 
+{{if .GenerateServices}}
+// ==============
+//  Collection Services
+// ==============
+{{range .Collections}}
+
+// New{{.StructName}}Service creates a type-safe service for '{{.CollectionName}}' collection.
+func New{{.StructName}}Service(client *pocketbase.Client) *pocketbase.Service[*{{.StructName}}] {
+	return pocketbase.NewService[*{{.StructName}}](client, "{{.CollectionName}}", New{{.StructName}})
+}
+{{end}}
+{{end}}
+
 // ==============
 //  Typed Helpers
 // ==============

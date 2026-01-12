@@ -19,6 +19,7 @@ func TestCLIFlags(t *testing.T) {
 		expectedEnums bool
 		expectedRels  bool
 		expectedFiles bool
+		expectedSvcs  bool
 		expectError   bool
 	}{
 		{
@@ -27,30 +28,34 @@ func TestCLIFlags(t *testing.T) {
 			expectedEnums: true,
 			expectedRels:  true,
 			expectedFiles: true,
+			expectedSvcs:  true,
 			expectError:   false,
 		},
 		{
 			name:          "모든 기능 활성화",
-			args:          []string{"-enums=true", "-relations=true", "-files=true"},
+			args:          []string{"-enums=true", "-relations=true", "-files=true", "-services=true"},
 			expectedEnums: true,
 			expectedRels:  true,
 			expectedFiles: true,
+			expectedSvcs:  true,
 			expectError:   false,
 		},
 		{
 			name:          "모든 기능 비활성화",
-			args:          []string{"-enums=false", "-relations=false", "-files=false"},
+			args:          []string{"-enums=false", "-relations=false", "-files=false", "-services=false"},
 			expectedEnums: false,
 			expectedRels:  false,
 			expectedFiles: false,
+			expectedSvcs:  false,
 			expectError:   false,
 		},
 		{
 			name:          "일부 기능만 활성화",
-			args:          []string{"-enums=true", "-relations=false", "-files=true"},
+			args:          []string{"-enums=true", "-relations=false", "-files=true", "-services=false"},
 			expectedEnums: true,
 			expectedRels:  false,
 			expectedFiles: true,
+			expectedSvcs:  false,
 			expectError:   false,
 		},
 	}
@@ -71,6 +76,7 @@ func TestCLIFlags(t *testing.T) {
 			generateEnums := fs.Bool("enums", true, "Generate enum constants for select fields")
 			generateRelations := fs.Bool("relations", true, "Generate enhanced relation types")
 			generateFiles := fs.Bool("files", true, "Generate enhanced file types")
+			generateServices := fs.Bool("services", true, "Generate typed collection services (pocketbase.Service[T])")
 
 			err := fs.Parse(tt.args)
 			if tt.expectError && err == nil {
@@ -89,6 +95,9 @@ func TestCLIFlags(t *testing.T) {
 				}
 				if *generateFiles != tt.expectedFiles {
 					t.Errorf("files 플래그: 예상값 %v, 실제값 %v", tt.expectedFiles, *generateFiles)
+				}
+				if *generateServices != tt.expectedSvcs {
+					t.Errorf("services 플래그: 예상값 %v, 실제값 %v", tt.expectedSvcs, *generateServices)
 				}
 			}
 		})
@@ -137,24 +146,35 @@ func TestCLIIntegration(t *testing.T) {
 		name        string
 		args        []string
 		expectEnums bool
+		expectSvcs  bool
 		expectError bool
 	}{
 		{
 			name:        "기본 실행",
 			args:        []string{"-schema", schemaFile, "-path", filepath.Join(tempDir, "models1.gen.go")},
 			expectEnums: true,
+			expectSvcs:  true,
 			expectError: false,
 		},
 		{
 			name:        "Enum 비활성화",
 			args:        []string{"-schema", schemaFile, "-path", filepath.Join(tempDir, "models2.gen.go"), "-enums=false"},
 			expectEnums: false,
+			expectSvcs:  true,
+			expectError: false,
+		},
+		{
+			name:        "Service 비활성화",
+			args:        []string{"-schema", schemaFile, "-path", filepath.Join(tempDir, "models2b.gen.go"), "-services=false"},
+			expectEnums: true,
+			expectSvcs:  false,
 			expectError: false,
 		},
 		{
 			name:        "존재하지 않는 스키마 파일",
 			args:        []string{"-schema", "nonexistent.json", "-path", filepath.Join(tempDir, "models3.gen.go")},
 			expectEnums: false,
+			expectSvcs:  false,
 			expectError: true,
 		},
 	}
@@ -216,6 +236,15 @@ func TestCLIIntegration(t *testing.T) {
 			// 기본 구조체는 항상 생성되어야 함
 			if !strings.Contains(contentStr, "type TestItems struct") {
 				t.Error("기본 구조체가 생성되지 않았습니다")
+			}
+
+			// Service 생성 여부 확인
+			hasService := strings.Contains(contentStr, "func NewTestItemsService(")
+			if tt.expectSvcs && !hasService {
+				t.Error("Service 생성 코드가 생성되지 않았습니다")
+			}
+			if !tt.expectSvcs && hasService {
+				t.Error("Service 생성 코드가 예상치 않게 생성되었습니다")
 			}
 		})
 	}
