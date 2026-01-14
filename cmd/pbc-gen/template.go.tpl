@@ -4,6 +4,7 @@ package {{.PackageName}}
 
 import (
 	"context"
+	"encoding/json"
 	{{with .FileTypes}}"fmt"{{end}}
 
 	"github.com/mrchypark/pocketbase-client"
@@ -295,6 +296,16 @@ func Get{{.StructName}}(client pocketbase.RecordServiceAPI, id string, opts *poc
 	result.SetID(r.ID)
 	result.SetCollectionID(r.CollectionID)
 	result.SetCollectionName(r.CollectionName)
+
+	// Marshal record to JSON and unmarshal into struct to populate all fields
+	data, err := json.Marshal(r)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal record: %w", err)
+	}
+	if err := json.Unmarshal(data, result); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal into {{.StructName}}: %w", err)
+	}
+
 	return result, nil
 }
 
@@ -310,6 +321,16 @@ func Get{{.StructName}}List(client pocketbase.RecordServiceAPI, opts *pocketbase
 		item.SetID(r.ID)
 		item.SetCollectionID(r.CollectionID)
 		item.SetCollectionName(r.CollectionName)
+
+		// Marshal record to JSON and unmarshal into struct to populate all fields
+		data, err := json.Marshal(r)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal record: %w", err)
+		}
+		if err := json.Unmarshal(data, item); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal into {{.StructName}}: %w", err)
+		}
+
 		typedItems[i] = item
 	}
 
