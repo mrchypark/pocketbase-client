@@ -1,11 +1,11 @@
 [
   {
-    "id": "pbc_events_0001",
-    "listRule": "",
-    "viewRule": "",
-    "createRule": "",
-    "updateRule": "",
-    "deleteRule": "",
+    "id": "pbc_1687431684",
+    "listRule": null,
+    "viewRule": null,
+    "createRule": null,
+    "updateRule": null,
+    "deleteRule": null,
     "name": "events",
     "type": "base",
     "fields": [
@@ -24,16 +24,6 @@
         "type": "text"
       },
       {
-        "hidden": false,
-        "id": "autodate_created",
-        "name": "created",
-        "onCreate": true,
-        "onUpdate": false,
-        "presentable": false,
-        "system": true,
-        "type": "autodate"
-      },
-      {
         "autogeneratePattern": "",
         "hidden": false,
         "id": "text1912072331",
@@ -49,10 +39,10 @@
       },
       {
         "cascadeDelete": false,
-        "collectionId": "pbc_persons_001",
+        "collectionId": "pbc_856668217",
         "hidden": false,
         "id": "relation886886774",
-        "maxSelect": 1,
+        "maxSelect": 0,
         "minSelect": 0,
         "name": "person",
         "presentable": false,
@@ -129,7 +119,7 @@
         "required": true,
         "system": false,
         "type": "select",
-        "values": ["human", "system"]
+        "values": ["person", "system", "api"]
       },
       {
         "hidden": false,
@@ -140,7 +130,7 @@
         "required": true,
         "system": false,
         "type": "select",
-        "values": ["ui", "api", "import"]
+        "values": ["webhook", "api", "sync"]
       },
       {
         "autogeneratePattern": "",
@@ -160,40 +150,27 @@
         "hidden": false,
         "id": "number975605429",
         "max": null,
-        "min": 1,
+        "min": null,
         "name": "schema_version",
         "onlyInt": false,
         "presentable": false,
         "required": true,
         "system": false,
         "type": "number"
-      },
-      {
-        "hidden": false,
-        "id": "autodate_updated",
-        "name": "updated",
-        "onCreate": true,
-        "onUpdate": true,
-        "presentable": false,
-        "system": true,
-        "type": "autodate"
       }
     ],
-    "indexes": [
-      "CREATE UNIQUE INDEX idx_events_event_id ON events (event_id)",
-      "CREATE UNIQUE INDEX idx_events_idempotency_key ON events (idempotency_key)"
-    ],
-    "created": "2026-01-16 05:29:44.941Z",
-    "updated": "2026-01-19 09:02:48.064Z",
+    "indexes": [],
+    "created": "2026-01-19 14:10:50.252Z",
+    "updated": "2026-01-19 14:11:12.414Z",
     "system": false
   },
   {
-    "id": "pbc_org_vers_01",
-    "listRule": "",
-    "viewRule": "",
-    "createRule": "",
-    "updateRule": "",
-    "deleteRule": "",
+    "id": "pbc_854299703",
+    "listRule": null,
+    "viewRule": null,
+    "createRule": null,
+    "updateRule": null,
+    "deleteRule": null,
     "name": "org_versions",
     "type": "base",
     "fields": [
@@ -210,16 +187,6 @@
         "required": true,
         "system": true,
         "type": "text"
-      },
-      {
-        "hidden": false,
-        "id": "autodate_created",
-        "name": "created",
-        "onCreate": true,
-        "onUpdate": false,
-        "presentable": false,
-        "system": true,
-        "type": "autodate"
       },
       {
         "autogeneratePattern": "",
@@ -255,32 +222,20 @@
         "required": true,
         "system": false,
         "type": "json"
-      },
-      {
-        "hidden": false,
-        "id": "autodate_updated",
-        "name": "updated",
-        "onCreate": true,
-        "onUpdate": true,
-        "presentable": false,
-        "system": true,
-        "type": "autodate"
       }
     ],
-    "indexes": [
-      "CREATE UNIQUE INDEX idx_org_versions_id ON org_versions (org_version_id)"
-    ],
-    "created": "2026-01-16 13:37:25.306Z",
-    "updated": "2026-01-19 09:02:48.055Z",
+    "indexes": [],
+    "created": "2026-01-19 14:09:57.804Z",
+    "updated": "2026-01-19 14:10:04.979Z",
     "system": false
   },
   {
-    "id": "pbc_outbox_0001",
-    "listRule": "",
-    "viewRule": "",
-    "createRule": "",
-    "updateRule": "",
-    "deleteRule": "",
+    "id": "pbc_1576314942",
+    "listRule": null,
+    "viewRule": null,
+    "createRule": null,
+    "updateRule": null,
+    "deleteRule": null,
     "name": "outbox",
     "type": "base",
     "fields": [
@@ -299,21 +254,11 @@
         "type": "text"
       },
       {
-        "hidden": false,
-        "id": "autodate_created",
-        "name": "created",
-        "onCreate": true,
-        "onUpdate": false,
-        "presentable": false,
-        "system": true,
-        "type": "autodate"
-      },
-      {
         "cascadeDelete": true,
-        "collectionId": "pbc_events_0001",
+        "collectionId": "pbc_1687431684",
         "hidden": false,
         "id": "relation1001261735",
-        "maxSelect": 1,
+        "maxSelect": 0,
         "minSelect": 0,
         "name": "event",
         "presentable": false,
@@ -327,10 +272,10 @@
         "maxSelect": 0,
         "name": "status",
         "presentable": false,
-        "required": true,
+        "required": false,
         "system": false,
         "type": "select",
-        "values": ["pending", "delivering", "delivered", "failed"]
+        "values": ["pending", "processing", "failed", "completed"]
       },
       {
         "hidden": false,
@@ -368,30 +313,20 @@
         "required": false,
         "system": false,
         "type": "text"
-      },
-      {
-        "hidden": false,
-        "id": "autodate_updated",
-        "name": "updated",
-        "onCreate": true,
-        "onUpdate": true,
-        "presentable": false,
-        "system": true,
-        "type": "autodate"
       }
     ],
     "indexes": [],
-    "created": "2026-01-16 13:37:25.319Z",
-    "updated": "2026-01-19 09:02:48.071Z",
+    "created": "2026-01-19 14:11:42.415Z",
+    "updated": "2026-01-19 14:11:53.698Z",
     "system": false
   },
   {
-    "id": "pbc_persons_001",
-    "listRule": "",
-    "viewRule": "",
-    "createRule": "",
-    "updateRule": "",
-    "deleteRule": "",
+    "id": "pbc_856668217",
+    "listRule": null,
+    "viewRule": null,
+    "createRule": null,
+    "updateRule": null,
+    "deleteRule": null,
     "name": "persons",
     "type": "base",
     "fields": [
@@ -410,21 +345,11 @@
         "type": "text"
       },
       {
-        "hidden": false,
-        "id": "autodate_created",
-        "name": "created",
-        "onCreate": true,
-        "onUpdate": false,
-        "presentable": false,
-        "system": true,
-        "type": "autodate"
-      },
-      {
         "autogeneratePattern": "",
         "hidden": false,
         "id": "text3578368839",
         "max": 0,
-        "min": 1,
+        "min": 0,
         "name": "display_name",
         "pattern": "",
         "presentable": false,
@@ -471,24 +396,11 @@
         "required": false,
         "system": false,
         "type": "text"
-      },
-      {
-        "hidden": false,
-        "id": "autodate_updated",
-        "name": "updated",
-        "onCreate": true,
-        "onUpdate": true,
-        "presentable": false,
-        "system": true,
-        "type": "autodate"
       }
     ],
-    "indexes": [
-      "CREATE UNIQUE INDEX idx_persons_external_email ON persons (external_email) WHERE external_email != ''",
-      "CREATE UNIQUE INDEX idx_persons_external_id ON persons (external_id) WHERE external_id != ''"
-    ],
-    "created": "2026-01-16 05:29:44.930Z",
-    "updated": "2026-01-19 09:02:48.047Z",
+    "indexes": [],
+    "created": "2026-01-19 14:09:33.791Z",
+    "updated": "2026-01-19 14:09:44.386Z",
     "system": false
   },
   {
@@ -630,8 +542,8 @@
       "CREATE UNIQUE INDEX `idx_tokenKey__pb_users_auth_` ON `users` (`tokenKey`)",
       "CREATE UNIQUE INDEX `idx_email__pb_users_auth_` ON `users` (`email`) WHERE `email` != ''"
     ],
-    "created": "2026-01-16 04:06:29.054Z",
-    "updated": "2026-01-16 04:06:29.054Z",
+    "created": "2026-01-19 14:06:52.485Z",
+    "updated": "2026-01-19 14:06:52.485Z",
     "system": false,
     "authRule": "",
     "manageRule": null,
@@ -697,58 +609,5 @@
       "subject": "Confirm your {APP_NAME} new email address",
       "body": "<p>Hello,</p>\n<p>Click on the button below to confirm your new email address.</p>\n<p>\n  <a class=\"btn\" href=\"{APP_URL}/_/#/auth/confirm-email-change/{TOKEN}\" target=\"_blank\" rel=\"noopener\">Confirm new email</a>\n</p>\n<p><i>If you didn't ask to change your email address, you can ignore this email.</i></p>\n<p>\n  Thanks,<br/>\n  {APP_NAME} team\n</p>"
     }
-  },
-  {
-    "id": "pbc_1799058121",
-    "listRule": "",
-    "viewRule": "",
-    "createRule": null,
-    "updateRule": null,
-    "deleteRule": null,
-    "name": "view_daily_events",
-    "type": "view",
-    "fields": [
-      {
-        "autogeneratePattern": "",
-        "hidden": false,
-        "id": "text3208210256",
-        "max": 0,
-        "min": 0,
-        "name": "id",
-        "pattern": "^[a-z0-9]+$",
-        "presentable": false,
-        "primaryKey": true,
-        "required": true,
-        "system": true,
-        "type": "text"
-      },
-      {
-        "hidden": false,
-        "id": "json3852478864",
-        "maxSize": 1,
-        "name": "day",
-        "presentable": false,
-        "required": false,
-        "system": false,
-        "type": "json"
-      },
-      {
-        "hidden": false,
-        "id": "number3257917790",
-        "max": null,
-        "min": null,
-        "name": "total",
-        "onlyInt": false,
-        "presentable": false,
-        "required": false,
-        "system": false,
-        "type": "number"
-      }
-    ],
-    "indexes": [],
-    "created": "2026-01-16 13:39:34.645Z",
-    "updated": "2026-01-19 09:02:48.078Z",
-    "system": false,
-    "viewQuery": "SELECT (ROW_NUMBER() OVER()) as id, strftime('%Y-%m-%d', occurred_at) as day, count(*) as total FROM events GROUP BY day"
   }
 ]
