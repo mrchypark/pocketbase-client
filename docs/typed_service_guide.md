@@ -437,14 +437,17 @@ result, err := postService.GetList(ctx, opts)
 ### WriteOptions (for Create/Update)
 
 ```go
-// For file uploads, use WriteOptions with Files
 opts := &pocketbase.WriteOptions{
-    Expand: "author",
-    Fields: "id,title,author",
+    Expand: "author",  // Expand relation fields
+    Fields: "id,title,author.name",  // Select specific fields
 }
 
-// Files are passed separately to the Create/Update method
+// Create/Update with options
+created, err := postService.Create(ctx, newPost, opts)
+updated, err := postService.Update(ctx, recordID, post, opts)
 ```
+
+> **Note**: File uploads are handled separately via `FileService.Upload()`. See [File Fields](#file-fields) section for details.
 
 ---
 
@@ -498,32 +501,60 @@ fmt.Printf("%s wrote: %s\n", author.Name(), post.Title())
 
 ## File Fields
 
-### Create with File Upload
+### File Upload (Separate Step)
+
+File uploads are handled via `FileService.Upload()`, not through `WriteOptions`:
 
 ```go
-// Open file
+// 1. Create the record first
+newPost := &Post{
+    Title: "Post with Image",
+}
+created, err := postService.Create(ctx, newPost, nil)
+if err != nil {
+    log.Fatalf("Create failed: %v", err)
+}
+
+// 2. Upload the file separately
 coverFile, err := os.Open("image.jpg")
 if err != nil {
     log.Fatalf("Failed to open file: %v", err)
 }
 defer coverFile.Close()
 
-// Create record with file
-newPost := &Post{
-    Title: "Post with Image",
-}
-
-// Create with file upload
-created, err := postService.Create(ctx, newPost, &pocketbase.WriteOptions{
-    Files: map[string]io.Reader{
-        "cover": coverFile,  // "cover" is the file field name
-    },
-})
+updated, err := client.Files.Upload(ctx, "posts", created.GetID(), "cover", coverFile)
 if err != nil {
-    log.Fatalf("Create failed: %v", err)
+    log.Fatalf("File upload failed: %v", err)
 }
 
-fmt.Printf("Created with file: %s\n", created.GetID())
+fmt.Printf("Created with file: %s\n", updated.GetID())
+```
+
+### File Download
+
+```go
+// Get file URL
+fileURL := client.Files.GetFileURL("posts", recordID, "cover.jpg", nil)
+fmt.Printf("File URL: %s\n", fileURL)
+
+// Download file content
+reader, err := client.Files.Download(ctx, "posts", recordID, "cover.jpg", nil)
+if err != nil {
+    log.Fatalf("Download failed: %v", err)
+}
+defer reader.Close()
+
+// Read file content
+data, _ := io.ReadAll(reader)
+```
+
+### Delete File
+
+```go
+err := client.Files.Delete(ctx, "posts", recordID, "cover.jpg")
+if err != nil {
+    log.Fatalf("File delete failed: %v", err)
+}
 ```
 
 ---
