@@ -96,7 +96,13 @@ func main() {
 		}
 
 		for _, field := range s.Fields {
+			// Skip system fields and hardcoded fields
 			if field.System {
+				continue
+			}
+			// Skip standard PocketBase fields that are hardcoded in the template
+			lowerName := strings.ToLower(field.Name)
+			if lowerName == "id" || lowerName == "collectionid" || lowerName == "collectionname" || lowerName == "created" || lowerName == "updated" {
 				continue
 			}
 			// --- ✨ Modified part ---
