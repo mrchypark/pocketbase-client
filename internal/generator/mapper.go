@@ -13,11 +13,16 @@ func MapPbTypeToGoType(field FieldSchema, omitEmpty bool) (string, string) {
 	// Pre-determine whether it's a multi-select field based on MaxSelect option
 	isMulti := false
 
-	// Expect field.Options.MaxSelect to be correctly parsed as *int.
+	// MaxSelect handling:
+	// - nil or > 1: multi (nil means unlimited in PocketBase schema)
+	// - 1: single
+	// - 0: treated as single (0 is often used as default/unset value)
 	if field.Options != nil && field.Options.MaxSelect != nil {
-		if *field.Options.MaxSelect != 1 {
+		maxSelect := *field.Options.MaxSelect
+		if maxSelect > 1 {
 			isMulti = true
 		}
+		// maxSelect <= 1 (including 0) is treated as single
 	} else if field.Type == "relation" || field.Type == "file" || field.Type == "select" {
 		// When MaxSelect is nil (when maxSelect is missing or null in schema),
 		// relation/file/select types are considered multi by default.

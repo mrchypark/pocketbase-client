@@ -74,8 +74,9 @@ func BuildTemplateData(schemas []CollectionSchema, packageName string) TemplateD
 		var fields []FieldData
 		// cs.Fields is always populated thanks to custom UnmarshalJSON logic.
 		for _, f := range s.Fields {
-			// System fields or hidden fields can be skipped as needed.
-			if f.System || f.Hidden {
+			// System fields, hidden fields, or autodate fields can be skipped as needed.
+			// autodate fields are skipped because they are already included in BaseModel.
+			if f.System || f.Hidden || f.Type == "autodate" {
 				continue
 			}
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## [v0.3.2] - 2026-01-20
+
+### Bug Fixes
+
+- **Fixed autodate field duplication**: autodate fields (created, updated) with `system: false` are now properly skipped during code generation to avoid duplication with BaseModel fields
+- **Fixed relation field type for maxSelect=0**: Relations with `maxSelect: 0` are now correctly generated as `string` (single relation) instead of `[]string` (multi relation)
+
 ## [v0.3.1] - 2026-01-10
 
 ### Breaking Changes
