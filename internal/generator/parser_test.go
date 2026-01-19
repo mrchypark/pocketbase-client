@@ -220,19 +220,19 @@ func TestCollectionSchema_UnmarshalJSON(t *testing.T) {
 		wantFields int
 	}{
 		{
-			name:       "with schema field",
+			name:       "with schema field (legacy format)",
 			jsonData:   `{"name": "test", "schema": [{"name": "field1"}]}`,
 			wantErr:    false,
 			wantFields: 1,
 		},
 		{
-			name:       "with fields field",
+			name:       "with fields field (latest format)",
 			jsonData:   `{"name": "test", "fields": [{"name": "field1"}, {"name": "field2"}]}`,
 			wantErr:    false,
 			wantFields: 2,
 		},
 		{
-			name:       "with both fields, schema takes precedence",
+			name:       "with both fields, schema takes precedence (legacy priority)",
 			jsonData:   `{"name": "test", "schema": [{"name": "field1"}], "fields": [{"name": "field2"}]}`,
 			wantErr:    false,
 			wantFields: 1,
@@ -266,6 +266,127 @@ func TestCollectionSchema_UnmarshalJSON(t *testing.T) {
 			}
 			if !tt.wantErr && len(cs.Fields) != tt.wantFields {
 				t.Errorf("UnmarshalJSON() got %d fields, want %d", len(cs.Fields), tt.wantFields)
+			}
+		})
+	}
+}
+
+func TestFieldSchema_UnmarshalJSON(t *testing.T) {
+	tests := []struct {
+		name          string
+		jsonData      string
+		wantErr       bool
+		wantName      string
+		wantType      string
+		wantRequired  bool
+		wantMaxSelect *int
+		wantValues    []string
+	}{
+		{
+			name:         "legacy format with nested options",
+			jsonData:     `{"name": "title", "type": "text", "required": true, "options": {"min": 5, "max": 100, "pattern": "^test$"}}`,
+			wantErr:      false,
+			wantName:     "title",
+			wantType:     "text",
+			wantRequired: true,
+		},
+		{
+			name:          "latest format with flattened options",
+			jsonData:      `{"name": "author", "type": "relation", "required": true, "collectionId": "col123", "maxSelect": 1, "cascadeDelete": false}`,
+			wantErr:       false,
+			wantName:      "author",
+			wantType:      "relation",
+			wantRequired:  true,
+			wantMaxSelect: intPtr(1),
+		},
+		{
+			name:       "select field with values",
+			jsonData:   `{"name": "status", "type": "select", "options": {"values": ["active", "inactive", "pending"]}}`,
+			wantErr:    false,
+			wantName:   "status",
+			wantType:   "select",
+			wantValues: []string{"active", "inactive", "pending"},
+		},
+		{
+			name:     "file field with thumbs",
+			jsonData: `{"name": "cover", "type": "file", "options": {"mimeTypes": ["image/jpeg", "image/png"], "thumbs": ["100x100", "300x300"]}}`,
+			wantErr:  false,
+			wantName: "cover",
+			wantType: "file",
+		},
+		{
+			name:          "maxSelect at field level (latest format)",
+			jsonData:      `{"name": "tags", "type": "relation", "maxSelect": 5}`,
+			wantErr:       false,
+			wantName:      "tags",
+			wantType:      "relation",
+			wantMaxSelect: intPtr(5),
+		},
+		{
+			name:          "maxSelect in options (legacy format)",
+			jsonData:      `{"name": "files", "type": "file", "options": {"maxSelect": 3}}`,
+			wantErr:       false,
+			wantName:      "files",
+			wantType:      "file",
+			wantMaxSelect: intPtr(3),
+		},
+		{
+			name:     "autodate with onCreate/onUpdate",
+			jsonData: `{"name": "created", "type": "autodate", "onCreate": true, "onUpdate": false}`,
+			wantErr:  false,
+			wantName: "created",
+			wantType: "autodate",
+		},
+		{
+			name:     "email with domain restrictions",
+			jsonData: `{"name": "email", "type": "email", "options": {"onlyDomains": ["example.com"], "exceptDomains": ["spam.com"]}}`,
+			wantErr:  false,
+			wantName: "email",
+			wantType: "email",
+		},
+		{
+			name:     "number with onlyInt",
+			jsonData: `{"name": "count", "type": "number", "onlyInt": true}`,
+			wantErr:  false,
+			wantName: "count",
+			wantType: "number",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var fs FieldSchema
+			err := fs.UnmarshalJSON([]byte(tt.jsonData))
+			if (err != nil) != tt.wantErr {
+				t.Errorf("UnmarshalJSON() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !tt.wantErr {
+				if fs.Name != tt.wantName {
+					t.Errorf("Name = %q, want %q", fs.Name, tt.wantName)
+				}
+				if fs.Type != tt.wantType {
+					t.Errorf("Type = %q, want %q", fs.Type, tt.wantType)
+				}
+				if fs.Required != tt.wantRequired {
+					t.Errorf("Required = %v, want %v", fs.Required, tt.wantRequired)
+				}
+				if tt.wantMaxSelect != nil && (fs.Options == nil || fs.Options.MaxSelect == nil || *fs.Options.MaxSelect != *tt.wantMaxSelect) {
+					want := 0
+					if tt.wantMaxSelect != nil {
+						want = *tt.wantMaxSelect
+					}
+					got := 0
+					if fs.Options != nil && fs.Options.MaxSelect != nil {
+						got = *fs.Options.MaxSelect
+					}
+					t.Errorf("MaxSelect = %d, want %d", got, want)
+				}
+				if tt.wantValues != nil {
+					if fs.Options == nil || len(fs.Options.Values) != len(tt.wantValues) {
+						t.Errorf("Values = %v, want %v", fs.Options.Values, tt.wantValues)
+					}
+				}
 			}
 		})
 	}

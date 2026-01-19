@@ -72,53 +72,130 @@ type FieldSchema struct {
 	// options field is kept as FieldOptions type (pointer)
 	Options *FieldOptions `json:"options"`
 
-	// RawMessage fields for maxSelect, minSelect directly at field level (for temporary parsing)
-	// These fields are only used inside FieldSchema.UnmarshalJSON.
-	MinSelectRaw json.RawMessage `json:"minSelect"` // May be at field level depending on schema
-	MaxSelectRaw json.RawMessage `json:"maxSelect"` // May be at field level depending on schema
+	// RawMessage fields for flattened options (v0.23+ format)
+	// These fields can appear at field level or inside options
+	MinSelectRaw           json.RawMessage `json:"minSelect"`
+	MaxSelectRaw           json.RawMessage `json:"maxSelect"`
+	AutogeneratePatternRaw json.RawMessage `json:"autogeneratePattern"`
+	OnlyIntRaw             json.RawMessage `json:"onlyInt"`
+	OnCreateRaw            json.RawMessage `json:"onCreate"`
+	OnUpdateRaw            json.RawMessage `json:"onUpdate"`
+	ExceptDomainsRaw       json.RawMessage `json:"exceptDomains"`
+	OnlyDomainsRaw         json.RawMessage `json:"onlyDomains"`
+	ConvertURLsRaw         json.RawMessage `json:"convertUrls"`
+	CostRaw                json.RawMessage `json:"cost"`
+	PrimaryKeyRaw          json.RawMessage `json:"primaryKey"`
 }
 
 // UnmarshalJSON is custom unmarshaling logic for FieldSchema.
-// This method handles both minSelect/maxSelect inside 'options' object or directly at field level.
+// This method handles both legacy (options nested) and latest (flattened) formats.
 func (fs *FieldSchema) UnmarshalJSON(data []byte) error {
-	// Use temporary struct to unmarshal basic fields and raw 'options' data to avoid infinite recursion.
-	type Alias FieldSchema // Alias that includes all other fields of FieldSchema
+	type Alias FieldSchema
 	aux := &struct {
-		OptionsRaw json.RawMessage `json:"options"` // Capture raw 'options' object as json.RawMessage
+		OptionsRaw json.RawMessage `json:"options"`
 		*Alias
 	}{
-		Alias: (*Alias)(fs), // Automatically bind other fields to fs instance
+		Alias: (*Alias)(fs),
 	}
 
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return err
 	}
 
-	// Initialize fs.Options
-	fs.Options = &FieldOptions{}
+	// Initialize fs.Options if nil
+	if fs.Options == nil {
+		fs.Options = &FieldOptions{}
+	}
 
-	// If aux.OptionsRaw (raw 'options' object) exists, unmarshal it first.
+	// Unmarshal options object if present (legacy format)
 	if len(aux.OptionsRaw) > 0 && string(aux.OptionsRaw) != "null" {
 		if err := json.Unmarshal(aux.OptionsRaw, fs.Options); err != nil {
-			return fmt.Errorf("failed to unmarshal FieldOptions from raw options: %w", err)
+			return fmt.Errorf("failed to unmarshal FieldOptions: %w", err)
 		}
 	}
 
-	// Now check MaxSelectRaw/MinSelectRaw directly at field level,
-	// and overwrite only if values are not already set in fs.Options (or give priority).
-	// In PocketBase schema, values inside `options` may be more explicit,
-	// so prioritize values inside `options` and use field-level values as auxiliary.
-	// Here we will unconditionally overwrite with field-level values.
+	// Handle flattened options (v0.23+ format) - field-level values override options
+	// These fields can appear either at field level or inside options
+
+	// minSelect / maxSelect
 	if len(aux.MinSelectRaw) > 0 && string(aux.MinSelectRaw) != "null" {
 		var val int
 		if err := json.Unmarshal(aux.MinSelectRaw, &val); err == nil {
-			fs.Options.MinSelect = &val // Prioritize field-level value
+			fs.Options.MinSelect = &val
 		}
 	}
 	if len(aux.MaxSelectRaw) > 0 && string(aux.MaxSelectRaw) != "null" {
 		var val int
 		if err := json.Unmarshal(aux.MaxSelectRaw, &val); err == nil {
-			fs.Options.MaxSelect = &val // Prioritize field-level value
+			fs.Options.MaxSelect = &val
+		}
+	}
+
+	// autogeneratePattern (text)
+	if len(aux.AutogeneratePatternRaw) > 0 && string(aux.AutogeneratePatternRaw) != "null" {
+		var val string
+		if err := json.Unmarshal(aux.AutogeneratePatternRaw, &val); err == nil {
+			fs.Options.AutogeneratePattern = &val
+		}
+	}
+
+	// onlyInt (number)
+	if len(aux.OnlyIntRaw) > 0 && string(aux.OnlyIntRaw) != "null" {
+		var val bool
+		if err := json.Unmarshal(aux.OnlyIntRaw, &val); err == nil {
+			fs.Options.OnlyInt = &val
+		}
+	}
+
+	// onCreate / onUpdate (autodate)
+	if len(aux.OnCreateRaw) > 0 && string(aux.OnCreateRaw) != "null" {
+		var val bool
+		if err := json.Unmarshal(aux.OnCreateRaw, &val); err == nil {
+			fs.Options.OnCreate = &val
+		}
+	}
+	if len(aux.OnUpdateRaw) > 0 && string(aux.OnUpdateRaw) != "null" {
+		var val bool
+		if err := json.Unmarshal(aux.OnUpdateRaw, &val); err == nil {
+			fs.Options.OnUpdate = &val
+		}
+	}
+
+	// exceptDomains / onlyDomains (email, url)
+	if len(aux.ExceptDomainsRaw) > 0 && string(aux.ExceptDomainsRaw) != "null" {
+		var val []string
+		if err := json.Unmarshal(aux.ExceptDomainsRaw, &val); err == nil {
+			fs.Options.ExceptDomains = val
+		}
+	}
+	if len(aux.OnlyDomainsRaw) > 0 && string(aux.OnlyDomainsRaw) != "null" {
+		var val []string
+		if err := json.Unmarshal(aux.OnlyDomainsRaw, &val); err == nil {
+			fs.Options.OnlyDomains = val
+		}
+	}
+
+	// convertURLs (editor)
+	if len(aux.ConvertURLsRaw) > 0 && string(aux.ConvertURLsRaw) != "null" {
+		var val bool
+		if err := json.Unmarshal(aux.ConvertURLsRaw, &val); err == nil {
+			fs.Options.ConvertURLs = &val
+		}
+	}
+
+	// cost (password)
+	if len(aux.CostRaw) > 0 && string(aux.CostRaw) != "null" {
+		var val int
+		if err := json.Unmarshal(aux.CostRaw, &val); err == nil {
+			fs.Options.Cost = &val
+		}
+	}
+
+	// primaryKey (text)
+	if len(aux.PrimaryKeyRaw) > 0 && string(aux.PrimaryKeyRaw) != "null" {
+		var val bool
+		if err := json.Unmarshal(aux.PrimaryKeyRaw, &val); err == nil {
+			fs.Options.PrimaryKey = &val
 		}
 	}
 
@@ -128,23 +205,42 @@ func (fs *FieldSchema) UnmarshalJSON(data []byte) error {
 // FieldOptions represents the options/configuration for a PocketBase field.
 // It contains validation rules, constraints, and field-specific settings.
 type FieldOptions struct {
+	// Relation options
 	CollectionID  string `json:"collectionId"`
 	CascadeDelete bool   `json:"cascadeDelete"`
 
-	Min json.RawMessage `json:"min"`
-	Max json.RawMessage `json:"max"`
+	// Number options
+	OnlyInt *bool `json:"onlyInt"`
 
-	MinSelect *int `json:"minSelect"` // Keep as *int, handled in FieldSchema.UnmarshalJSON
-	MaxSelect *int `json:"maxSelect"` // Keep as *int, handled in FieldSchema.UnmarshalJSON
+	// Text options
+	AutogeneratePattern *string `json:"autogeneratePattern"`
+	PrimaryKey          *bool   `json:"primaryKey"`
 
-	Pattern string `json:"pattern"`
+	// Date options
+	OnCreate *bool `json:"onCreate"`
+	OnUpdate *bool `json:"onUpdate"`
 
+	// Select/Relation/File options
+	MinSelect *int     `json:"minSelect"`
+	MaxSelect *int     `json:"maxSelect"`
+	Values    []string `json:"values"`
+
+	// File options
 	MimeTypes []string `json:"mimeTypes"`
 	Thumbs    []string `json:"thumbs"`
 	MaxSize   int      `json:"maxSize"`
 	Protected bool     `json:"protected"`
-	Values    []string `json:"values"`
-}
 
-// UnmarshalJSON method for FieldOptions is no longer needed (deleted).
-// FieldSchema.UnmarshalJSON handles all parsing.
+	// String validation options
+	Pattern string `json:"pattern"`
+
+	// Email/URL options
+	ExceptDomains []string `json:"exceptDomains"`
+	OnlyDomains   []string `json:"onlyDomains"`
+
+	// Editor options
+	ConvertURLs *bool `json:"convertUrls"`
+
+	// Password options
+	Cost *int `json:"cost"`
+}
