@@ -36,4 +36,6 @@ go.work.sum
 *__debug_bin*
 database*
 
-.k*
+# pbc-gen binary
+pbc-gen
+test_*.go
