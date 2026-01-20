@@ -38,4 +38,3 @@ database*
 
 # pbc-gen binary
 pbc-gen
-test_*.go
