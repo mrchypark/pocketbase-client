@@ -86,17 +86,6 @@
         "type": "date"
       },
       {
-        "hidden": false,
-        "id": "date3421697126",
-        "max": "",
-        "min": "",
-        "name": "ingested_at",
-        "presentable": false,
-        "required": true,
-        "system": false,
-        "type": "date"
-      },
-      {
         "autogeneratePattern": "",
         "hidden": false,
         "id": "text282784330",
@@ -157,11 +146,31 @@
         "required": true,
         "system": false,
         "type": "number"
+      },
+      {
+        "hidden": false,
+        "id": "autodate2990389176",
+        "name": "created",
+        "onCreate": true,
+        "onUpdate": false,
+        "presentable": false,
+        "system": false,
+        "type": "autodate"
+      },
+      {
+        "hidden": false,
+        "id": "autodate3332085495",
+        "name": "updated",
+        "onCreate": true,
+        "onUpdate": true,
+        "presentable": false,
+        "system": false,
+        "type": "autodate"
       }
     ],
     "indexes": [],
-    "created": "2026-01-19 14:10:50.252Z",
-    "updated": "2026-01-19 14:11:12.414Z",
+    "created": "2026-01-19 17:26:58.584Z",
+    "updated": "2026-01-19 17:31:06.295Z",
     "system": false
   },
   {
@@ -174,6 +183,16 @@
     "name": "org_versions",
     "type": "base",
     "fields": [
+      {
+        "hidden": false,
+        "id": "autodate_created",
+        "name": "created",
+        "onCreate": true,
+        "onUpdate": false,
+        "presentable": false,
+        "system": true,
+        "type": "autodate"
+      },
       {
         "autogeneratePattern": "[a-z0-9]{15}",
         "hidden": false,
@@ -222,11 +241,21 @@
         "required": true,
         "system": false,
         "type": "json"
+      },
+      {
+        "hidden": false,
+        "id": "autodate_updated",
+        "name": "updated",
+        "onCreate": true,
+        "onUpdate": true,
+        "presentable": false,
+        "system": true,
+        "type": "autodate"
       }
     ],
     "indexes": [],
     "created": "2026-01-19 14:09:57.804Z",
-    "updated": "2026-01-19 14:10:04.979Z",
+    "updated": "2026-01-19 17:31:06.539Z",
     "system": false
   },
   {
@@ -239,6 +268,16 @@
     "name": "outbox",
     "type": "base",
     "fields": [
+      {
+        "hidden": false,
+        "id": "autodate_created",
+        "name": "created",
+        "onCreate": true,
+        "onUpdate": false,
+        "presentable": false,
+        "system": true,
+        "type": "autodate"
+      },
       {
         "autogeneratePattern": "[a-z0-9]{15}",
         "hidden": false,
@@ -313,11 +352,21 @@
         "required": false,
         "system": false,
         "type": "text"
+      },
+      {
+        "hidden": false,
+        "id": "autodate_updated",
+        "name": "updated",
+        "onCreate": true,
+        "onUpdate": true,
+        "presentable": false,
+        "system": true,
+        "type": "autodate"
       }
     ],
     "indexes": [],
     "created": "2026-01-19 14:11:42.415Z",
-    "updated": "2026-01-19 14:11:53.698Z",
+    "updated": "2026-01-19 17:31:06.759Z",
     "system": false
   },
   {
@@ -330,6 +379,16 @@
     "name": "persons",
     "type": "base",
     "fields": [
+      {
+        "hidden": false,
+        "id": "autodate_created",
+        "name": "created",
+        "onCreate": true,
+        "onUpdate": false,
+        "presentable": false,
+        "system": true,
+        "type": "autodate"
+      },
       {
         "autogeneratePattern": "[a-z0-9]{15}",
         "hidden": false,
@@ -396,11 +455,21 @@
         "required": false,
         "system": false,
         "type": "text"
+      },
+      {
+        "hidden": false,
+        "id": "autodate_updated",
+        "name": "updated",
+        "onCreate": true,
+        "onUpdate": true,
+        "presentable": false,
+        "system": true,
+        "type": "autodate"
       }
     ],
     "indexes": [],
     "created": "2026-01-19 14:09:33.791Z",
-    "updated": "2026-01-19 14:09:44.386Z",
+    "updated": "2026-01-19 17:31:06.981Z",
     "system": false
   },
   {
@@ -543,7 +612,7 @@
       "CREATE UNIQUE INDEX `idx_email__pb_users_auth_` ON `users` (`email`) WHERE `email` != ''"
     ],
     "created": "2026-01-19 14:06:52.485Z",
-    "updated": "2026-01-19 14:06:52.485Z",
+    "updated": "2026-01-19 17:31:03.393Z",
     "system": false,
     "authRule": "",
     "manageRule": null,
