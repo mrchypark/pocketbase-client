@@ -28,8 +28,8 @@ jobs:
       - name: "🏃 Run GoReleaser"
         uses: goreleaser/goreleaser-action@v5
         with:
-          # Specify goreleaser version. Using 'latest' will always use the most recent version.
-          version: latest
+          # Use goreleaser v2 (matches version: 2 in .goreleaser.yml)
+          version: '~> v2'
           # Arguments to pass to the workflow
           args: release --clean
         env:
