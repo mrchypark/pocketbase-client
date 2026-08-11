@@ -119,7 +119,7 @@ type CollectionSchema struct {
 | text, email, url, editor | string | *string |
 | number | float64 | *float64 |
 | bool | bool | *bool |
-| date, autodate | types.DateTime | *types.DateTime |
+| date, autodate | pocketbase.DateTime | *pocketbase.DateTime |
 | json | json.RawMessage | json.RawMessage |
 | relation (single) | string | *string |
 | relation (multi) | []string | []string |
@@ -157,12 +157,12 @@ func (f FileReference) URL(baseURL string) string { ... }
 func (f FileReference) ThumbURL(baseURL, thumb string) string { ... }
 // 4. 컬렉션 Struct
 type Posts struct {
-    ID             string         `json:"id"`
-    CollectionID   string         `json:"collectionId"`
-    CollectionName string         `json:"collectionName"`
-    Created        types.DateTime `json:"created"`
-    Updated        types.DateTime `json:"updated"`
-    Title          string         `json:"title"`
+    ID             string             `json:"id"`
+    CollectionID   string             `json:"collectionId"`
+    CollectionName string             `json:"collectionName"`
+    Created        pocketbase.DateTime `json:"created"`
+    Updated        pocketbase.DateTime `json:"updated"`
+    Title          string             `json:"title"`
     Content        *string        `json:"content,omitempty"`
 }
 // 5. RecordModel 인터페이스 구현

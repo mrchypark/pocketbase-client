@@ -132,7 +132,7 @@ func main() {
 	// 6. Delete - Clean up
 	// ============================================================
 	fmt.Println("\n=== Delete ===")
-	err = postService.Delete(ctx, postService.Collection, post.ID)
+	err = postService.Delete(ctx, post.ID)
 	if err != nil {
 		log.Fatalf("Delete failed: %v", err)
 	}

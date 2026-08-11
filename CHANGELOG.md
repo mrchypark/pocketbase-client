@@ -1,5 +1,24 @@
 # Changelog
 
+## [v0.4.0] - 2026-08-11
+
+### Breaking Changes
+
+- **DateTime/GeoPoint types**: generated `date`/`autodate` fields changed from `github.com/pocketbase/pocketbase/tools/types.DateTime` to the client's own `pocketbase.DateTime`; `geoPoint` fields changed to `pocketbase.GeoPoint`. The JSON wire format is identical — only the type name and import change. The client and generated code no longer require the PocketBase module.
+- **Service[T] removed**: the older generic `Service[T]`/`NewService` API was removed. Use `TypedRecordService[T]`/`NewTypedRecordService` instead.
+- **GetX/GetXList helpers removed**: top-level `Get{{X}}`/`Get{{X}}List` helpers were removed. Use the typed service methods directly (`NewXService`). Relation `Load` now takes `*pocketbase.Client` instead of `RecordServiceAPI`.
+- **Legacy schema format dropped**: the `schema` key (pre-v0.23) and nested `options` objects are no longer accepted. Re-export your schema from PocketBase v0.23+.
+- **Go 1.26+ required**.
+
+### Features
+
+- **Codegen single pipeline**: `BuildTemplateData` is now the sole entry point for schema-to-template-data. Dead code removed (~2.4k lines).
+- **Zero-cost typed reads**: `TypedRecordService` decodes raw HTTP responses directly into `T` (single `json.Unmarshal` pass) via new `Client.SendRaw`. Removed the old `Record` marshal→unmarshal round-trip.
+- **PocketBase dependency removed**: self-contained `pocketbase.DateTime` (wire-compatible with `tools/types.DateTime`) and `pocketbase.GeoPoint`. Generated code depends only on the client library — no `github.com/pocketbase/pocketbase` in `go.mod`.
+- **PocketBase v0.39.10 support**: `geoPoint` field type mapped to `pocketbase.GeoPoint`; `help` key parsed from field objects.
+- **Schema parsing**: `LoadSchema` now accepts the actual API output shapes: plain array, paginated `{items:[...]}` response, or single collection object.
+- **Development/usage skills** added under `skills/`.
+
 ## [v0.3.2] - 2026-01-20
 
 ### Bug Fixes

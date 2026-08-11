@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"os"
 
 	pocketbase "github.com/mrchypark/pocketbase-client"
 )
@@ -13,151 +12,169 @@ import (
 // Generated Model (from pbc-gen)
 // ============================================================
 //
-// When you run pbc-gen, it generates models like this:
+// When you run pbc-gen, it generates models with direct struct fields:
 //
 //   type Post struct {
-//       pocketbase.Record
+//       ID             string             `json:"id"`
+//       CollectionID   string             `json:"collectionId"`
+//       CollectionName string             `json:"collectionName"`
+//       Created        pocketbase.DateTime `json:"created"`
+//       Updated        pocketbase.DateTime `json:"updated"`
+//       Title          string             `json:"title"`
+//       Content        *string            `json:"content,omitempty"`
+//       Published      bool               `json:"published"`
+//       ViewCount      float64            `json:"view_count"`
+//       Author         string             `json:"author"`
+//       Tags           []string           `json:"tags"`
 //   }
-//
-// Plus getter/setter methods for each field:
-//   - Title() string
-//   - SetTitle(value string)
-//   - TitleValueOr(default string) string (for optional fields)
 // ============================================================
 
 // Post represents a record from the 'posts' collection
 type Post struct {
-	pocketbase.Record
+	ID             string             `json:"id"`
+	CollectionID   string             `json:"collectionId"`
+	CollectionName string             `json:"collectionName"`
+	Created        pocketbase.DateTime `json:"created"`
+	Updated        pocketbase.DateTime `json:"updated"`
+	Title          string             `json:"title"`
+	Content        *string            `json:"content,omitempty"`
+	Published      bool               `json:"published"`
+	ViewCount      float64            `json:"view_count"`
+	Author         string             `json:"author"`
+	Tags           []string           `json:"tags"`
 }
 
-// Generated getter methods (normally from pbc-gen):
-func (p *Post) Title() string      { return p.GetString("title") }
-func (p *Post) Content() string    { return p.GetString("content") }
-func (p *Post) Published() bool    { return p.GetBool("published") }
-func (p *Post) ViewCount() float64 { return p.GetFloat("view_count") }
-func (p *Post) AuthorID() string   { return p.GetString("author") }
-func (p *Post) Tags() []string     { return p.GetStringSlice("tags") }
+func (p *Post) GetID() string                { return p.ID }
+func (p *Post) GetCollectionName() string     { return p.CollectionName }
+func (p *Post) SetID(id string)               { p.ID = id }
+func (p *Post) SetCollectionID(id string)     { p.CollectionID = id }
+func (p *Post) SetCollectionName(name string) { p.CollectionName = name }
 
-// Generated setter methods:
-func (p *Post) SetTitle(value string)      { p.Set("title", value) }
-func (p *Post) SetContent(value string)    { p.Set("content", value) }
-func (p *Post) SetPublished(value bool)    { p.Set("published", value) }
-func (p *Post) SetViewCount(value float64) { p.Set("view_count", value) }
-func (p *Post) SetAuthorID(value string)   { p.Set("author", value) }
-func (p *Post) SetTags(value []string)     { p.Set("tags", value) }
-
-// ToMap implements Mappable for Create/Update
 func (p *Post) ToMap() map[string]any {
-	return map[string]any{
-		"title":      p.Title(),
-		"content":    p.Content(),
-		"published":  p.Published(),
-		"view_count": p.ViewCount(),
-		"author":     p.AuthorID(),
-		"tags":       p.Tags(),
+	data := make(map[string]any)
+	if p.Title != "" {
+		data["title"] = p.Title
 	}
+	if p.Content != nil {
+		data["content"] = p.Content
+	}
+	if p.Published {
+		data["published"] = p.Published
+	}
+	if p.ViewCount != 0 {
+		data["view_count"] = p.ViewCount
+	}
+	if p.Author != "" {
+		data["author"] = p.Author
+	}
+	if p.Tags != nil {
+		data["tags"] = p.Tags
+	}
+	return data
 }
 
 // Author represents a record from the 'authors' collection
 type Author struct {
-	pocketbase.Record
+	ID             string             `json:"id"`
+	CollectionID   string             `json:"collectionId"`
+	CollectionName string             `json:"collectionName"`
+	Created        pocketbase.DateTime `json:"created"`
+	Updated        pocketbase.DateTime `json:"updated"`
+	Name           string             `json:"name"`
+	Email          string             `json:"email"`
+	Bio            string             `json:"bio"`
+	Avatar         string             `json:"avatar"`
 }
 
-func (a *Author) Name() string   { return a.GetString("name") }
-func (a *Author) Email() string  { return a.GetString("email") }
-func (a *Author) Bio() string    { return a.GetString("bio") }
-func (a *Author) Avatar() string { return a.GetString("avatar") }
+func (a *Author) GetID() string                { return a.ID }
+func (a *Author) GetCollectionName() string     { return a.CollectionName }
+func (a *Author) SetID(id string)               { a.ID = id }
+func (a *Author) SetCollectionID(id string)     { a.CollectionID = id }
+func (a *Author) SetCollectionName(name string) { a.CollectionName = name }
 
 func (a *Author) ToMap() map[string]any {
-	return map[string]any{
-		"name":   a.Name(),
-		"email":  a.Email(),
-		"bio":    a.Bio(),
-		"avatar": a.Avatar(),
+	data := make(map[string]any)
+	if a.Name != "" {
+		data["name"] = a.Name
 	}
+	if a.Email != "" {
+		data["email"] = a.Email
+	}
+	if a.Bio != "" {
+		data["bio"] = a.Bio
+	}
+	if a.Avatar != "" {
+		data["avatar"] = a.Avatar
+	}
+	return data
 }
 
-// ============================================================
-// Main Example: Using TypedRecordService with Generated Models
 // ============================================================
 
 func main() {
 	ctx := context.Background()
+	client := pocketbase.NewClient("http://127.0.0.1:8090")
 
-	client := pocketbase.NewClient(os.Getenv("POCKETBASE_URL"))
-	if client == nil {
-		client = pocketbase.NewClient("http://127.0.0.1:8090")
-	}
-
-	_, err := client.WithAdminPassword(ctx, "admin@example.com", "password123")
+	// Authenticate as admin
+	_, err := client.WithAdminPassword(ctx, "admin@example.com", "password")
 	if err != nil {
-		log.Fatalf("Auth failed: %v", err)
+		log.Fatalf("Failed to authenticate: %v", err)
 	}
 
 	// ============================================================
-	// Method 1: Using NewTypedRecordService (NEW!)
+	// Method 1: Typed Service (Recommended)
 	// ============================================================
-	// Pass the MODEL TYPE (not pointer), get typed service
-	// T = Post (the struct), methods return *Post
+	fmt.Println("=== Method 1: Typed Service ===")
 
+	// Create a typed service for the 'posts' collection
 	postService := pocketbase.NewTypedRecordService[Post](client, "posts")
 
-	// Get single record - returns *Post
-	post, err := postService.GetOne(ctx, "RECORD_ID", nil)
-	if err != nil {
-		log.Fatalf("GetOne failed: %v", err)
+	// Create a new post
+	newPost := &Post{
+		Title:     "Hello World",
+		Published: true,
+		ViewCount: 0,
+		Tags:      []string{"golang", "pocketbase"},
 	}
-	// Access fields via generated getter methods
-	fmt.Printf("Post: %s (Views: %.0f)\n", post.Title(), post.ViewCount())
-
-	// Get list with pagination
-	posts, err := postService.GetList(ctx, &pocketbase.ListOptions{
-		Page:    1,
-		PerPage: 10,
-		Filter:  "published = true",
-		Sort:    "-created",
-	})
-	if err != nil {
-		log.Fatalf("GetList failed: %v", err)
-	}
-	fmt.Printf("Found %d posts on page 1\n", len(posts.Items))
-	for _, p := range posts.Items {
-		fmt.Printf("  - %s\n", p.Title())
-	}
-
-	// Get ALL records (auto-pagination)
-	allPosts, err := postService.GetAll(ctx, &pocketbase.ListOptions{
-		Filter: "published = true",
-	})
-	if err != nil {
-		log.Fatalf("GetAll failed: %v", err)
-	}
-	fmt.Printf("Total published posts: %d\n", len(allPosts))
-
-	// Create new record
-	newPost := &Post{}
-	newPost.SetTitle("My New Post")
-	newPost.SetContent("This is the content...")
-	newPost.SetPublished(true)
-	newPost.SetViewCount(0)
-	newPost.SetTags([]string{"go", "pocketbase"})
 
 	created, err := postService.Create(ctx, newPost)
 	if err != nil {
 		log.Fatalf("Create failed: %v", err)
 	}
-	fmt.Printf("Created: %s (ID: %s)\n", created.Title(), created.ID)
+	fmt.Printf("Created: %s (ID: %s)\n", created.Title, created.ID)
 
-	// Update record
-	created.SetViewCount(100)
-	updated, err := postService.Update(ctx, created.ID, created)
+	// Get a single post
+	post, err := postService.GetOne(ctx, created.ID, nil)
+	if err != nil {
+		log.Fatalf("GetOne failed: %v", err)
+	}
+	fmt.Printf("Post: %s (Views: %.0f)\n", post.Title, post.ViewCount)
+
+	// Get a list of posts
+	result, err := postService.GetList(ctx, &pocketbase.ListOptions{
+		Page:    1,
+		PerPage: 10,
+		Filter:  "published = true",
+	})
+	if err != nil {
+		log.Fatalf("GetList failed: %v", err)
+	}
+	fmt.Printf("Found %d posts:\n", result.TotalItems)
+	for _, p := range result.Items {
+		fmt.Printf("  - %s\n", p.Title)
+	}
+
+	// Update a post
+	post.ViewCount++
+	post.Title = "Updated Title"
+	updated, err := postService.Update(ctx, post.ID, post)
 	if err != nil {
 		log.Fatalf("Update failed: %v", err)
 	}
-	fmt.Printf("Updated: %s (Views: %.0f)\n", updated.Title(), updated.ViewCount())
+	fmt.Printf("Updated: %s (Views: %.0f)\n", updated.Title, updated.ViewCount)
 
 	// Delete record
-	err = postService.Delete(ctx, postService.Collection, created.ID)
+	err = postService.Delete(ctx, created.ID)
 	if err != nil {
 		log.Fatalf("Delete failed: %v", err)
 	}
@@ -171,23 +188,33 @@ func main() {
 	if err != nil {
 		log.Fatalf("loadPostWithAuthor failed: %v", err)
 	}
-	fmt.Printf("Post by %s: %s\n", loadedAuthor.Name(), loadedPost.Title())
+	fmt.Printf("Post by %s: %s\n", loadedAuthor.Name, loadedPost.Title)
+
+	// ============================================================
+	// Method 3: Dynamic RecordService (for untyped access)
+	// ============================================================
+
+	fmt.Println("\n=== Method 3: Dynamic RecordService ===")
+
+	// Use the dynamic RecordService for flexible queries
+	dynamicPost, err := client.Records.GetOne(ctx, "posts", "RECORD_ID", nil)
+	if err != nil {
+		log.Fatalf("Failed to get record: %v", err)
+	}
+	fmt.Printf("Dynamic record: ID=%s\n", dynamicPost.ID)
 }
 
-// ============================================================
-// Type-safe Relation Loading Example
-// ============================================================
-
+// loadPostWithAuthor demonstrates type-safe relation loading
 func loadPostWithAuthor(ctx context.Context, client *pocketbase.Client, postID string) (*Post, *Author, error) {
 	postService := pocketbase.NewTypedRecordService[Post](client, "posts")
-	authorService := pocketbase.NewTypedRecordService[Author](client, "authors")
 
 	post, err := postService.GetOne(ctx, postID, nil)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	author, err := authorService.GetOne(ctx, post.AuthorID(), nil)
+	authorService := pocketbase.NewTypedRecordService[Author](client, "authors")
+	author, err := authorService.GetOne(ctx, post.Author, nil)
 	if err != nil {
 		return nil, nil, err
 	}

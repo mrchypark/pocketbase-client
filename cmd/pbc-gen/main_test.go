@@ -111,18 +111,15 @@ func TestCLIIntegration(t *testing.T) {
 					"id": "test_name",
 					"name": "name",
 					"type": "text",
-					"required": true,
-					"options": {}
+					"required": true
 				},
 				{
 					"id": "test_status",
 					"name": "status",
 					"type": "select",
 					"required": true,
-					"options": {
-						"maxSelect": 1,
-						"values": ["active", "inactive"]
-					}
+					"maxSelect": 1,
+					"values": ["active", "inactive"]
 				}
 			]
 		}
@@ -360,18 +357,15 @@ func createValidSchemaFile(t *testing.T, dir string) string {
 					"id": "test_name",
 					"name": "name",
 					"type": "text",
-					"required": true,
-					"options": {}
+					"required": true
 				},
 				{
 					"id": "test_status",
 					"name": "status",
 					"type": "select",
 					"required": true,
-					"options": {
-						"maxSelect": 1,
-						"values": ["active", "inactive"]
-					}
+					"maxSelect": 1,
+					"values": ["active", "inactive"]
 				}
 			]
 		}

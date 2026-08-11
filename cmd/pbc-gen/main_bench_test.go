@@ -28,53 +28,13 @@ func BenchmarkCodeGeneration(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		// 기본 TemplateData 생성
-		baseTplData := generator.TemplateData{
-			PackageName: "models",
+		// 단일 파이프라인으로 데이터 생성
+		enhancedData := generator.BuildTemplateData(schemas, "models", generator.GenerateOptions{
 			JSONLibrary: "encoding/json",
-			Collections: make([]generator.CollectionData, 0, len(schemas)),
-		}
-
-		for _, s := range schemas {
-			collectionData := generator.CollectionData{
-				CollectionName: s.Name,
-				StructName:     generator.ToPascalCase(s.Name),
-				Fields:         make([]generator.FieldData, 0, len(s.Fields)),
-			}
-
-			for _, field := range s.Fields {
-				if field.System {
-					continue
-				}
-				goType, getter := generator.MapPbTypeToGoType(field, !field.Required)
-				collectionData.Fields = append(collectionData.Fields, generator.FieldData{
-					JSONName:     field.Name,
-					GoName:       generator.ToPascalCase(field.Name),
-					GoType:       goType,
-					OmitEmpty:    !field.Required,
-					GetterMethod: getter,
-				})
-			}
-			baseTplData.Collections = append(baseTplData.Collections, collectionData)
-		}
-
-		// Enhanced 기능 포함 데이터 생성
-		enhancedData := generator.EnhancedTemplateData{
-			TemplateData:      baseTplData,
-			GenerateEnums:     true,
-			GenerateRelations: true,
-			GenerateFiles:     true,
-		}
-
-		// Enhanced 분석 및 데이터 생성
-		enumGenerator := generator.NewEnumGenerator()
-		enhancedData.Enums = enumGenerator.GenerateEnums(baseTplData.Collections, schemas)
-
-		relationGenerator := generator.NewRelationGenerator()
-		enhancedData.RelationTypes = relationGenerator.GenerateRelationTypes(baseTplData.Collections, schemas)
-
-		fileGenerator := generator.NewFileGenerator()
-		enhancedData.FileTypes = fileGenerator.GenerateFileTypes(baseTplData.Collections, schemas)
+			Enums:       true,
+			Relations:   true,
+			Files:       true,
+		})
 
 		// 임시 파일에 템플릿 실행
 		tmpFile, err := os.CreateTemp("", "benchmark_*.go")
@@ -108,29 +68,25 @@ func BenchmarkSchemaLoading(b *testing.B) {
 // BenchmarkTemplateExecution 템플릿 실행 성능을 측정합니다
 func BenchmarkTemplateExecution(b *testing.B) {
 	// 테스트 데이터 준비
-	testData := generator.EnhancedTemplateData{
-		TemplateData: generator.TemplateData{
-			PackageName: "models",
-			JSONLibrary: "encoding/json",
-			Collections: []generator.CollectionData{
-				{
-					CollectionName: "test_collection",
-					StructName:     "TestCollection",
-					Fields: []generator.FieldData{
-						{
-							JSONName:     "name",
-							GoName:       "Name",
-							GoType:       "string",
-							OmitEmpty:    false,
-							GetterMethod: "GetString",
-						},
-						{
-							JSONName:     "count",
-							GoName:       "Count",
-							GoType:       "int",
-							OmitEmpty:    false,
-							GetterMethod: "GetInt",
-						},
+	testData := generator.TemplateData{
+		PackageName: "models",
+		JSONLibrary: "encoding/json",
+		Collections: []generator.CollectionData{
+			{
+				CollectionName: "test_collection",
+				StructName:     "TestCollection",
+				Fields: []generator.FieldData{
+					{
+						JSONName:  "name",
+						GoName:    "Name",
+						GoType:    "string",
+						OmitEmpty: false,
+					},
+					{
+						JSONName:  "count",
+						GoName:    "Count",
+						GoType:    "int",
+						OmitEmpty: false,
 					},
 				},
 			},
@@ -310,43 +266,12 @@ func BenchmarkMemoryUsage(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		// 전체 코드 생성 프로세스
-		baseTplData := generator.TemplateData{
-			PackageName: "models",
+		generator.BuildTemplateData(schemas, "models", generator.GenerateOptions{
 			JSONLibrary: "encoding/json",
-			Collections: make([]generator.CollectionData, 0, len(schemas)),
-		}
-
-		for _, s := range schemas {
-			collectionData := generator.CollectionData{
-				CollectionName: s.Name,
-				StructName:     generator.ToPascalCase(s.Name),
-				Fields:         make([]generator.FieldData, 0, len(s.Fields)),
-			}
-
-			for _, field := range s.Fields {
-				if field.System {
-					continue
-				}
-				goType, getter := generator.MapPbTypeToGoType(field, !field.Required)
-				collectionData.Fields = append(collectionData.Fields, generator.FieldData{
-					JSONName:     field.Name,
-					GoName:       generator.ToPascalCase(field.Name),
-					GoType:       goType,
-					OmitEmpty:    !field.Required,
-					GetterMethod: getter,
-				})
-			}
-			baseTplData.Collections = append(baseTplData.Collections, collectionData)
-		}
-
-		// Enhanced 기능들
-		enumGenerator := generator.NewEnumGenerator()
-		relationGenerator := generator.NewRelationGenerator()
-		fileGenerator := generator.NewFileGenerator()
-
-		_ = enumGenerator.GenerateEnums(baseTplData.Collections, schemas)
-		_ = relationGenerator.GenerateRelationTypes(baseTplData.Collections, schemas)
-		_ = fileGenerator.GenerateFileTypes(baseTplData.Collections, schemas)
+			Enums:       true,
+			Relations:   true,
+			Files:       true,
+		})
 	}
 }
 

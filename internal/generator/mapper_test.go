@@ -1,7 +1,6 @@
 package generator
 
 import (
-	"reflect"
 	"testing"
 )
 
@@ -52,13 +51,31 @@ func TestMapPbTypeToGoType(t *testing.T) {
 			name:       "date type, not omitEmpty",
 			field:      FieldSchema{Type: "date"},
 			omitEmpty:  false,
-			wantGoType: "types.DateTime",
+			wantGoType: "pocketbase.DateTime",
 		},
 		{
 			name:       "date type, omitEmpty",
 			field:      FieldSchema{Type: "date"},
 			omitEmpty:  true,
-			wantGoType: "*types.DateTime",
+			wantGoType: "*pocketbase.DateTime",
+		},
+		{
+			name:       "geoPoint type, not omitEmpty",
+			field:      FieldSchema{Type: "geoPoint"},
+			omitEmpty:  false,
+			wantGoType: "pocketbase.GeoPoint",
+		},
+		{
+			name:       "geoPoint type, omitEmpty",
+			field:      FieldSchema{Type: "geoPoint"},
+			omitEmpty:  true,
+			wantGoType: "*pocketbase.GeoPoint",
+		},
+		{
+			name:       "password type, not omitEmpty",
+			field:      FieldSchema{Type: "password"},
+			omitEmpty:  false,
+			wantGoType: "string",
 		},
 		{
 			name:       "json type, not omitEmpty",
@@ -167,176 +184,6 @@ func TestToPascalCase(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := ToPascalCase(tt.input); got != tt.want {
 				t.Errorf("ToPascalCase() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-// TestAnalyzeEnhancedField tests the AnalyzeEnhancedField function
-func TestAnalyzeEnhancedField(t *testing.T) {
-	// 테스트용 컬렉션 스키마 생성
-	allCollections := []CollectionSchema{
-		{
-			ID:   "plants_collection_id",
-			Name: "plants",
-		},
-		{
-			ID:   "users_collection_id",
-			Name: "users",
-		},
-	}
-
-	tests := []struct {
-		name           string
-		field          FieldSchema
-		collectionName string
-		want           EnhancedFieldInfo
-	}{
-		{
-			name: "select field analysis",
-			field: FieldSchema{
-				Name: "status",
-				Type: "select",
-				Options: &FieldOptions{
-					Values: []string{"active", "inactive", "pending"},
-				},
-			},
-			collectionName: "devices",
-			want: EnhancedFieldInfo{
-				FieldSchema: FieldSchema{
-					Name: "status",
-					Type: "select",
-					Options: &FieldOptions{
-						Values: []string{"active", "inactive", "pending"},
-					},
-				},
-				EnumValues:   []string{"active", "inactive", "pending"},
-				EnumTypeName: "DevicesStatusType",
-			},
-		},
-		{
-			name: "relation field analysis",
-			field: FieldSchema{
-				Name: "plant",
-				Type: "relation",
-				Options: &FieldOptions{
-					CollectionID: "plants_collection_id",
-					MaxSelect:    func() *int { i := 1; return &i }(),
-				},
-			},
-			collectionName: "devices",
-			want: EnhancedFieldInfo{
-				FieldSchema: FieldSchema{
-					Name: "plant",
-					Type: "relation",
-					Options: &FieldOptions{
-						CollectionID: "plants_collection_id",
-						MaxSelect:    func() *int { i := 1; return &i }(),
-					},
-				},
-				TargetCollection: "plants",
-				RelationTypeName: "PlantsRelation",
-				IsMultiRelation:  false,
-			},
-		},
-		{
-			name: "multi relation field analysis",
-			field: FieldSchema{
-				Name: "users",
-				Type: "relation",
-				Options: &FieldOptions{
-					CollectionID: "users_collection_id",
-					MaxSelect:    func() *int { i := 3; return &i }(),
-				},
-			},
-			collectionName: "projects",
-			want: EnhancedFieldInfo{
-				FieldSchema: FieldSchema{
-					Name: "users",
-					Type: "relation",
-					Options: &FieldOptions{
-						CollectionID: "users_collection_id",
-						MaxSelect:    func() *int { i := 3; return &i }(),
-					},
-				},
-				TargetCollection: "users",
-				RelationTypeName: "UsersRelation",
-				IsMultiRelation:  true,
-			},
-		},
-		{
-			name: "file field analysis",
-			field: FieldSchema{
-				Name: "avatar",
-				Type: "file",
-				Options: &FieldOptions{
-					MaxSelect: func() *int { i := 1; return &i }(),
-					Thumbs:    []string{"100x100", "200x200"},
-				},
-			},
-			collectionName: "users",
-			want: EnhancedFieldInfo{
-				FieldSchema: FieldSchema{
-					Name: "avatar",
-					Type: "file",
-					Options: &FieldOptions{
-						MaxSelect: func() *int { i := 1; return &i }(),
-						Thumbs:    []string{"100x100", "200x200"},
-					},
-				},
-				FileTypeName:   "AvatarFile",
-				IsMultiFile:    false,
-				HasThumbnails:  true,
-				ThumbnailSizes: []string{"100x100", "200x200"},
-			},
-		},
-		{
-			name: "multi file field analysis",
-			field: FieldSchema{
-				Name: "images",
-				Type: "file",
-				Options: &FieldOptions{
-					MaxSelect: func() *int { i := 5; return &i }(),
-				},
-			},
-			collectionName: "gallery",
-			want: EnhancedFieldInfo{
-				FieldSchema: FieldSchema{
-					Name: "images",
-					Type: "file",
-					Options: &FieldOptions{
-						MaxSelect: func() *int { i := 5; return &i }(),
-					},
-				},
-				FileTypeName:   "ImagesFile",
-				IsMultiFile:    true,
-				HasThumbnails:  false,
-				ThumbnailSizes: nil,
-			},
-		},
-		{
-			name: "text field analysis (no enhancement)",
-			field: FieldSchema{
-				Name: "title",
-				Type: "text",
-			},
-			collectionName: "posts",
-			want: EnhancedFieldInfo{
-				FieldSchema: FieldSchema{
-					Name: "title",
-					Type: "text",
-				},
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := AnalyzeEnhancedField(tt.field, tt.collectionName, allCollections)
-
-			// reflect.DeepEqual을 사용하여 구조체 비교
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("AnalyzeEnhancedField() = %+v, want %+v", got, tt.want)
 			}
 		})
 	}

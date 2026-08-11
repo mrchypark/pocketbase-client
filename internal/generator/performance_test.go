@@ -32,44 +32,12 @@ func BenchmarkLargeSchemaProcessing(b *testing.B) {
 	b.ReportAllocs() // 메모리 할당 정보 리포트
 
 	for i := 0; i < b.N; i++ {
-		// 기본 TemplateData 생성
-		baseTplData := TemplateData{
-			PackageName: "models",
+		BuildTemplateData(schemas, "models", GenerateOptions{
 			JSONLibrary: "encoding/json",
-			Collections: make([]CollectionData, 0, len(schemas)),
-		}
-
-		for _, s := range schemas {
-			collectionData := CollectionData{
-				CollectionName: s.Name,
-				StructName:     ToPascalCase(s.Name),
-				Fields:         make([]FieldData, 0, len(s.Fields)),
-			}
-
-			for _, field := range s.Fields {
-				if field.System {
-					continue
-				}
-				goType, getter := MapPbTypeToGoType(field, !field.Required)
-				collectionData.Fields = append(collectionData.Fields, FieldData{
-					JSONName:     field.Name,
-					GoName:       ToPascalCase(field.Name),
-					GoType:       goType,
-					OmitEmpty:    !field.Required,
-					GetterMethod: getter,
-				})
-			}
-			baseTplData.Collections = append(baseTplData.Collections, collectionData)
-		}
-
-		// Enhanced 기능들 생성
-		enumGenerator := NewEnumGenerator()
-		relationGenerator := NewRelationGenerator()
-		fileGenerator := NewFileGenerator()
-
-		_ = enumGenerator.GenerateEnums(baseTplData.Collections, schemas)
-		_ = relationGenerator.GenerateRelationTypes(baseTplData.Collections, schemas)
-		_ = fileGenerator.GenerateFileTypes(baseTplData.Collections, schemas)
+			Enums:       true,
+			Relations:   true,
+			Files:       true,
+		})
 	}
 }
 
@@ -171,51 +139,12 @@ func TestLargeSchemaGeneration(t *testing.T) {
 	start := time.Now()
 
 	// 기본 TemplateData 생성
-	baseTplData := TemplateData{
-		PackageName: "models",
+	tplData := BuildTemplateData(schemas, "models", GenerateOptions{
 		JSONLibrary: "encoding/json",
-		Collections: make([]CollectionData, 0, len(schemas)),
-	}
-
-	for _, s := range schemas {
-		collectionData := CollectionData{
-			CollectionName: s.Name,
-			StructName:     ToPascalCase(s.Name),
-			Fields:         make([]FieldData, 0, len(s.Fields)),
-		}
-
-		for _, field := range s.Fields {
-			if field.System {
-				continue
-			}
-			goType, getter := MapPbTypeToGoType(field, !field.Required)
-			collectionData.Fields = append(collectionData.Fields, FieldData{
-				JSONName:     field.Name,
-				GoName:       ToPascalCase(field.Name),
-				GoType:       goType,
-				OmitEmpty:    !field.Required,
-				GetterMethod: getter,
-			})
-		}
-		baseTplData.Collections = append(baseTplData.Collections, collectionData)
-	}
-
-	// Enhanced 기능들 생성
-	enhancedData := EnhancedTemplateData{
-		TemplateData:      baseTplData,
-		GenerateEnums:     true,
-		GenerateRelations: true,
-		GenerateFiles:     true,
-	}
-
-	enumGenerator := NewEnumGenerator()
-	enhancedData.Enums = enumGenerator.GenerateEnums(baseTplData.Collections, schemas)
-
-	relationGenerator := NewRelationGenerator()
-	enhancedData.RelationTypes = relationGenerator.GenerateRelationTypes(baseTplData.Collections, schemas)
-
-	fileGenerator := NewFileGenerator()
-	enhancedData.FileTypes = fileGenerator.GenerateFileTypes(baseTplData.Collections, schemas)
+		Enums:       true,
+		Relations:   true,
+		Files:       true,
+	})
 
 	processingTime := time.Since(start)
 	t.Logf("데이터 처리 시간: %v", processingTime)
@@ -273,7 +202,7 @@ type {{.TypeName}} struct {
 	defer os.Remove(tmpFile.Name())
 	defer tmpFile.Close()
 
-	err = tpl.Execute(tmpFile, enhancedData)
+	err = tpl.Execute(tmpFile, tplData)
 	if err != nil {
 		t.Fatalf("템플릿 실행 실패: %v", err)
 	}
@@ -310,34 +239,7 @@ func TestPerformanceBottlenecks(t *testing.T) {
 
 	// 1. 기본 데이터 생성
 	start := time.Now()
-	baseTplData := TemplateData{
-		PackageName: "models",
-		JSONLibrary: "encoding/json",
-		Collections: make([]CollectionData, 0, len(schemas)),
-	}
-
-	for _, s := range schemas {
-		collectionData := CollectionData{
-			CollectionName: s.Name,
-			StructName:     ToPascalCase(s.Name),
-			Fields:         make([]FieldData, 0, len(s.Fields)),
-		}
-
-		for _, field := range s.Fields {
-			if field.System {
-				continue
-			}
-			goType, getter := MapPbTypeToGoType(field, !field.Required)
-			collectionData.Fields = append(collectionData.Fields, FieldData{
-				JSONName:     field.Name,
-				GoName:       ToPascalCase(field.Name),
-				GoType:       goType,
-				OmitEmpty:    !field.Required,
-				GetterMethod: getter,
-			})
-		}
-		baseTplData.Collections = append(baseTplData.Collections, collectionData)
-	}
+	baseTplData := BuildTemplateData(schemas, "models", GenerateOptions{JSONLibrary: "encoding/json"})
 	times["basic_data_generation"] = time.Since(start)
 
 	// 2. Enum 생성
@@ -530,41 +432,10 @@ func generateComplexRelationSchemas() []CollectionSchema {
 
 // processSchemas 스키마 처리 로직을 실행합니다
 func processSchemas(schemas []CollectionSchema) {
-	baseTplData := TemplateData{
-		PackageName: "models",
+	BuildTemplateData(schemas, "models", GenerateOptions{
 		JSONLibrary: "encoding/json",
-		Collections: make([]CollectionData, 0, len(schemas)),
-	}
-
-	for _, s := range schemas {
-		collectionData := CollectionData{
-			CollectionName: s.Name,
-			StructName:     ToPascalCase(s.Name),
-			Fields:         make([]FieldData, 0, len(s.Fields)),
-		}
-
-		for _, field := range s.Fields {
-			if field.System {
-				continue
-			}
-			goType, getter := MapPbTypeToGoType(field, !field.Required)
-			collectionData.Fields = append(collectionData.Fields, FieldData{
-				JSONName:     field.Name,
-				GoName:       ToPascalCase(field.Name),
-				GoType:       goType,
-				OmitEmpty:    !field.Required,
-				GetterMethod: getter,
-			})
-		}
-		baseTplData.Collections = append(baseTplData.Collections, collectionData)
-	}
-
-	// Enhanced 기능들
-	enumGenerator := NewEnumGenerator()
-	relationGenerator := NewRelationGenerator()
-	fileGenerator := NewFileGenerator()
-
-	_ = enumGenerator.GenerateEnums(baseTplData.Collections, schemas)
-	_ = relationGenerator.GenerateRelationTypes(baseTplData.Collections, schemas)
-	_ = fileGenerator.GenerateFileTypes(baseTplData.Collections, schemas)
+		Enums:       true,
+		Relations:   true,
+		Files:       true,
+	})
 }

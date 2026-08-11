@@ -50,8 +50,8 @@ The `TypedRecordService[T]` is a generic service that performs CRUD operations o
 │   • GetOne(ctx, id, opts) → *T                                          │
 │   • GetList(ctx, opts) → *TypedListResult[T]                            │
 │   • GetAll(ctx, opts) → []*T                                            │
-│   • Create(ctx, record, opts) → *T                                      │
-│   • Update(ctx, id, record, opts) → *T                                  │
+│   • Create(ctx, record) → *T                                            │
+│   • Update(ctx, id, record) → *T                                        │
 │   • Delete(ctx, id) → error                                             │
 └─────────────────────────────────────────────────────────────────────────┘
                               │
@@ -61,14 +61,14 @@ The `TypedRecordService[T]` is a generic service that performs CRUD operations o
 │                    Generated Model (by pbc-gen)                          │
 ├─────────────────────────────────────────────────────────────────────────┤
 │ type Post struct {                                                       │
-│     ID             string         `json:"id"`                            │
-│     CollectionID   string         `json:"collectionId"`                  │
-│     CollectionName string         `json:"collectionName"`                │
-│     Created        types.DateTime `json:"created"`                       │
-│     Updated        types.DateTime `json:"updated"`                       │
-│     Title          string         `json:"title"`                         │
-│     Content        string         `json:"content"`                       │
-│     Published      bool           `json:"published"`                     │
+│     ID             string             `json:"id"`                        │
+│     CollectionID   string             `json:"collectionId"`              │
+│     CollectionName string             `json:"collectionName"`            │
+│     Created        pocketbase.DateTime `json:"created"`                  │
+│     Updated        pocketbase.DateTime `json:"updated"`                  │
+│     Title          string             `json:"title"`                     │
+│     Content        string             `json:"content"`                   │
+│     Published      bool               `json:"published"`                 │
 │ }                                                                         │
 │                                                                          │
 │ Interface Implementations:                                               │
@@ -77,54 +77,41 @@ The `TypedRecordService[T]` is a generic service that performs CRUD operations o
 │   • Mappable (ToMap)                                                    │
 └─────────────────────────────────────────────────────────────────────────┘
                               │
-                              │ Converts via json.Marshal/Unmarshal
+                              │ Decodes raw HTTP response directly (single pass)
                               ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                         Internal: *Record                                │
-├─────────────────────────────────────────────────────────────────────────┤
-│ • Parses raw API response                                               │
-│ • Stores all fields in deserializedData map                            │
-│ • Provides GetString, GetBool, GetFloat, etc.                          │
+│                       Raw HTTP Response Body ([]byte)                    │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Why It Works
 
-The service handles JSON unmarshaling correctly by:
-
-1. **Receiving `*Record`** from the API (via `RecordService.GetList`)
-2. **Converting each item** using `convertRecord[T]()` function
-3. **Marshal/Unmarshal cycle** to populate all fields into the concrete type
+The typed service decodes the raw HTTP response body **directly into `T`** via a
+single `json.Unmarshal` pass. Because generated structs carry plain JSON struct
+tags, unknown fields returned by the server (e.g. `expand`) are ignored and no
+intermediate `*Record` representation or extra `json.Marshal`/`json.Unmarshal`
+round-trip is needed:
 
 ```go
-// records.go:296-323
-func convertRecord[T any](rec *Record) (*T, error) {
-    // Case 1: T is *Record (passthrough)
-    if ptr, ok := any(&t).(**Record); ok {
-        *ptr = rec
-        return &t, nil
+// generic_client.go
+func (s *TypedRecordService[T]) GetOne(ctx context.Context, recordID string, opts *GetOneOptions) (*T, error) {
+    data, err := s.Client.SendRaw(ctx, http.MethodGet, path, nil)
+    if err != nil {
+        return nil, err
     }
-
-    // Case 2: T implements RecordModel (generated types)
-    if model, ok := any(&t).(RecordModel); ok {
-        model.SetID(rec.ID)
-        model.SetCollectionID(rec.CollectionID)
-        model.SetCollectionName(rec.CollectionName)
-
-        // Marshal record to JSON and unmarshal into the model
-        data, err := json.Marshal(rec)
-        if err != nil {
-            return nil, fmt.Errorf("failed to marshal record: %w", err)
-        }
-        if err := json.Unmarshal(data, &t); err != nil {
-            return nil, fmt.Errorf("failed to unmarshal into %T: %w", t, err)
-        }
-        return &t, nil
+    result := new(T)
+    if err := json.Unmarshal(data, result); err != nil {
+        return nil, err
     }
-
-    return nil, fmt.Errorf("cannot convert Record to %T", t)
+    return result, nil
 }
 ```
+
+This is what makes the typed read path effectively **zero-cost serialization**:
+one decode pass instead of the legacy decode → marshal → decode cycle (roughly
+7x faster in serialization benchmarks). Writes (`Create`/`Update`) still
+serialize through `ToMap()` when `T` implements `Mappable`, preserving PATCH
+semantics (empty optional fields are omitted).
 
 ---
 
@@ -143,9 +130,12 @@ type BaseModel interface {
 }
 ```
 
-### 2. RecordModel (Required for most operations)
+### 2. RecordModel (compile-time contract)
 
-Generated types should implement `RecordModel` for population from API responses:
+Generated types implement `RecordModel` and the generated code asserts it via
+`var _ pocketbase.RecordModel = (*Post)(nil)`. It is no longer required for
+response population (that now happens via direct struct decoding), but it
+documents the record contract and enables future helpers:
 
 ```go
 type RecordModel interface {
@@ -174,14 +164,14 @@ The `pbc-gen` tool automatically generates all required interfaces (`cmd/pbc-gen
 // This is AUTO-GENERATED by pbc-gen
 
 type Post struct {
-    ID             string         `json:"id"`
-    CollectionID   string         `json:"collectionId"`
-    CollectionName string         `json:"collectionName"`
-    Created        types.DateTime `json:"created"`
-    Updated        types.DateTime `json:"updated"`
-    Title          string         `json:"title"`
-    Content        string         `json:"content"`
-    Published      bool           `json:"published"`
+    ID             string             `json:"id"`
+    CollectionID   string             `json:"collectionId"`
+    CollectionName string             `json:"collectionName"`
+    Created        pocketbase.DateTime `json:"created"`
+    Updated        pocketbase.DateTime `json:"updated"`
+    Title          string             `json:"title"`
+    Content        string             `json:"content"`
+    Published      bool               `json:"published"`
 }
 
 // BaseModel interface
@@ -264,12 +254,12 @@ newPost := &Post{
     Published: true,
 }
 
-created, err := postService.Create(ctx, newPost, nil)
+created, err := postService.Create(ctx, newPost)
 if err != nil {
     log.Fatalf("Create failed: %v", err)
 }
 
-fmt.Printf("Created: ID=%s, Title=%s\n", created.GetID(), created.Title())
+fmt.Printf("Created: ID=%s, Title=%s\n", created.GetID(), created.Title)
 ```
 
 **Return Type**: `*Post` (not `interface{}`)
@@ -287,9 +277,9 @@ if err != nil {
 }
 
 // Access fields via generated getters
-fmt.Printf("Title: %s\n", post.Title())
+fmt.Printf("Title: %s\n", post.Title)
 fmt.Printf("Created: %s\n", post.Created)
-fmt.Printf("Published: %v\n", post.Published())
+fmt.Printf("Published: %v\n", post.Published)
 ```
 
 **Return Type**: `*Post`
@@ -319,7 +309,7 @@ fmt.Printf("Total: %d items (Page %d of %d)\n",
 
 // Access typed items
 for i, post := range result.Items {
-    fmt.Printf("%d. %s\n", i+1, post.Title())
+    fmt.Printf("%d. %s\n", i+1, post.Title)
 }
 ```
 
@@ -353,7 +343,7 @@ if err != nil {
 
 fmt.Printf("Total posts: %d\n", len(allPosts))
 for _, post := range allPosts {
-    fmt.Printf("- %s\n", post.Title())
+    fmt.Printf("- %s\n", post.Title)
 }
 ```
 
@@ -379,12 +369,12 @@ post.SetTitle("Updated Title")
 post.SetPublished(false)
 
 // 3. Update
-updated, err := postService.Update(ctx, post.GetID(), post, nil)
+updated, err := postService.Update(ctx, post.GetID(), post)
 if err != nil {
     log.Fatalf("Update failed: %v", err)
 }
 
-fmt.Printf("Updated: %s\n", updated.Title())
+fmt.Printf("Updated: %s\n", updated.Title)
 ```
 
 **Return Type**: `*Post` (the updated record)
@@ -436,15 +426,18 @@ result, err := postService.GetList(ctx, opts)
 
 ### WriteOptions (for Create/Update)
 
+`TypedRecordService` Create/Update do not accept `WriteOptions` directly. Use the
+embedded `RecordService` methods for field selection on write:
+
 ```go
 opts := &pocketbase.WriteOptions{
     Expand: "author",  // Expand relation fields
     Fields: "id,title,author.name",  // Select specific fields
 }
 
-// Create/Update with options
-created, err := postService.Create(ctx, newPost, opts)
-updated, err := postService.Update(ctx, recordID, post, opts)
+// Create/Update with options via embedded RecordService
+created, err := postService.RecordService.CreateWithOptions(ctx, postService.Collection, newPost.ToMap(), opts)
+updated, err := postService.RecordService.UpdateWithOptions(ctx, postService.Collection, recordID, post.ToMap(), opts)
 ```
 
 > **Note**: File uploads are handled separately via `FileService.Upload()`. See [File Fields](#file-fields) section for details.
@@ -494,7 +487,7 @@ if err != nil {
     log.Fatalf("Failed to get author: %v", err)
 }
 
-fmt.Printf("%s wrote: %s\n", author.Name(), post.Title())
+fmt.Printf("%s wrote: %s\n", author.Name, post.Title)
 ```
 
 ---
@@ -510,7 +503,7 @@ File uploads are handled via `FileService.Upload()`, not through `WriteOptions`:
 newPost := &Post{
     Title: "Post with Image",
 }
-created, err := postService.Create(ctx, newPost, nil)
+created, err := postService.Create(ctx, newPost)
 if err != nil {
     log.Fatalf("Create failed: %v", err)
 }
@@ -522,7 +515,7 @@ if err != nil {
 }
 defer coverFile.Close()
 
-updated, err := client.Files.Upload(ctx, "posts", created.GetID(), "cover", coverFile)
+updated, err := client.Files.Upload(ctx, "posts", created.GetID(), "cover", "cover.jpg", coverFile)
 if err != nil {
     log.Fatalf("File upload failed: %v", err)
 }
@@ -551,7 +544,7 @@ data, _ := io.ReadAll(reader)
 ### Delete File
 
 ```go
-err := client.Files.Delete(ctx, "posts", recordID, "cover.jpg")
+err := client.Files.Delete(ctx, "posts", recordID, "cover", "cover.jpg")
 if err != nil {
     log.Fatalf("File delete failed: %v", err)
 }
@@ -597,11 +590,11 @@ func main() {
     newPost.SetPublished(true)
     newPost.SetViewCount(0)
 
-    created, err := postService.Create(ctx, newPost, nil)
+    created, err := postService.Create(ctx, newPost)
     if err != nil {
         log.Fatalf("Create failed: %v", err)
     }
-    fmt.Printf("Created: ID=%s, Title=%s\n", created.GetID(), created.Title())
+fmt.Printf("Created: ID=%s, Title=%s\n", created.GetID(), created.Title)
 
     // === READ ONE ===
     fmt.Println("\n=== Read One ===")
@@ -609,19 +602,19 @@ func main() {
     if err != nil {
         log.Fatalf("GetOne failed: %v", err)
     }
-    fmt.Printf("Title: %s\n", post.Title())
-    fmt.Printf("Views: %.0f\n", post.ViewCount())
+fmt.Printf("Title: %s\n", post.Title)
+    fmt.Printf("Views: %.0f\n", post.ViewCount)
 
     // === UPDATE ===
     fmt.Println("\n=== Update ===")
-    post.SetViewCount(post.ViewCount() + 1)
+    post.SetViewCount(post.ViewCount + 1)
     post.SetTitle("Updated Title")
 
-    updated, err := postService.Update(ctx, post.GetID(), post, nil)
+    updated, err := postService.Update(ctx, post.GetID(), post)
     if err != nil {
         log.Fatalf("Update failed: %v", err)
     }
-    fmt.Printf("Updated: %s (Views: %.0f)\n", updated.Title(), updated.ViewCount())
+    fmt.Printf("Updated: %s (Views: %.0f)\n", updated.Title, updated.ViewCount)
 
     // === READ LIST ===
     fmt.Println("\n=== Read List ===")
@@ -636,7 +629,7 @@ func main() {
     }
     fmt.Printf("Found %d posts:\n", result.TotalItems)
     for i, p := range result.Items {
-        fmt.Printf("  %d. %s (%.0f views)\n", i+1, p.Title(), p.ViewCount())
+        fmt.Printf("  %d. %s (%.0f views)\n", i+1, p.Title, p.ViewCount)
     }
 
     // === READ ALL ===
@@ -668,7 +661,7 @@ func main() {
 | Feature | TypedRecordService (Recommended) | Dynamic API (`client.Records`) |
 |---------|----------------------------------|-------------------------------|
 | **Return Type** | `*models.Post` | `*pocketbase.Record` |
-| **Field Access** | `post.Title()` (generated getter) | `record.GetString("title")` |
+| **Field Access** | `post.Title` (struct field) | `record.GetString("title")` |
 | **Type Safety** | ✅ Compile-time check | ❌ Runtime check only |
 | **IDE Support** | ✅ Full autocomplete | ❌ No autocomplete |
 | **Collection Binding** | ✅ Automatic | ❌ Manual string every call |

@@ -1,4 +1,4 @@
-PB_VERSION := "0.28.4"
+PB_VERSION := "0.39.10"
 ARCH := $(shell uname -m)
 UNAME_S := $(shell uname -s)
 

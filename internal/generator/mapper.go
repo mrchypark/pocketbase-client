@@ -30,7 +30,7 @@ func MapPbTypeToGoType(field FieldSchema, omitEmpty bool) (string, string) {
 	}
 
 	switch field.Type {
-	case "text", "email", "url", "editor":
+	case "text", "email", "url", "editor", "password":
 		goType = "string"
 		getterMethod = "GetString"
 		if omitEmpty {
@@ -49,11 +49,14 @@ func MapPbTypeToGoType(field FieldSchema, omitEmpty bool) (string, string) {
 			getterMethod = "GetBoolPointer"
 		}
 	case "date", "autodate":
-		goType = "types.DateTime"
+		goType = "pocketbase.DateTime"
 		getterMethod = "GetDateTime"
 		if omitEmpty {
 			getterMethod = "GetDateTimePointer"
 		}
+	case "geoPoint":
+		goType = "pocketbase.GeoPoint"
+		getterMethod = "Get"
 	case "json":
 		goType = "json.RawMessage"
 		getterMethod = "GetRawMessage"
@@ -119,93 +122,6 @@ func BuildJSONTag(name string, omitEmpty bool) string {
 		return fmt.Sprintf("`json:\"%s,omitempty\"`", name)
 	}
 	return fmt.Sprintf("`json:\"%s\"`", name)
-}
-
-// BuildToMapBlock returns the ToMap assignment block for a field.
-func BuildToMapBlock(jsonName, goName string, omitEmpty bool) string {
-	if omitEmpty {
-		return fmt.Sprintf("\tif val := m.%s(); val != nil {\n\t\tdata[\"%s\"] = val\n\t}\n", goName, jsonName)
-	}
-	return fmt.Sprintf("\t// For required fields, we always include them.\n\t// You can add more complex logic here if needed, e.g., checking for zero values.\n\tdata[\"%s\"] = m.%s()\n", jsonName, goName)
-}
-
-// BuildValueOrBlock returns the ValueOr method block for pointer fields.
-func BuildValueOrBlock(structName, goName, jsonName, baseType string, isPointer bool) string {
-	if !isPointer {
-		return ""
-	}
-	return fmt.Sprintf("\n// %sValueOr returns the value of the '%s' field or the provided default value if nil.\nfunc (m *%s) %sValueOr(defaultValue %s) %s {\n\tif val := m.%s(); val != nil {\n\t\treturn *val\n\t}\n\treturn defaultValue\n}\n",
-		goName, jsonName, structName, goName, baseType, baseType, goName)
-}
-
-// AnalyzeEnhancedField analyzes a field and returns enhanced information for code generation
-func AnalyzeEnhancedField(field FieldSchema, collectionName string, allCollections []CollectionSchema) EnhancedFieldInfo {
-	enhanced := EnhancedFieldInfo{
-		FieldSchema: field,
-	}
-
-	switch field.Type {
-	case "select":
-		enhanced = analyzeSelectField(enhanced, collectionName)
-	case "relation":
-		enhanced = analyzeRelationField(enhanced, collectionName, allCollections)
-	case "file":
-		enhanced = analyzeFileField(enhanced, collectionName)
-	}
-
-	return enhanced
-}
-
-// analyzeSelectField analyzes select field for enum generation
-func analyzeSelectField(enhanced EnhancedFieldInfo, collectionName string) EnhancedFieldInfo {
-	if enhanced.Options != nil && len(enhanced.Options.Values) > 0 {
-		enhanced.EnumValues = enhanced.Options.Values
-		enhanced.EnumTypeName = ToPascalCase(collectionName) + ToPascalCase(enhanced.Name) + "Type"
-	}
-	return enhanced
-}
-
-// analyzeRelationField analyzes relation field for relation type generation
-func analyzeRelationField(enhanced EnhancedFieldInfo, collectionName string, allCollections []CollectionSchema) EnhancedFieldInfo {
-	if enhanced.Options != nil && enhanced.Options.CollectionID != "" {
-		// Find target collection by ID
-		for _, col := range allCollections {
-			if col.ID == enhanced.Options.CollectionID {
-				enhanced.TargetCollection = col.Name
-				break
-			}
-		}
-
-		if enhanced.TargetCollection != "" {
-			enhanced.RelationTypeName = ToPascalCase(enhanced.TargetCollection) + "Relation"
-
-			// Check if it's multi-relation
-			if enhanced.Options.MaxSelect != nil && *enhanced.Options.MaxSelect > 1 {
-				enhanced.IsMultiRelation = true
-			}
-		}
-	}
-	return enhanced
-}
-
-// analyzeFileField analyzes file field for file type generation
-func analyzeFileField(enhanced EnhancedFieldInfo, _ string) EnhancedFieldInfo {
-	enhanced.FileTypeName = ToPascalCase(enhanced.Name) + "File"
-
-	if enhanced.Options != nil {
-		// Check if it's multi-file
-		if enhanced.Options.MaxSelect != nil && *enhanced.Options.MaxSelect > 1 {
-			enhanced.IsMultiFile = true
-		}
-
-		// Check for thumbnails
-		if len(enhanced.Options.Thumbs) > 0 {
-			enhanced.HasThumbnails = true
-			enhanced.ThumbnailSizes = enhanced.Options.Thumbs
-		}
-	}
-
-	return enhanced
 }
 
 // ToConstantName converts a value to a valid Go constant name

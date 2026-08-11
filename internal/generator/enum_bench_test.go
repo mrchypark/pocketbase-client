@@ -103,22 +103,32 @@ func BenchmarkEnumGenerator_GenerateEnums(b *testing.B) {
 func BenchmarkEnumGenerator_GenerateEnumConstants(b *testing.B) {
 	generator := NewEnumGenerator()
 
-	enhanced := EnhancedFieldInfo{
-		FieldSchema: FieldSchema{
-			Name: "status",
-			Type: "select",
-			Options: &FieldOptions{
-				Values: []string{"active", "inactive", "pending", "archived", "deleted", "suspended"},
+	collections := []CollectionData{
+		{
+			CollectionName: "devices",
+			StructName:     "Device",
+		},
+	}
+
+	schemas := []CollectionSchema{
+		{
+			Name: "devices",
+			Fields: []FieldSchema{
+				{
+					Name: "status",
+					Type: "select",
+					Options: &FieldOptions{
+						Values: []string{"active", "inactive", "pending", "archived", "deleted", "suspended"},
+					},
+				},
 			},
 		},
-		EnumValues:   []string{"active", "inactive", "pending", "archived", "deleted", "suspended"},
-		EnumTypeName: "DeviceStatusType",
 	}
 
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		_ = generator.GenerateEnumConstants(enhanced, "devices")
+		_ = generator.GenerateEnums(collections, schemas)
 	}
 }
 
@@ -132,22 +142,32 @@ func BenchmarkEnumGenerator_LargeValueSet(b *testing.B) {
 		largeValues[i] = "value_" + string(rune('a'+i%26)) + string(rune('0'+i/26))
 	}
 
-	enhanced := EnhancedFieldInfo{
-		FieldSchema: FieldSchema{
-			Name: "large_enum",
-			Type: "select",
-			Options: &FieldOptions{
-				Values: largeValues,
+	collections := []CollectionData{
+		{
+			CollectionName: "test_collection",
+			StructName:     "TestCollection",
+		},
+	}
+
+	schemas := []CollectionSchema{
+		{
+			Name: "test_collection",
+			Fields: []FieldSchema{
+				{
+					Name: "large_enum",
+					Type: "select",
+					Options: &FieldOptions{
+						Values: largeValues,
+					},
+				},
 			},
 		},
-		EnumValues:   largeValues,
-		EnumTypeName: "LargeEnumType",
 	}
 
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		_ = generator.GenerateEnumConstants(enhanced, "test_collection")
+		_ = generator.GenerateEnums(collections, schemas)
 	}
 }
 
@@ -209,22 +229,32 @@ func BenchmarkEnumGenerator_SpecialCharacters(b *testing.B) {
 		"日本語値",
 	}
 
-	enhanced := EnhancedFieldInfo{
-		FieldSchema: FieldSchema{
-			Name: "special_enum",
-			Type: "select",
-			Options: &FieldOptions{
-				Values: specialValues,
+	collections := []CollectionData{
+		{
+			CollectionName: "test_collection",
+			StructName:     "TestCollection",
+		},
+	}
+
+	schemas := []CollectionSchema{
+		{
+			Name: "test_collection",
+			Fields: []FieldSchema{
+				{
+					Name: "special_enum",
+					Type: "select",
+					Options: &FieldOptions{
+						Values: specialValues,
+					},
+				},
 			},
 		},
-		EnumValues:   specialValues,
-		EnumTypeName: "SpecialEnumType",
 	}
 
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		_ = generator.GenerateEnumConstants(enhanced, "test_collection")
+		_ = generator.GenerateEnums(collections, schemas)
 	}
 }
 

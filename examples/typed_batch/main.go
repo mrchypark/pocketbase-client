@@ -171,9 +171,9 @@ func main() {
 
 	// Cleanup
 	fmt.Println("\n=== Cleanup ===")
-	postService.Delete(ctx, postService.Collection, p1.ID)
-	postService.Delete(ctx, postService.Collection, p2.ID)
-	userService.Delete(ctx, userService.Collection, u1.ID)
-	userService.Delete(ctx, userService.Collection, u2.ID)
+	postService.Delete(ctx, p1.ID)
+	postService.Delete(ctx, p2.ID)
+	userService.Delete(ctx, u1.ID)
+	userService.Delete(ctx, u2.ID)
 	fmt.Println("Cleanup done")
 }

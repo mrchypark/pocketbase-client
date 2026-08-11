@@ -1,7 +1,6 @@
 package generator
 
 import (
-	"fmt"
 	"strings"
 )
 
@@ -53,114 +52,6 @@ func (g *EnumGenerator) GenerateEnums(collections []CollectionData, schemas []Co
 	}
 
 	return enums
-}
-
-// GenerateEnumData generates enum data for a single select field
-func (g *EnumGenerator) GenerateEnumData(enhanced EnhancedFieldInfo, collectionName string) EnumData {
-	constants := make([]ConstantData, 0, len(enhanced.EnumValues))
-
-	for _, value := range enhanced.EnumValues {
-		constantName := ToConstantName(collectionName, enhanced.Name, value)
-		constants = append(constants, ConstantData{
-			Name:  constantName,
-			Value: value,
-		})
-	}
-
-	return EnumData{
-		CollectionName: collectionName,
-		FieldName:      enhanced.Name,
-		EnumTypeName:   enhanced.EnumTypeName,
-		Constants:      constants,
-	}
-}
-
-// GenerateEnumConstants generates individual enum constants for a field
-func (g *EnumGenerator) GenerateEnumConstants(field EnhancedFieldInfo, collectionName string) []ConstantData {
-	if len(field.EnumValues) == 0 {
-		return nil
-	}
-
-	constants := make([]ConstantData, 0, len(field.EnumValues))
-
-	for _, value := range field.EnumValues {
-		constantName := ToConstantName(collectionName, field.Name, value)
-		constants = append(constants, ConstantData{
-			Name:  constantName,
-			Value: value,
-		})
-	}
-
-	return constants
-}
-
-// GenerateEnumHelperFunction generates helper function code for enum values
-func (g *EnumGenerator) GenerateEnumHelperFunction(enumData EnumData) string {
-	functionName := enumData.EnumTypeName + "Values"
-
-	var values []string
-	for _, constant := range enumData.Constants {
-		values = append(values, constant.Name)
-	}
-
-	return fmt.Sprintf(`// %s returns all possible values for %s
-func %s() []string {
-	return []string{%s}
-}`, functionName, enumData.EnumTypeName, functionName, strings.Join(values, ", "))
-}
-
-// GenerateEnumValidationFunction generates validation function code for enum values
-func (g *EnumGenerator) GenerateEnumValidationFunction(enumData EnumData) string {
-	functionName := "IsValid" + enumData.EnumTypeName
-
-	var cases []string
-	for _, constant := range enumData.Constants {
-		cases = append(cases, fmt.Sprintf(`case %s:`, constant.Name))
-	}
-
-	return fmt.Sprintf(`// %s checks if the given value is a valid %s
-func %s(value string) bool {
-	switch value {
-	%s
-		return true
-	default:
-		return false
-	}
-}`, functionName, enumData.EnumTypeName, functionName, strings.Join(cases, "\n\t"))
-}
-
-// ValidateEnumName ensures the enum name is a valid Go identifier
-func (g *EnumGenerator) ValidateEnumName(name string) string {
-	// Remove any invalid characters and ensure it starts with a letter
-	cleaned := strings.Map(func(r rune) rune {
-		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') {
-			return r
-		}
-		return -1
-	}, name)
-
-	// Ensure it starts with a letter
-	if len(cleaned) > 0 && cleaned[0] >= '0' && cleaned[0] <= '9' {
-		cleaned = "Enum" + cleaned
-	}
-
-	if cleaned == "" {
-		cleaned = "EnumValue"
-	}
-
-	return cleaned
-}
-
-// SanitizeConstantValue sanitizes a constant value for safe Go code generation
-func (g *EnumGenerator) SanitizeConstantValue(value string) string {
-	// Escape special characters in string literals
-	value = strings.ReplaceAll(value, `\`, `\\`)
-	value = strings.ReplaceAll(value, `"`, `\"`)
-	value = strings.ReplaceAll(value, "\n", `\n`)
-	value = strings.ReplaceAll(value, "\r", `\r`)
-	value = strings.ReplaceAll(value, "\t", `\t`)
-
-	return fmt.Sprintf(`"%s"`, value)
 }
 
 // generateEnumDataOptimized 성능 최적화된 enum 데이터 생성 함수

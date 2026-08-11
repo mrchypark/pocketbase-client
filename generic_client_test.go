@@ -2,6 +2,7 @@ package pocketbase
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -20,7 +21,7 @@ func (m *testModel) ToMap() map[string]any {
 	}
 }
 
-func TestGenericService_CRUD(t *testing.T) {
+func TestTypedRecordService_CRUD(t *testing.T) {
 	t.Parallel()
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -68,9 +69,6 @@ func TestGenericService_CRUD(t *testing.T) {
 			return
 
 		case r.Method == http.MethodPatch && r.URL.Path == "/api/collections/tests/records/rec2":
-			if got := r.URL.Query().Get("fields"); got != "id,name" {
-				t.Fatalf("fields got %q, want %q", got, "id,name")
-			}
 			var body map[string]any
 			_ = json.NewDecoder(r.Body).Decode(&body)
 			if got := body["name"]; got != "updated" {
@@ -93,7 +91,7 @@ func TestGenericService_CRUD(t *testing.T) {
 	t.Cleanup(srv.Close)
 
 	client := NewClient(srv.URL)
-	svc := NewService[*testModel](client, "tests", func() *testModel { return &testModel{} })
+	svc := NewTypedRecordService[testModel](client, "tests")
 
 	ctx := context.Background()
 
@@ -116,7 +114,7 @@ func TestGenericService_CRUD(t *testing.T) {
 		t.Fatalf("GetList item got %#v", gotList.Items[0])
 	}
 
-	created, err := svc.Create(ctx, &testModel{Name: "created"}, nil)
+	created, err := svc.Create(ctx, &testModel{Name: "created"})
 	if err != nil {
 		t.Fatalf("Create error: %v", err)
 	}
@@ -124,7 +122,7 @@ func TestGenericService_CRUD(t *testing.T) {
 		t.Fatalf("Create got %#v", created)
 	}
 
-	updated, err := svc.Update(ctx, "rec2", &testModel{Name: "updated"}, &WriteOptions{Fields: "id,name"})
+	updated, err := svc.Update(ctx, "rec2", &testModel{Name: "updated"})
 	if err != nil {
 		t.Fatalf("Update error: %v", err)
 	}
@@ -132,7 +130,82 @@ func TestGenericService_CRUD(t *testing.T) {
 		t.Fatalf("Update got %#v", updated)
 	}
 
+	// Delete is now a method on TypedRecordService.
 	if err := svc.Delete(ctx, "rec2"); err != nil {
 		t.Fatalf("Delete error: %v", err)
+	}
+}
+
+func TestTypedRecordService_GetAll_SkipTotal(t *testing.T) {
+	t.Parallel()
+
+	const perPage = 100
+	var requests int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		requests++
+
+		if got := r.URL.Query().Get("skipTotal"); got != "1" {
+			t.Fatalf("skipTotal got %q, want %q", got, "1")
+		}
+
+		page := 1
+		_ = json.Unmarshal([]byte(r.URL.Query().Get("page")), &page)
+
+		const total = 30
+		start := (page - 1) * perPage
+		if start > total {
+			start = total
+		}
+		items := make([]map[string]any, 0, total-start)
+		for i := start; i < total; i++ {
+			items = append(items, map[string]any{"id": fmt.Sprintf("rec%d", i+1), "name": "x"})
+		}
+
+		// With skipTotal, PocketBase reports totalPages as -1.
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"page":       page,
+			"perPage":    perPage,
+			"totalItems": total,
+			"totalPages": -1,
+			"items":      items,
+		})
+	}))
+	t.Cleanup(srv.Close)
+
+	client := NewClient(srv.URL)
+	svc := NewTypedRecordService[testModel](client, "tests")
+
+	all, err := svc.GetAll(context.Background(), &ListOptions{SkipTotal: true, PerPage: perPage})
+	if err != nil {
+		t.Fatalf("GetAll error: %v", err)
+	}
+	if len(all) != 30 {
+		t.Errorf("GetAll returned %d records, want 30", len(all))
+	}
+	// With short-page guard, we stop after page 1 because 30 items < perPage (100).
+	// No need to make a second request to discover there are no more items.
+	if requests != 1 {
+		t.Errorf("expected 1 request (page 1 only), got %d", requests)
+	}
+}
+
+func TestTypedRecordService_NilBody(t *testing.T) {
+	t.Parallel()
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+	}))
+	t.Cleanup(srv.Close)
+
+	client := NewClient(srv.URL)
+	svc := NewTypedRecordService[testModel](client, "tests")
+	ctx := context.Background()
+
+	if _, err := svc.Create(ctx, nil); err == nil {
+		t.Error("Create(nil) expected an error, got nil")
+	}
+	if _, err := svc.Update(ctx, "rec2", nil); err == nil {
+		t.Error("Update(nil) expected an error, got nil")
 	}
 }

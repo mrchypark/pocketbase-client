@@ -5,47 +5,37 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+
+	"github.com/goccy/go-json"
 )
 
-// Model is the constraint for type-safe generic collection services.
+// TypedRecordService provides type-safe CRUD operations for a single PocketBase
+// collection.
 //
-// It is an alias of Mappable to keep the API consistent with the existing RecordService
-// ToMap() behavior.
-type Model = Mappable
-
-// CollectionResult represents a collection list response with typed items.
+// Unlike the dynamic RecordService, responses are decoded directly from the raw
+// HTTP response body into the concrete type T. This avoids the intermediate
+// dynamic Record representation and its extra JSON round-trip, making the typed
+// read path effectively a single decode pass.
 //
-// Note: this intentionally duplicates the pagination fields from ListResult to avoid
-// JSON tag conflicts with ListResult.Items.
-type CollectionResult[T Model] struct {
-	Page       int `json:"page"`
-	PerPage    int `json:"perPage"`
-	TotalItems int `json:"totalItems"`
-	TotalPages int `json:"totalPages"`
-	Items      []T `json:"items"`
+// T must be a struct whose JSON tags match the collection's fields (generated
+// models satisfy this). Create and Update bodies are serialized through ToMap()
+// when T implements Mappable (generated models do), preserving PATCH semantics.
+type TypedRecordService[T any] struct {
+	*RecordService
+	Collection string
 }
 
-// Service provides type-safe CRUD operations for a single PocketBase collection.
-type Service[T Model] struct {
-	client         *Client
-	collectionName string
-	newModel       func() T
-}
-
-// NewService creates a new generic service for the specified collection.
-func NewService[T Model](client *Client, collectionName string, newModel func() T) *Service[T] {
-	return &Service[T]{
-		client:         client,
-		collectionName: collectionName,
-		newModel:       newModel,
+// NewTypedRecordService creates a new TypedRecordService for the given collection.
+func NewTypedRecordService[T any](client *Client, collection string) *TypedRecordService[T] {
+	return &TypedRecordService[T]{
+		RecordService: &RecordService{Client: client},
+		Collection:    collection,
 	}
 }
 
-// GetOne fetches a single record by its ID.
-func (s *Service[T]) GetOne(ctx context.Context, id string, opts *GetOneOptions) (T, error) {
-	var zero T
-
-	path := fmt.Sprintf("/api/collections/%s/records/%s", url.PathEscape(s.collectionName), url.PathEscape(id))
+// GetOne retrieves a single record and decodes it directly into *T.
+func (s *TypedRecordService[T]) GetOne(ctx context.Context, recordID string, opts *GetOneOptions) (*T, error) {
+	path := fmt.Sprintf("/api/collections/%s/records/%s", url.PathEscape(s.Collection), url.PathEscape(recordID))
 	q := url.Values{}
 	if opts != nil {
 		if opts.Expand != "" {
@@ -59,70 +49,129 @@ func (s *Service[T]) GetOne(ctx context.Context, id string, opts *GetOneOptions)
 		path += "?" + qs
 	}
 
-	record := s.newModel()
-	if err := s.client.Send(ctx, http.MethodGet, path, nil, &record); err != nil {
-		return zero, fmt.Errorf("pocketbase: fetch %s: %w", s.collectionName, err)
-	}
-	return record, nil
-}
-
-// GetList fetches a list of records.
-func (s *Service[T]) GetList(ctx context.Context, opts *ListOptions) (*CollectionResult[T], error) {
-	path := fmt.Sprintf("/api/collections/%s/records", url.PathEscape(s.collectionName))
-	q := url.Values{}
-	applyListOptions(q, opts)
-	if qs := q.Encode(); qs != "" {
-		path += "?" + qs
+	data, err := s.Client.SendRaw(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, fmt.Errorf("pocketbase: fetch %s: %w", s.Collection, err)
 	}
 
-	var result CollectionResult[T]
-	if err := s.client.Send(ctx, http.MethodGet, path, nil, &result); err != nil {
-		return nil, fmt.Errorf("pocketbase: fetch %s list: %w", s.collectionName, err)
-	}
-	return &result, nil
-}
-
-// Create creates a new record.
-func (s *Service[T]) Create(ctx context.Context, record T, opts *WriteOptions) (T, error) {
-	var zero T
-
-	path := fmt.Sprintf("/api/collections/%s/records", url.PathEscape(s.collectionName))
-	q := url.Values{}
-	opts.apply(q)
-	if qs := q.Encode(); qs != "" {
-		path += "?" + qs
-	}
-
-	result := s.newModel()
-	if err := s.client.Send(ctx, http.MethodPost, path, record.ToMap(), &result); err != nil {
-		return zero, fmt.Errorf("pocketbase: create %s: %w", s.collectionName, err)
+	result := new(T)
+	if err := json.Unmarshal(data, result); err != nil {
+		return nil, fmt.Errorf("pocketbase: decode %T: %w", result, err)
 	}
 	return result, nil
 }
 
-// Update updates an existing record.
-func (s *Service[T]) Update(ctx context.Context, id string, record T, opts *WriteOptions) (T, error) {
-	var zero T
+// Create creates a new record from type T and decodes the response directly.
+func (s *TypedRecordService[T]) Create(ctx context.Context, body *T) (*T, error) {
+	if body == nil {
+		return nil, fmt.Errorf("pocketbase: create %s: body is nil", s.Collection)
+	}
+	path := fmt.Sprintf("/api/collections/%s/records", url.PathEscape(s.Collection))
 
-	path := fmt.Sprintf("/api/collections/%s/records/%s", url.PathEscape(s.collectionName), url.PathEscape(id))
-	q := url.Values{}
-	opts.apply(q)
-	if qs := q.Encode(); qs != "" {
-		path += "?" + qs
+	requestBody := prepareRequestBody(body)
+	data, err := s.Client.SendRaw(ctx, http.MethodPost, path, requestBody)
+	if err != nil {
+		return nil, fmt.Errorf("pocketbase: create %s: %w", s.Collection, err)
 	}
 
-	result := s.newModel()
-	if err := s.client.Send(ctx, http.MethodPatch, path, record.ToMap(), &result); err != nil {
-		return zero, fmt.Errorf("pocketbase: update %s: %w", s.collectionName, err)
+	result := new(T)
+	if err := json.Unmarshal(data, result); err != nil {
+		return nil, fmt.Errorf("pocketbase: decode %T: %w", result, err)
+	}
+	return result, nil
+}
+
+// Update updates an existing record and decodes the response directly.
+func (s *TypedRecordService[T]) Update(ctx context.Context, recordID string, body *T) (*T, error) {
+	if body == nil {
+		return nil, fmt.Errorf("pocketbase: update %s: body is nil", s.Collection)
+	}
+	path := fmt.Sprintf("/api/collections/%s/records/%s", url.PathEscape(s.Collection), url.PathEscape(recordID))
+
+	requestBody := prepareRequestBody(body)
+	data, err := s.Client.SendRaw(ctx, http.MethodPatch, path, requestBody)
+	if err != nil {
+		return nil, fmt.Errorf("pocketbase: update %s: %w", s.Collection, err)
+	}
+
+	result := new(T)
+	if err := json.Unmarshal(data, result); err != nil {
+		return nil, fmt.Errorf("pocketbase: decode %T: %w", result, err)
 	}
 	return result, nil
 }
 
 // Delete deletes a record by its ID.
-func (s *Service[T]) Delete(ctx context.Context, id string) error {
-	path := fmt.Sprintf("/api/collections/%s/records/%s", url.PathEscape(s.collectionName), url.PathEscape(id))
-	if err := s.client.Send(ctx, http.MethodDelete, path, nil, nil); err != nil {
-		return fmt.Errorf("pocketbase: delete %s: %w", s.collectionName, err)
+func (s *TypedRecordService[T]) Delete(ctx context.Context, recordID string) error {
+	return s.RecordService.Delete(ctx, s.Collection, recordID)
+}
+
+// GetList retrieves a list of records and decodes them directly into
+// a TypedListResult[T].
+func (s *TypedRecordService[T]) GetList(ctx context.Context, opts *ListOptions) (*TypedListResult[T], error) {
+	path := fmt.Sprintf("/api/collections/%s/records", url.PathEscape(s.Collection))
+	if qs := buildQueryString(opts); qs != "" {
+		path += "?" + qs
 	}
-	return nil
+
+	data, err := s.Client.SendRaw(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, fmt.Errorf("pocketbase: fetch %s list: %w", s.Collection, err)
+	}
+
+	var result TypedListResult[T]
+	if err := json.Unmarshal(data, &result); err != nil {
+		return nil, fmt.Errorf("pocketbase: decode %T: %w", result, err)
+	}
+	return &result, nil
+}
+
+// GetAll retrieves all records via automatic pagination.
+func (s *TypedRecordService[T]) GetAll(ctx context.Context, opts *ListOptions) ([]*T, error) {
+	base := ListOptions{}
+	if opts != nil {
+		base = *opts
+	}
+	if base.PerPage <= 0 {
+		base.PerPage = 100
+	}
+	base.Page = 1
+
+	var all []*T
+	for {
+		res, err := s.GetList(ctx, &base)
+		if err != nil {
+			return nil, err
+		}
+		all = append(all, res.Items...)
+		// With skipTotal the server reports totalPages as -1, so only rely on
+		// TotalPages when it is a positive value; otherwise stop when a page
+		// comes back empty or shorter than requested (short page).
+		if len(res.Items) == 0 || len(res.Items) < base.PerPage ||
+			(res.TotalPages > 0 && res.Page >= res.TotalPages) {
+			break
+		}
+		base.Page++
+	}
+	return all, nil
+}
+
+// TypedListResult is a typed version of ListResult.
+type TypedListResult[T any] struct {
+	Page       int  `json:"page"`
+	PerPage    int  `json:"perPage"`
+	TotalItems int  `json:"totalItems"`
+	TotalPages int  `json:"totalPages"`
+	Items      []*T `json:"items"`
+}
+
+// prepareRequestBody serializes a typed body for Create/Update.
+// Types implementing Mappable (generated models) are converted via ToMap() to
+// preserve PATCH semantics (omitting empty optional fields). Other types are
+// marshaled as-is.
+func prepareRequestBody(body any) any {
+	if m, ok := body.(Mappable); ok {
+		return m.ToMap()
+	}
+	return body
 }

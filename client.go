@@ -140,6 +140,24 @@ func (c *Client) SendWithOptions(ctx context.Context, method, path string, body,
 	return c.send(ctx, method, path, body, responseData, opts...)
 }
 
+// SendRaw sends a request and returns the raw response body bytes without
+// decoding them into a predefined type.
+//
+// It is primarily used by the typed services (e.g. TypedRecordService) which
+// decode the response directly into concrete model types, avoiding the
+// intermediate dynamic Record representation and its extra JSON round-trip.
+func (c *Client) SendRaw(ctx context.Context, method, path string, body any, opts ...RequestOption) ([]byte, error) {
+	var reqBody io.Reader
+	if body != nil {
+		b, err := json.Marshal(body)
+		if err != nil {
+			return nil, fmt.Errorf("pocketbase: failed to marshal request body: %w", err)
+		}
+		reqBody = bytes.NewReader(b)
+	}
+	return c.doRaw(ctx, method, path, reqBody, "application/json", opts...)
+}
+
 func (c *Client) sendStream(ctx context.Context, method, path string, body io.Reader, contentType string) (io.ReadCloser, error) {
 	req, err := c.newRequest(ctx, method, path, body, contentType)
 	if err != nil {
@@ -224,6 +242,44 @@ func (c *Client) do(ctx context.Context, method, path string, body io.Reader, co
 	}
 
 	return nil
+}
+
+// doRaw is the central handler for requests whose raw response bytes are
+// returned to the caller instead of being unmarshaled into a response type.
+func (c *Client) doRaw(ctx context.Context, method, path string, body io.Reader, contentType string, opts ...RequestOption) ([]byte, error) {
+	var ropts requestOptions
+	for _, opt := range opts {
+		opt(&ropts)
+	}
+	if ropts.writer != nil {
+		return nil, fmt.Errorf("pocketbase: WithResponseWriter cannot be used with raw response decoding")
+	}
+
+	req, err := c.newRequest(ctx, method, path, body, contentType)
+	if err != nil {
+		return nil, err
+	}
+
+	res, err := c.HTTPClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("pocketbase: http request failed: %w", err)
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode >= http.StatusBadRequest {
+		resBody, err := io.ReadAll(res.Body)
+		if err != nil {
+			return nil, fmt.Errorf("pocketbase: failed to read error response body: %w", err)
+		}
+		return nil, ParseAPIErrorFromResponse(res, resBody)
+	}
+
+	resBody, err := io.ReadAll(res.Body)
+	if err != nil {
+		return nil, fmt.Errorf("pocketbase: failed to read response body: %w", err)
+	}
+
+	return resBody, nil
 }
 
 // WithPassword creates a PasswordAuth strategy and sets it to the client.

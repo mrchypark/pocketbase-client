@@ -1,12 +1,13 @@
 package generator
 
 import (
+	"encoding/json"
 	"os"
 	"testing"
 )
 
 func TestLoadSchema(t *testing.T) {
-	// Create a dummy schema file for testing
+	// Create a dummy schema file for testing (latest flattened format)
 	dummySchema := `[
 	{
 		"id": "_pb_users_auth_",
@@ -20,21 +21,15 @@ func TestLoadSchema(t *testing.T) {
 			"type": "email",
 			"required": true,
 			"unique": true,
-			"options": {
-				"exceptDomains": null,
-				"onlyDomains": null
-			}
+			"exceptDomains": null,
+			"onlyDomains": null
 		},
 		{
 			"id": "_pb_users_auth_password",
 			"name": "password",
 			"type": "text",
 			"required": true,
-			"options": {
-				"min": 8,
-				"max": 72,
-				"pattern": ""
-			}
+			"pattern": ""
 		}
 		],
 		"indexes": [],
@@ -68,20 +63,14 @@ func TestLoadSchema(t *testing.T) {
 			"name": "title",
 			"type": "text",
 			"required": true,
-			"options": {
-				"min": null,
-				"max": null,
-				"pattern": ""
-			}
+			"pattern": ""
 		},
 		{
 			"id": "_pb_users_auth_content",
 			"name": "content",
 			"type": "editor",
 			"required": false,
-			"options": {
-				"convertUrls": false
-			}
+			"convertUrls": false
 		}
 		],
 		"indexes": [],
@@ -138,14 +127,14 @@ func TestLoadSchema(t *testing.T) {
 
 	// Test invalid JSON
 	invalidJsonPath := "invalid.json"
-	err = os.WriteFile(invalidJsonPath, []byte(`{"name": "test"}`), 0644)
+	err = os.WriteFile(invalidJsonPath, []byte(`{"foo": "bar"}`), 0644)
 	if err != nil {
 		t.Fatalf("Failed to create invalid JSON file: %v", err)
 	}
 	defer os.Remove(invalidJsonPath)
 
 	_, err = LoadSchema(invalidJsonPath)
-	// Expect an error because the root is not an array
+	// Expect an error because the object is not a recognizable collection shape
 	if err == nil {
 		t.Errorf("Expected an error for invalid JSON, but got none")
 	}
@@ -154,6 +143,89 @@ func TestLoadSchema(t *testing.T) {
 	_, err = LoadSchema("non_existent.json")
 	if err == nil {
 		t.Errorf("Expected an error for non-existent file, but got none")
+	}
+}
+
+func TestParseSchemas(t *testing.T) {
+	collectionJSON := `{"id": "c1", "name": "posts", "type": "base", "system": false, "fields": [{"id": "f1", "name": "title", "type": "text", "required": true}]}`
+
+	tests := []struct {
+		name      string
+		jsonData  string
+		wantCount int
+		wantName  string
+		wantErr   bool
+	}{
+		{
+			name:      "plain array of collections",
+			jsonData:  `[` + collectionJSON + `]`,
+			wantCount: 1,
+			wantName:  "posts",
+		},
+		{
+			name:      "paginated wrapper from GET /api/collections",
+			jsonData:  `{"page": 1, "perPage": 30, "totalItems": 1, "totalPages": 1, "items": [` + collectionJSON + `]}`,
+			wantCount: 1,
+			wantName:  "posts",
+		},
+		{
+			name:      "single collection object from GET /api/collections/{id}",
+			jsonData:  collectionJSON,
+			wantCount: 1,
+			wantName:  "posts",
+		},
+		{
+			name:      "paginated wrapper with empty items",
+			jsonData:  `{"page": 1, "perPage": 30, "totalItems": 0, "totalPages": 0, "items": []}`,
+			wantCount: 0,
+		},
+		{
+			name:      "single object without collection markers",
+			jsonData:  `{"foo": "bar"}`,
+			wantCount: 0,
+			wantErr:   true,
+		},
+		{
+			name:     "legacy array with schema key is rejected",
+			jsonData: `[{"id": "c1", "name": "posts", "schema": [{"name": "title", "type": "text"}]}]`,
+			wantErr:  true,
+		},
+		{
+			name:     "legacy single object with schema key is rejected",
+			jsonData: `{"id": "c1", "name": "posts", "schema": [{"name": "title", "type": "text"}]}`,
+			wantErr:  true,
+		},
+		{
+			name:     "legacy wrapper with schema key is rejected",
+			jsonData: `{"page": 1, "perPage": 30, "items": [{"id": "c1", "name": "posts", "schema": [{"name": "title", "type": "text"}]}]}`,
+			wantErr:  true,
+		},
+		{
+			name:     "invalid json",
+			jsonData: `{"items": [` + collectionJSON,
+			wantErr:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			schemas, err := parseSchemas([]byte(tt.jsonData))
+			if tt.wantErr {
+				if err == nil {
+					t.Fatal("expected an error, got none")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("parseSchemas() error = %v", err)
+			}
+			if len(schemas) != tt.wantCount {
+				t.Fatalf("got %d collections, want %d", len(schemas), tt.wantCount)
+			}
+			if tt.wantCount > 0 && schemas[0].Name != tt.wantName {
+				t.Errorf("collection name = %q, want %q", schemas[0].Name, tt.wantName)
+			}
+		})
 	}
 }
 
@@ -220,22 +292,10 @@ func TestCollectionSchema_UnmarshalJSON(t *testing.T) {
 		wantFields int
 	}{
 		{
-			name:       "with schema field (legacy format)",
-			jsonData:   `{"name": "test", "schema": [{"name": "field1"}]}`,
-			wantErr:    false,
-			wantFields: 1,
-		},
-		{
 			name:       "with fields field (latest format)",
 			jsonData:   `{"name": "test", "fields": [{"name": "field1"}, {"name": "field2"}]}`,
 			wantErr:    false,
 			wantFields: 2,
-		},
-		{
-			name:       "with both fields, schema takes precedence (legacy priority)",
-			jsonData:   `{"name": "test", "schema": [{"name": "field1"}], "fields": [{"name": "field2"}]}`,
-			wantErr:    false,
-			wantFields: 1,
 		},
 		{
 			name:       "with no fields",
@@ -245,13 +305,13 @@ func TestCollectionSchema_UnmarshalJSON(t *testing.T) {
 		},
 		{
 			name:       "with null fields",
-			jsonData:   `{"name": "test", "schema": null, "fields": null}`,
+			jsonData:   `{"name": "test", "fields": null}`,
 			wantErr:    false,
 			wantFields: 0,
 		},
 		{
 			name:     "invalid json",
-			jsonData: `{"name": "test", "schema": [{"name": "field1"}]`,
+			jsonData: `{"name": "test", "fields": [{"name": "field1"}]`,
 			wantErr:  true,
 		},
 	}
@@ -259,7 +319,7 @@ func TestCollectionSchema_UnmarshalJSON(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var cs CollectionSchema
-			err := cs.UnmarshalJSON([]byte(tt.jsonData))
+			err := json.Unmarshal([]byte(tt.jsonData), &cs)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("UnmarshalJSON() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -283,15 +343,15 @@ func TestFieldSchema_UnmarshalJSON(t *testing.T) {
 		wantValues    []string
 	}{
 		{
-			name:         "legacy format with nested options",
-			jsonData:     `{"name": "title", "type": "text", "required": true, "options": {"min": 5, "max": 100, "pattern": "^test$"}}`,
+			name:         "text field with flattened pattern",
+			jsonData:     `{"name": "title", "type": "text", "required": true, "pattern": "^test$"}`,
 			wantErr:      false,
 			wantName:     "title",
 			wantType:     "text",
 			wantRequired: true,
 		},
 		{
-			name:          "latest format with flattened options",
+			name:          "relation field with flattened options",
 			jsonData:      `{"name": "author", "type": "relation", "required": true, "collectionId": "col123", "maxSelect": 1, "cascadeDelete": false}`,
 			wantErr:       false,
 			wantName:      "author",
@@ -301,7 +361,7 @@ func TestFieldSchema_UnmarshalJSON(t *testing.T) {
 		},
 		{
 			name:       "select field with values",
-			jsonData:   `{"name": "status", "type": "select", "options": {"values": ["active", "inactive", "pending"]}}`,
+			jsonData:   `{"name": "status", "type": "select", "values": ["active", "inactive", "pending"]}`,
 			wantErr:    false,
 			wantName:   "status",
 			wantType:   "select",
@@ -309,26 +369,18 @@ func TestFieldSchema_UnmarshalJSON(t *testing.T) {
 		},
 		{
 			name:     "file field with thumbs",
-			jsonData: `{"name": "cover", "type": "file", "options": {"mimeTypes": ["image/jpeg", "image/png"], "thumbs": ["100x100", "300x300"]}}`,
+			jsonData: `{"name": "cover", "type": "file", "mimeTypes": ["image/jpeg", "image/png"], "thumbs": ["100x100", "300x300"]}`,
 			wantErr:  false,
 			wantName: "cover",
 			wantType: "file",
 		},
 		{
-			name:          "maxSelect at field level (latest format)",
+			name:          "maxSelect at field level",
 			jsonData:      `{"name": "tags", "type": "relation", "maxSelect": 5}`,
 			wantErr:       false,
 			wantName:      "tags",
 			wantType:      "relation",
 			wantMaxSelect: intPtr(5),
-		},
-		{
-			name:          "maxSelect in options (legacy format)",
-			jsonData:      `{"name": "files", "type": "file", "options": {"maxSelect": 3}}`,
-			wantErr:       false,
-			wantName:      "files",
-			wantType:      "file",
-			wantMaxSelect: intPtr(3),
 		},
 		{
 			name:     "autodate with onCreate/onUpdate",
@@ -339,7 +391,7 @@ func TestFieldSchema_UnmarshalJSON(t *testing.T) {
 		},
 		{
 			name:     "email with domain restrictions",
-			jsonData: `{"name": "email", "type": "email", "options": {"onlyDomains": ["example.com"], "exceptDomains": ["spam.com"]}}`,
+			jsonData: `{"name": "email", "type": "email", "onlyDomains": ["example.com"], "exceptDomains": ["spam.com"]}`,
 			wantErr:  false,
 			wantName: "email",
 			wantType: "email",
@@ -356,7 +408,7 @@ func TestFieldSchema_UnmarshalJSON(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var fs FieldSchema
-			err := fs.UnmarshalJSON([]byte(tt.jsonData))
+			err := json.Unmarshal([]byte(tt.jsonData), &fs)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("UnmarshalJSON() error = %v, wantErr %v", err, tt.wantErr)
 				return

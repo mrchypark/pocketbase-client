@@ -34,7 +34,7 @@ go get github.com/mrchypark/pocketbase-client
 curl -sL https://raw.githubusercontent.com/mrchypark/pocketbase-client/main/install.sh | sh
 
 # Install specific version
-curl -sL https://raw.githubusercontent.com/mrchypark/pocketbase-client/main/install.sh | sh -s v0.3.3
+curl -sL https://raw.githubusercontent.com/mrchypark/pocketbase-client/main/install.sh | sh -s v0.4.0
 
 # Move to PATH
 sudo mv ./pbc-gen /usr/local/bin/
@@ -50,7 +50,7 @@ go install github.com/mrchypark/pocketbase-client/cmd/pbc-gen@latest
 Verify installation:
 ```bash
 pbc-gen --version
-# pbc-gen 0.3.3
+# pbc-gen 0.4.0
 #   commit: c536d13
 #   built:  2026-01-10T03:49:17Z
 ```
@@ -72,7 +72,7 @@ func main() {
     client := pocketbase.NewClient("http://127.0.0.1:8090")
 
     // Authenticate as an admin
-    _, err := client.AuthenticateAsAdmin(context.Background(), "admin@example.com", "password")
+    _, err := client.WithAdminPassword(context.Background(), "admin@example.com", "password")
     if err != nil {
         log.Fatalf("Failed to authenticate: %v", err)
     }
@@ -89,7 +89,7 @@ func main() {
 
     fmt.Printf("Retrieved %d records:\n", len(list.Items))
     for _, record := range list.Items {
-        fmt.Printf("- ID: %s, Title: %v\n", record.ID, record.Data["title"])
+        fmt.Printf("- ID: %s, Title: %v\n", record.ID, record.GetString("title"))
     }
 }
 ```
@@ -127,11 +127,11 @@ The client supports custom strategies via `client.WithAuthStrategy(...)` or `poc
 ctx := context.Background()
 
 // Authenticate as an admin
-adminAuth, err := client.AuthenticateAsAdmin(ctx, "admin@example.com", "password")
+adminAuth, err := client.WithAdminPassword(ctx, "admin@example.com", "password")
 if err != nil { /* ... */ }
 
 // Authenticate as a user from the 'users' collection
-userAuth, err := client.AuthenticateWithPassword(ctx, "users", "username_or_email", "password")
+userAuth, err := client.WithPassword(ctx, "users", "username_or_email", "password")
 if err != nil { /* ... */ }
 ```
 
@@ -143,8 +143,10 @@ Perform Create, Read, Update, and Delete operations on your records.
 # Install pbc-gen
 curl -sL https://raw.githubusercontent.com/mrchypark/pocketbase-client/main/install.sh | sh
 
-# Export schema and generate models
-curl http://localhost:8090/api/collections > schema.json
+# Export schema and generate models.
+# pbc-gen accepts the raw /api/collections paginated response directly,
+# a plain array of collections, or a single collection object.
+curl "http://localhost:8090/api/collections?perPage=500" > schema.json
 pbc-gen -schema schema.json -path models.gen.go -pkgname models
 
 # (Optional) disable generating typed services
@@ -155,12 +157,13 @@ pbc-gen -schema schema.json -path models.gen.go -pkgname models
 ```go
 // Generated model (simplified)
 type Posts struct {
-    pocketbase.Record
+    ID   string `json:"id"`
+    Name string `json:"name"`
 }
 
 // Generated typed service constructor
-func NewPostsService(client *pocketbase.Client) *pocketbase.Service[*Posts] {
-    return pocketbase.NewService[*Posts](client, "posts", NewPosts)
+func NewPostsService(client *pocketbase.Client) *pocketbase.TypedRecordService[Posts] {
+    return pocketbase.NewTypedRecordService[Posts](client, "posts")
 }
 ```
 
@@ -206,7 +209,7 @@ post.SetViewCount(100)
 updated, err := postService.Update(ctx, post.ID, post)
 
 // Delete
-err = postService.RecordService.Delete(ctx, postService.Collection, post.ID)
+err = postService.Delete(ctx, post.ID)
 ```
 
 ### Authentication
@@ -246,7 +249,7 @@ post := models.NewPosts()
 post.SetTitle("New Post")
 post.SetContent("Content here")
 
-created, err := posts.Create(ctx, post, nil)
+created, err := posts.Create(ctx, post)
 
 one, err := posts.GetOne(ctx, "RECORD_ID", nil)
 _ = one
@@ -262,7 +265,7 @@ _ = list
 
 // Update (PATCH semantics via ToMap(): omit empty/zero fields)
 post.SetTitle("Updated Title")
-updated, err := posts.Update(ctx, created.ID, post, nil)
+updated, err := posts.Update(ctx, created.ID, post)
 _ = updated
 
 // Delete

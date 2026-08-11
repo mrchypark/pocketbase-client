@@ -66,64 +66,12 @@ func TestEndToEndCodeGeneration(t *testing.T) {
 			}
 
 			// 기본 TemplateData 생성
-			baseTplData := TemplateData{
-				PackageName: "models",
+			tplData := BuildTemplateData(schemas, "models", GenerateOptions{
 				JSONLibrary: "encoding/json",
-				Collections: make([]CollectionData, 0, len(schemas)),
-			}
-
-			for _, s := range schemas {
-				collectionData := CollectionData{
-					CollectionName: s.Name,
-					StructName:     ToPascalCase(s.Name),
-					Fields:         make([]FieldData, 0, len(s.Fields)),
-				}
-
-				for _, field := range s.Fields {
-					if field.System {
-						continue
-					}
-					goType, getter := MapPbTypeToGoType(field, !field.Required)
-					collectionData.Fields = append(collectionData.Fields, FieldData{
-						JSONName:     field.Name,
-						GoName:       ToPascalCase(field.Name),
-						GoType:       goType,
-						OmitEmpty:    !field.Required,
-						GetterMethod: getter,
-					})
-				}
-				baseTplData.Collections = append(baseTplData.Collections, collectionData)
-			}
-
-			// Enhanced 기능 처리
-			var tplData any
-			if tt.generateEnums || tt.generateRels || tt.generateFiles {
-				enhancedData := EnhancedTemplateData{
-					TemplateData:      baseTplData,
-					GenerateEnums:     tt.generateEnums,
-					GenerateRelations: tt.generateRels,
-					GenerateFiles:     tt.generateFiles,
-				}
-
-				if tt.generateEnums {
-					enumGenerator := NewEnumGenerator()
-					enhancedData.Enums = enumGenerator.GenerateEnums(baseTplData.Collections, schemas)
-				}
-
-				if tt.generateRels {
-					relationGenerator := NewRelationGenerator()
-					enhancedData.RelationTypes = relationGenerator.GenerateRelationTypes(baseTplData.Collections, schemas)
-				}
-
-				if tt.generateFiles {
-					fileGenerator := NewFileGenerator()
-					enhancedData.FileTypes = fileGenerator.GenerateFileTypes(baseTplData.Collections, schemas)
-				}
-
-				tplData = enhancedData
-			} else {
-				tplData = baseTplData
-			}
+				Enums:       tt.generateEnums,
+				Relations:   tt.generateRels,
+				Files:       tt.generateFiles,
+			})
 
 			// 템플릿 실행
 			templateContent := getTestTemplate()
@@ -189,50 +137,12 @@ func TestGeneratedCodeUsability(t *testing.T) {
 	}
 
 	// 모든 기능을 활성화하여 코드 생성
-	baseTplData := TemplateData{
-		PackageName: "models",
+	tplData := BuildTemplateData(schemas, "models", GenerateOptions{
 		JSONLibrary: "encoding/json",
-		Collections: make([]CollectionData, 0, len(schemas)),
-	}
-
-	for _, s := range schemas {
-		collectionData := CollectionData{
-			CollectionName: s.Name,
-			StructName:     ToPascalCase(s.Name),
-			Fields:         make([]FieldData, 0, len(s.Fields)),
-		}
-
-		for _, field := range s.Fields {
-			if field.System {
-				continue
-			}
-			goType, getter := MapPbTypeToGoType(field, !field.Required)
-			collectionData.Fields = append(collectionData.Fields, FieldData{
-				JSONName:     field.Name,
-				GoName:       ToPascalCase(field.Name),
-				GoType:       goType,
-				OmitEmpty:    !field.Required,
-				GetterMethod: getter,
-			})
-		}
-		baseTplData.Collections = append(baseTplData.Collections, collectionData)
-	}
-
-	enhancedData := EnhancedTemplateData{
-		TemplateData:      baseTplData,
-		GenerateEnums:     true,
-		GenerateRelations: true,
-		GenerateFiles:     true,
-	}
-
-	enumGenerator := NewEnumGenerator()
-	enhancedData.Enums = enumGenerator.GenerateEnums(baseTplData.Collections, schemas)
-
-	relationGenerator := NewRelationGenerator()
-	enhancedData.RelationTypes = relationGenerator.GenerateRelationTypes(baseTplData.Collections, schemas)
-
-	fileGenerator := NewFileGenerator()
-	enhancedData.FileTypes = fileGenerator.GenerateFileTypes(baseTplData.Collections, schemas)
+		Enums:       true,
+		Relations:   true,
+		Files:       true,
+	})
 
 	// 템플릿 실행
 	templateContent := getTestTemplate()
@@ -242,7 +152,7 @@ func TestGeneratedCodeUsability(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	err = tpl.Execute(&buf, enhancedData)
+	err = tpl.Execute(&buf, tplData)
 	if err != nil {
 		t.Fatalf("템플릿 실행 실패: %v", err)
 	}

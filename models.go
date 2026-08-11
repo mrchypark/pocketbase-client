@@ -5,7 +5,6 @@ import (
 	"net/url"
 
 	"github.com/goccy/go-json"
-	"github.com/pocketbase/pocketbase/tools/types"
 )
 
 // BaseModel is the interface that all PocketBase models must implement.
@@ -31,8 +30,8 @@ type RecordModel interface {
 
 // BaseDatetime provides common datetime fields for PocketBase models.
 type BaseDatetime struct {
-	Created types.DateTime `json:"created"`
-	Updated types.DateTime `json:"updated"`
+	Created DateTime `json:"created"`
+	Updated DateTime `json:"updated"`
 }
 
 // Admin represents a PocketBase administrator.
@@ -231,19 +230,19 @@ func (r *Record) GetFloat(key string) float64 {
 	return 0
 }
 
-// GetDateTime returns a types.DateTime value for a given key.
-func (r *Record) GetDateTime(key string) types.DateTime {
+// GetDateTime returns a DateTime value for a given key.
+func (r *Record) GetDateTime(key string) DateTime {
 	val := r.Get(key)
-	if dt, ok := val.(types.DateTime); ok {
+	if dt, ok := val.(DateTime); ok {
 		return dt
 	}
 	if str, ok := val.(string); ok {
-		dt, err := types.ParseDateTime(str)
+		dt, err := ParseDateTime(str)
 		if err == nil {
 			return dt
 		}
 	}
-	return types.DateTime{}
+	return DateTime{}
 }
 
 // GetStringSlice returns a slice of strings for a given key.
@@ -341,20 +340,20 @@ func (r *Record) GetFloatPointer(key string) *float64 {
 	return nil
 }
 
-// GetDateTimePointer returns a pointer to a types.DateTime value for a given key.
-func (r *Record) GetDateTimePointer(key string) *types.DateTime {
+// GetDateTimePointer returns a pointer to a DateTime value for a given key.
+func (r *Record) GetDateTimePointer(key string) *DateTime {
 	val := r.Get(key)
 	if val == nil {
 		return nil
 	}
-	if ptr, ok := val.(*types.DateTime); ok {
+	if ptr, ok := val.(*DateTime); ok {
 		return ptr
 	}
-	if dt, ok := val.(types.DateTime); ok {
+	if dt, ok := val.(DateTime); ok {
 		return &dt
 	}
 	if str, ok := val.(string); ok {
-		dt, err := types.ParseDateTime(str)
+		dt, err := ParseDateTime(str)
 		if err == nil {
 			return &dt
 		}
