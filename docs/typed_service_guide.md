@@ -50,8 +50,8 @@ The `TypedRecordService[T]` is a generic service that performs CRUD operations o
 │   • GetOne(ctx, id, opts) → *T                                          │
 │   • GetList(ctx, opts) → *TypedListResult[T]                            │
 │   • GetAll(ctx, opts) → []*T                                            │
-│   • Create(ctx, record, opts) → *T                                      │
-│   • Update(ctx, id, record, opts) → *T                                  │
+│   • Create(ctx, record) → *T                                            │
+│   • Update(ctx, id, record) → *T                                        │
 │   • Delete(ctx, id) → error                                             │
 └─────────────────────────────────────────────────────────────────────────┘
                               │
@@ -254,12 +254,12 @@ newPost := &Post{
     Published: true,
 }
 
-created, err := postService.Create(ctx, newPost, nil)
+created, err := postService.Create(ctx, newPost)
 if err != nil {
     log.Fatalf("Create failed: %v", err)
 }
 
-fmt.Printf("Created: ID=%s, Title=%s\n", created.GetID(), created.Title())
+fmt.Printf("Created: ID=%s, Title=%s\n", created.GetID(), created.Title)
 ```
 
 **Return Type**: `*Post` (not `interface{}`)
@@ -277,9 +277,9 @@ if err != nil {
 }
 
 // Access fields via generated getters
-fmt.Printf("Title: %s\n", post.Title())
+fmt.Printf("Title: %s\n", post.Title)
 fmt.Printf("Created: %s\n", post.Created)
-fmt.Printf("Published: %v\n", post.Published())
+fmt.Printf("Published: %v\n", post.Published)
 ```
 
 **Return Type**: `*Post`
@@ -309,7 +309,7 @@ fmt.Printf("Total: %d items (Page %d of %d)\n",
 
 // Access typed items
 for i, post := range result.Items {
-    fmt.Printf("%d. %s\n", i+1, post.Title())
+    fmt.Printf("%d. %s\n", i+1, post.Title)
 }
 ```
 
@@ -343,7 +343,7 @@ if err != nil {
 
 fmt.Printf("Total posts: %d\n", len(allPosts))
 for _, post := range allPosts {
-    fmt.Printf("- %s\n", post.Title())
+    fmt.Printf("- %s\n", post.Title)
 }
 ```
 
@@ -369,12 +369,12 @@ post.SetTitle("Updated Title")
 post.SetPublished(false)
 
 // 3. Update
-updated, err := postService.Update(ctx, post.GetID(), post, nil)
+updated, err := postService.Update(ctx, post.GetID(), post)
 if err != nil {
     log.Fatalf("Update failed: %v", err)
 }
 
-fmt.Printf("Updated: %s\n", updated.Title())
+fmt.Printf("Updated: %s\n", updated.Title)
 ```
 
 **Return Type**: `*Post` (the updated record)
@@ -426,15 +426,18 @@ result, err := postService.GetList(ctx, opts)
 
 ### WriteOptions (for Create/Update)
 
+`TypedRecordService` Create/Update do not accept `WriteOptions` directly. Use the
+embedded `RecordService` methods for field selection on write:
+
 ```go
 opts := &pocketbase.WriteOptions{
     Expand: "author",  // Expand relation fields
     Fields: "id,title,author.name",  // Select specific fields
 }
 
-// Create/Update with options
-created, err := postService.Create(ctx, newPost, opts)
-updated, err := postService.Update(ctx, recordID, post, opts)
+// Create/Update with options via embedded RecordService
+created, err := postService.RecordService.CreateWithOptions(ctx, postService.Collection, newPost.ToMap(), opts)
+updated, err := postService.RecordService.UpdateWithOptions(ctx, postService.Collection, recordID, post.ToMap(), opts)
 ```
 
 > **Note**: File uploads are handled separately via `FileService.Upload()`. See [File Fields](#file-fields) section for details.
@@ -484,7 +487,7 @@ if err != nil {
     log.Fatalf("Failed to get author: %v", err)
 }
 
-fmt.Printf("%s wrote: %s\n", author.Name(), post.Title())
+fmt.Printf("%s wrote: %s\n", author.Name, post.Title)
 ```
 
 ---
@@ -500,7 +503,7 @@ File uploads are handled via `FileService.Upload()`, not through `WriteOptions`:
 newPost := &Post{
     Title: "Post with Image",
 }
-created, err := postService.Create(ctx, newPost, nil)
+created, err := postService.Create(ctx, newPost)
 if err != nil {
     log.Fatalf("Create failed: %v", err)
 }
@@ -512,7 +515,7 @@ if err != nil {
 }
 defer coverFile.Close()
 
-updated, err := client.Files.Upload(ctx, "posts", created.GetID(), "cover", coverFile)
+updated, err := client.Files.Upload(ctx, "posts", created.GetID(), "cover", "cover.jpg", coverFile)
 if err != nil {
     log.Fatalf("File upload failed: %v", err)
 }
@@ -541,7 +544,7 @@ data, _ := io.ReadAll(reader)
 ### Delete File
 
 ```go
-err := client.Files.Delete(ctx, "posts", recordID, "cover.jpg")
+err := client.Files.Delete(ctx, "posts", recordID, "cover", "cover.jpg")
 if err != nil {
     log.Fatalf("File delete failed: %v", err)
 }
@@ -587,11 +590,11 @@ func main() {
     newPost.SetPublished(true)
     newPost.SetViewCount(0)
 
-    created, err := postService.Create(ctx, newPost, nil)
+    created, err := postService.Create(ctx, newPost)
     if err != nil {
         log.Fatalf("Create failed: %v", err)
     }
-    fmt.Printf("Created: ID=%s, Title=%s\n", created.GetID(), created.Title())
+fmt.Printf("Created: ID=%s, Title=%s\n", created.GetID(), created.Title)
 
     // === READ ONE ===
     fmt.Println("\n=== Read One ===")
@@ -599,19 +602,19 @@ func main() {
     if err != nil {
         log.Fatalf("GetOne failed: %v", err)
     }
-    fmt.Printf("Title: %s\n", post.Title())
-    fmt.Printf("Views: %.0f\n", post.ViewCount())
+fmt.Printf("Title: %s\n", post.Title)
+    fmt.Printf("Views: %.0f\n", post.ViewCount)
 
     // === UPDATE ===
     fmt.Println("\n=== Update ===")
-    post.SetViewCount(post.ViewCount() + 1)
+    post.SetViewCount(post.ViewCount + 1)
     post.SetTitle("Updated Title")
 
-    updated, err := postService.Update(ctx, post.GetID(), post, nil)
+    updated, err := postService.Update(ctx, post.GetID(), post)
     if err != nil {
         log.Fatalf("Update failed: %v", err)
     }
-    fmt.Printf("Updated: %s (Views: %.0f)\n", updated.Title(), updated.ViewCount())
+    fmt.Printf("Updated: %s (Views: %.0f)\n", updated.Title, updated.ViewCount)
 
     // === READ LIST ===
     fmt.Println("\n=== Read List ===")
@@ -626,7 +629,7 @@ func main() {
     }
     fmt.Printf("Found %d posts:\n", result.TotalItems)
     for i, p := range result.Items {
-        fmt.Printf("  %d. %s (%.0f views)\n", i+1, p.Title(), p.ViewCount())
+        fmt.Printf("  %d. %s (%.0f views)\n", i+1, p.Title, p.ViewCount)
     }
 
     // === READ ALL ===
@@ -658,7 +661,7 @@ func main() {
 | Feature | TypedRecordService (Recommended) | Dynamic API (`client.Records`) |
 |---------|----------------------------------|-------------------------------|
 | **Return Type** | `*models.Post` | `*pocketbase.Record` |
-| **Field Access** | `post.Title()` (generated getter) | `record.GetString("title")` |
+| **Field Access** | `post.Title` (struct field) | `record.GetString("title")` |
 | **Type Safety** | ✅ Compile-time check | ❌ Runtime check only |
 | **IDE Support** | ✅ Full autocomplete | ❌ No autocomplete |
 | **Collection Binding** | ✅ Automatic | ❌ Manual string every call |

@@ -130,8 +130,8 @@ func TestTypedRecordService_CRUD(t *testing.T) {
 		t.Fatalf("Update got %#v", updated)
 	}
 
-	// Delete is provided by the embedded RecordService.
-	if err := svc.Delete(ctx, "tests", "rec2"); err != nil {
+	// Delete is now a method on TypedRecordService.
+	if err := svc.Delete(ctx, "rec2"); err != nil {
 		t.Fatalf("Delete error: %v", err)
 	}
 }
@@ -183,8 +183,10 @@ func TestTypedRecordService_GetAll_SkipTotal(t *testing.T) {
 	if len(all) != 30 {
 		t.Errorf("GetAll returned %d records, want 30", len(all))
 	}
-	if requests != 2 {
-		t.Errorf("expected 2 requests (page 1 + page 2), got %d", requests)
+	// With short-page guard, we stop after page 1 because 30 items < perPage (100).
+	// No need to make a second request to discover there are no more items.
+	if requests != 1 {
+		t.Errorf("expected 1 request (page 1 only), got %d", requests)
 	}
 }
 

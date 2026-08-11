@@ -11,7 +11,7 @@ Use this for server-side operations requiring full access.
 
 ```go
 // Login as admin
-auth, err := client.AuthenticateAsAdmin(ctx, "admin@example.com", "secret123")
+auth, err := client.WithAdminPassword(ctx, "admin@example.com", "secret123")
 if err != nil {
     log.Fatal(err)
 }
@@ -23,7 +23,7 @@ Authenticate regular users from the `users` collection (or any auth collection).
 
 ```go
 // Login as a user
-auth, err := client.AuthenticateWithPassword(ctx, "users", "user@example.com", "password123")
+auth, err := client.WithPassword(ctx, "users", "user@example.com", "password123")
 if err != nil {
     log.Fatal(err)
 }
@@ -75,8 +75,10 @@ record, _ := client.Records.GetOne(ctx, "posts", "RECORD_ID", &pocketbase.GetOne
 })
 
 // Access expanded data
-author := record.Expanded["author"].(map[string]any)
-fmt.Println("Author Name:", author["name"])
+authors := record.Expand["author"]
+if len(authors) > 0 {
+    fmt.Println("Author Name:", authors[0].GetString("name"))
+}
 ```
 
 ---

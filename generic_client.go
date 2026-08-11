@@ -101,6 +101,11 @@ func (s *TypedRecordService[T]) Update(ctx context.Context, recordID string, bod
 	return result, nil
 }
 
+// Delete deletes a record by its ID.
+func (s *TypedRecordService[T]) Delete(ctx context.Context, recordID string) error {
+	return s.RecordService.Delete(ctx, s.Collection, recordID)
+}
+
 // GetList retrieves a list of records and decodes them directly into
 // a TypedListResult[T].
 func (s *TypedRecordService[T]) GetList(ctx context.Context, opts *ListOptions) (*TypedListResult[T], error) {
@@ -141,8 +146,9 @@ func (s *TypedRecordService[T]) GetAll(ctx context.Context, opts *ListOptions) (
 		all = append(all, res.Items...)
 		// With skipTotal the server reports totalPages as -1, so only rely on
 		// TotalPages when it is a positive value; otherwise stop when a page
-		// comes back empty.
-		if len(res.Items) == 0 || (res.TotalPages > 0 && res.Page >= res.TotalPages) {
+		// comes back empty or shorter than requested (short page).
+		if len(res.Items) == 0 || len(res.Items) < base.PerPage ||
+			(res.TotalPages > 0 && res.Page >= res.TotalPages) {
 			break
 		}
 		base.Page++

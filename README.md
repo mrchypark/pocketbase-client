@@ -72,7 +72,7 @@ func main() {
     client := pocketbase.NewClient("http://127.0.0.1:8090")
 
     // Authenticate as an admin
-    _, err := client.AuthenticateAsAdmin(context.Background(), "admin@example.com", "password")
+    _, err := client.WithAdminPassword(context.Background(), "admin@example.com", "password")
     if err != nil {
         log.Fatalf("Failed to authenticate: %v", err)
     }
@@ -89,7 +89,7 @@ func main() {
 
     fmt.Printf("Retrieved %d records:\n", len(list.Items))
     for _, record := range list.Items {
-        fmt.Printf("- ID: %s, Title: %v\n", record.ID, record.Data["title"])
+        fmt.Printf("- ID: %s, Title: %v\n", record.ID, record.GetString("title"))
     }
 }
 ```
@@ -127,11 +127,11 @@ The client supports custom strategies via `client.WithAuthStrategy(...)` or `poc
 ctx := context.Background()
 
 // Authenticate as an admin
-adminAuth, err := client.AuthenticateAsAdmin(ctx, "admin@example.com", "password")
+adminAuth, err := client.WithAdminPassword(ctx, "admin@example.com", "password")
 if err != nil { /* ... */ }
 
 // Authenticate as a user from the 'users' collection
-userAuth, err := client.AuthenticateWithPassword(ctx, "users", "username_or_email", "password")
+userAuth, err := client.WithPassword(ctx, "users", "username_or_email", "password")
 if err != nil { /* ... */ }
 ```
 
@@ -209,7 +209,7 @@ post.SetViewCount(100)
 updated, err := postService.Update(ctx, post.ID, post)
 
 // Delete
-err = postService.RecordService.Delete(ctx, postService.Collection, post.ID)
+err = postService.Delete(ctx, post.ID)
 ```
 
 ### Authentication
@@ -249,7 +249,7 @@ post := models.NewPosts()
 post.SetTitle("New Post")
 post.SetContent("Content here")
 
-created, err := posts.Create(ctx, post, nil)
+created, err := posts.Create(ctx, post)
 
 one, err := posts.GetOne(ctx, "RECORD_ID", nil)
 _ = one
@@ -265,7 +265,7 @@ _ = list
 
 // Update (PATCH semantics via ToMap(): omit empty/zero fields)
 post.SetTitle("Updated Title")
-updated, err := posts.Update(ctx, created.ID, post, nil)
+updated, err := posts.Update(ctx, created.ID, post)
 _ = updated
 
 // Delete
