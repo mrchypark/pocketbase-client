@@ -34,7 +34,7 @@ go get github.com/mrchypark/pocketbase-client
 curl -sL https://raw.githubusercontent.com/mrchypark/pocketbase-client/main/install.sh | sh
 
 # Install specific version
-curl -sL https://raw.githubusercontent.com/mrchypark/pocketbase-client/main/install.sh | sh -s v0.3.3
+curl -sL https://raw.githubusercontent.com/mrchypark/pocketbase-client/main/install.sh | sh -s v0.4.0
 
 # Move to PATH
 sudo mv ./pbc-gen /usr/local/bin/
@@ -50,7 +50,7 @@ go install github.com/mrchypark/pocketbase-client/cmd/pbc-gen@latest
 Verify installation:
 ```bash
 pbc-gen --version
-# pbc-gen 0.3.3
+# pbc-gen 0.4.0
 #   commit: c536d13
 #   built:  2026-01-10T03:49:17Z
 ```
