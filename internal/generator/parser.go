@@ -79,10 +79,17 @@ func LoadSchema(filePath string) ([]CollectionSchema, error) {
 //  2. The paginated response of GET /api/collections:
 //     {"items": [...], "page": 1, "perPage": 30, "totalItems": N, "totalPages": 1}
 //  3. A single collection object (the response of GET /api/collections/{id}).
+//
+// The legacy (pre-v0.23) format, which nests fields under a "schema" key, is
+// deliberately not supported and returns a clear error instead of silently
+// generating incorrect models.
 func parseSchemas(data []byte) ([]CollectionSchema, error) {
 	// 1. Plain array of collections.
 	var schemas []CollectionSchema
 	if err := json.Unmarshal(data, &schemas); err == nil {
+		if err := rejectLegacyCollections(data); err != nil {
+			return nil, err
+		}
 		return schemas, nil
 	}
 
@@ -91,6 +98,9 @@ func parseSchemas(data []byte) ([]CollectionSchema, error) {
 		Items json.RawMessage `json:"items"`
 	}
 	if err := json.Unmarshal(data, &wrapper); err == nil && wrapper.Items != nil && string(wrapper.Items) != "null" {
+		if err := rejectLegacyCollections(wrapper.Items); err != nil {
+			return nil, err
+		}
 		if err := json.Unmarshal(wrapper.Items, &schemas); err != nil {
 			return nil, err
 		}
@@ -100,10 +110,36 @@ func parseSchemas(data []byte) ([]CollectionSchema, error) {
 	// 3. Single collection object.
 	var single CollectionSchema
 	if err := json.Unmarshal(data, &single); err == nil && (single.Name != "" || single.ID != "" || len(single.Fields) > 0) {
+		var obj map[string]json.RawMessage
+		if err := json.Unmarshal(data, &obj); err == nil {
+			if _, ok := obj["schema"]; ok {
+				return nil, legacyFormatError()
+			}
+		}
 		return []CollectionSchema{single}, nil
 	}
 
 	return nil, fmt.Errorf("unsupported schema JSON: expected an array of collections, a paginated {items:[...]} response, or a single collection object")
+}
+
+// rejectLegacyCollections returns an error if any collection in the given JSON
+// array uses the legacy "schema" key.
+func rejectLegacyCollections(data []byte) error {
+	var collections []map[string]json.RawMessage
+	if err := json.Unmarshal(data, &collections); err != nil {
+		return nil
+	}
+	for _, c := range collections {
+		if _, ok := c["schema"]; ok {
+			return legacyFormatError()
+		}
+	}
+	return nil
+}
+
+// legacyFormatError describes the removed legacy schema format.
+func legacyFormatError() error {
+	return fmt.Errorf("legacy schema format is not supported: collections use a \"schema\" key, but only the latest \"fields\" format (PocketBase v0.23+) is accepted; re-export the schema from a current PocketBase instance")
 }
 
 // BuildTemplateData is the single entry point for transforming parsed PocketBase

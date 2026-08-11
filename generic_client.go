@@ -63,6 +63,9 @@ func (s *TypedRecordService[T]) GetOne(ctx context.Context, recordID string, opt
 
 // Create creates a new record from type T and decodes the response directly.
 func (s *TypedRecordService[T]) Create(ctx context.Context, body *T) (*T, error) {
+	if body == nil {
+		return nil, fmt.Errorf("pocketbase: create %s: body is nil", s.Collection)
+	}
 	path := fmt.Sprintf("/api/collections/%s/records", url.PathEscape(s.Collection))
 
 	requestBody := prepareRequestBody(body)
@@ -80,6 +83,9 @@ func (s *TypedRecordService[T]) Create(ctx context.Context, body *T) (*T, error)
 
 // Update updates an existing record and decodes the response directly.
 func (s *TypedRecordService[T]) Update(ctx context.Context, recordID string, body *T) (*T, error) {
+	if body == nil {
+		return nil, fmt.Errorf("pocketbase: update %s: body is nil", s.Collection)
+	}
 	path := fmt.Sprintf("/api/collections/%s/records/%s", url.PathEscape(s.Collection), url.PathEscape(recordID))
 
 	requestBody := prepareRequestBody(body)
@@ -133,7 +139,10 @@ func (s *TypedRecordService[T]) GetAll(ctx context.Context, opts *ListOptions) (
 			return nil, err
 		}
 		all = append(all, res.Items...)
-		if len(res.Items) == 0 || res.Page >= res.TotalPages {
+		// With skipTotal the server reports totalPages as -1, so only rely on
+		// TotalPages when it is a positive value; otherwise stop when a page
+		// comes back empty.
+		if len(res.Items) == 0 || (res.TotalPages > 0 && res.Page >= res.TotalPages) {
 			break
 		}
 		base.Page++

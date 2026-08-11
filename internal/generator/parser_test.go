@@ -186,6 +186,21 @@ func TestParseSchemas(t *testing.T) {
 			wantErr:   true,
 		},
 		{
+			name:     "legacy array with schema key is rejected",
+			jsonData: `[{"id": "c1", "name": "posts", "schema": [{"name": "title", "type": "text"}]}]`,
+			wantErr:  true,
+		},
+		{
+			name:     "legacy single object with schema key is rejected",
+			jsonData: `{"id": "c1", "name": "posts", "schema": [{"name": "title", "type": "text"}]}`,
+			wantErr:  true,
+		},
+		{
+			name:     "legacy wrapper with schema key is rejected",
+			jsonData: `{"page": 1, "perPage": 30, "items": [{"id": "c1", "name": "posts", "schema": [{"name": "title", "type": "text"}]}]}`,
+			wantErr:  true,
+		},
+		{
 			name:     "invalid json",
 			jsonData: `{"items": [` + collectionJSON,
 			wantErr:  true,

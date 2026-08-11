@@ -2,6 +2,7 @@ package pocketbase
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -132,5 +133,77 @@ func TestTypedRecordService_CRUD(t *testing.T) {
 	// Delete is provided by the embedded RecordService.
 	if err := svc.Delete(ctx, "tests", "rec2"); err != nil {
 		t.Fatalf("Delete error: %v", err)
+	}
+}
+
+func TestTypedRecordService_GetAll_SkipTotal(t *testing.T) {
+	t.Parallel()
+
+	const perPage = 100
+	var requests int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		requests++
+
+		if got := r.URL.Query().Get("skipTotal"); got != "1" {
+			t.Fatalf("skipTotal got %q, want %q", got, "1")
+		}
+
+		page := 1
+		_ = json.Unmarshal([]byte(r.URL.Query().Get("page")), &page)
+
+		const total = 30
+		start := (page - 1) * perPage
+		if start > total {
+			start = total
+		}
+		items := make([]map[string]any, 0, total-start)
+		for i := start; i < total; i++ {
+			items = append(items, map[string]any{"id": fmt.Sprintf("rec%d", i+1), "name": "x"})
+		}
+
+		// With skipTotal, PocketBase reports totalPages as -1.
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"page":       page,
+			"perPage":    perPage,
+			"totalItems": total,
+			"totalPages": -1,
+			"items":      items,
+		})
+	}))
+	t.Cleanup(srv.Close)
+
+	client := NewClient(srv.URL)
+	svc := NewTypedRecordService[testModel](client, "tests")
+
+	all, err := svc.GetAll(context.Background(), &ListOptions{SkipTotal: true, PerPage: perPage})
+	if err != nil {
+		t.Fatalf("GetAll error: %v", err)
+	}
+	if len(all) != 30 {
+		t.Errorf("GetAll returned %d records, want 30", len(all))
+	}
+	if requests != 2 {
+		t.Errorf("expected 2 requests (page 1 + page 2), got %d", requests)
+	}
+}
+
+func TestTypedRecordService_NilBody(t *testing.T) {
+	t.Parallel()
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+	}))
+	t.Cleanup(srv.Close)
+
+	client := NewClient(srv.URL)
+	svc := NewTypedRecordService[testModel](client, "tests")
+	ctx := context.Background()
+
+	if _, err := svc.Create(ctx, nil); err == nil {
+		t.Error("Create(nil) expected an error, got nil")
+	}
+	if _, err := svc.Update(ctx, "rec2", nil); err == nil {
+		t.Error("Update(nil) expected an error, got nil")
 	}
 }

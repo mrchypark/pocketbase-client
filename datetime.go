@@ -147,20 +147,20 @@ func (d *DateTime) Scan(value any) error {
 		d.t = time.Unix(int64(v), 0)
 	case float64:
 		d.t = time.Unix(int64(v), 0)
-	default:
-		str, ok := value.(string)
-		if !ok {
-			str = ""
-		}
-		if str == "" {
+	case []byte:
+		if len(v) == 0 {
 			d.t = time.Time{}
 		} else {
-			t, ok := parseTimeString(str)
+			t, ok := parseTimeString(string(v))
 			if !ok {
-				return &time.ParseError{Layout: DefaultDateLayout, Value: str}
+				return &time.ParseError{Layout: DefaultDateLayout, Value: string(v)}
 			}
 			d.t = t
 		}
+	default:
+		// Unsupported types are treated leniently as the zero value,
+		// matching the behavior of the original cast-based implementation.
+		d.t = time.Time{}
 	}
 
 	return nil
