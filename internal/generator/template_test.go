@@ -10,7 +10,7 @@ import (
 	"text/template"
 )
 
-func populateFieldBlocks(data *EnhancedTemplateData) {
+func populateFieldBlocks(data *TemplateData) {
 	for ci := range data.Collections {
 		collection := &data.Collections[ci]
 		for fi := range collection.Fields {
@@ -18,18 +18,11 @@ func populateFieldBlocks(data *EnhancedTemplateData) {
 			if field.GoName == "" {
 				field.GoName = ToPascalCase(field.JSONName)
 			}
-			if field.ToMapBlock == "" {
-				field.ToMapBlock = BuildToMapBlock(field.JSONName, field.GoName, field.OmitEmpty)
-			}
-
 			if field.BaseType == "" {
 				field.BaseType = strings.TrimPrefix(field.GoType, "*")
 			}
 			if !field.IsPointer && strings.HasPrefix(field.GoType, "*") {
 				field.IsPointer = true
-			}
-			if field.ValueOrBlock == "" {
-				field.ValueOrBlock = BuildValueOrBlock(collection.StructName, field.GoName, field.JSONName, field.BaseType, field.IsPointer)
 			}
 		}
 	}
@@ -51,60 +44,53 @@ func TestTemplateExecution(t *testing.T) {
 
 	tests := []struct {
 		name string
-		data EnhancedTemplateData
+		data TemplateData
 	}{
 		{
 			name: "basic template with all features",
-			data: EnhancedTemplateData{
-				TemplateData: TemplateData{
-					PackageName: "models",
-					JSONLibrary: "github.com/goccy/go-json",
-					Collections: []CollectionData{
-						{
-							CollectionName: "users",
-							StructName:     "User",
-							Fields: []FieldData{
-								{
-									JSONName:     "name",
-									GoName:       "Name",
-									GoType:       "string",
-									OmitEmpty:    false,
-									GetterMethod: "GetString",
-								},
-								{
-									JSONName:     "email",
-									GoName:       "Email",
-									GoType:       "*string",
-									OmitEmpty:    true,
-									GetterMethod: "GetStringPointer",
-								},
-								{
-									JSONName:     "age",
-									GoName:       "Age",
-									GoType:       "*int",
-									OmitEmpty:    true,
-									GetterMethod: "GetIntPointer",
-								},
+			data: TemplateData{
+				PackageName: "models",
+				JSONLibrary: "github.com/goccy/go-json",
+				Collections: []CollectionData{
+					{
+						CollectionName: "users",
+						StructName:     "User",
+						Fields: []FieldData{
+							{
+								JSONName:  "name",
+								GoName:    "Name",
+								GoType:    "string",
+								OmitEmpty: false,
+							},
+							{
+								JSONName:  "email",
+								GoName:    "Email",
+								GoType:    "*string",
+								OmitEmpty: true,
+							},
+							{
+								JSONName:  "age",
+								GoName:    "Age",
+								GoType:    "*int",
+								OmitEmpty: true,
 							},
 						},
-						{
-							CollectionName: "posts",
-							StructName:     "Post",
-							Fields: []FieldData{
-								{
-									JSONName:     "title",
-									GoName:       "Title",
-									GoType:       "string",
-									OmitEmpty:    false,
-									GetterMethod: "GetString",
-								},
-								{
-									JSONName:     "content",
-									GoName:       "Content",
-									GoType:       "*string",
-									OmitEmpty:    true,
-									GetterMethod: "GetStringPointer",
-								},
+					},
+					{
+						CollectionName: "posts",
+						StructName:     "Post",
+						Fields: []FieldData{
+							{
+								JSONName:  "title",
+								GoName:    "Title",
+								GoType:    "string",
+								OmitEmpty: false,
+							},
+							{
+								JSONName:  "content",
+								GoName:    "Content",
+								GoType:    "*string",
+								OmitEmpty: true,
 							},
 						},
 					},
@@ -149,22 +135,19 @@ func TestTemplateExecution(t *testing.T) {
 		},
 		{
 			name: "template with enums only",
-			data: EnhancedTemplateData{
-				TemplateData: TemplateData{
-					PackageName: "models",
-					JSONLibrary: "github.com/goccy/go-json",
-					Collections: []CollectionData{
-						{
-							CollectionName: "devices",
-							StructName:     "Device",
-							Fields: []FieldData{
-								{
-									JSONName:     "name",
-									GoName:       "Name",
-									GoType:       "string",
-									OmitEmpty:    false,
-									GetterMethod: "GetString",
-								},
+			data: TemplateData{
+				PackageName: "models",
+				JSONLibrary: "github.com/goccy/go-json",
+				Collections: []CollectionData{
+					{
+						CollectionName: "devices",
+						StructName:     "Device",
+						Fields: []FieldData{
+							{
+								JSONName:  "name",
+								GoName:    "Name",
+								GoType:    "string",
+								OmitEmpty: false,
 							},
 						},
 					},
@@ -187,22 +170,19 @@ func TestTemplateExecution(t *testing.T) {
 		},
 		{
 			name: "template with relations only",
-			data: EnhancedTemplateData{
-				TemplateData: TemplateData{
-					PackageName: "models",
-					JSONLibrary: "github.com/goccy/go-json",
-					Collections: []CollectionData{
-						{
-							CollectionName: "posts",
-							StructName:     "Post",
-							Fields: []FieldData{
-								{
-									JSONName:     "title",
-									GoName:       "Title",
-									GoType:       "string",
-									OmitEmpty:    false,
-									GetterMethod: "GetString",
-								},
+			data: TemplateData{
+				PackageName: "models",
+				JSONLibrary: "github.com/goccy/go-json",
+				Collections: []CollectionData{
+					{
+						CollectionName: "posts",
+						StructName:     "Post",
+						Fields: []FieldData{
+							{
+								JSONName:  "title",
+								GoName:    "Title",
+								GoType:    "string",
+								OmitEmpty: false,
 							},
 						},
 					},
@@ -222,22 +202,19 @@ func TestTemplateExecution(t *testing.T) {
 		},
 		{
 			name: "template with files only",
-			data: EnhancedTemplateData{
-				TemplateData: TemplateData{
-					PackageName: "models",
-					JSONLibrary: "github.com/goccy/go-json",
-					Collections: []CollectionData{
-						{
-							CollectionName: "gallery",
-							StructName:     "Gallery",
-							Fields: []FieldData{
-								{
-									JSONName:     "name",
-									GoName:       "Name",
-									GoType:       "string",
-									OmitEmpty:    false,
-									GetterMethod: "GetString",
-								},
+			data: TemplateData{
+				PackageName: "models",
+				JSONLibrary: "github.com/goccy/go-json",
+				Collections: []CollectionData{
+					{
+						CollectionName: "gallery",
+						StructName:     "Gallery",
+						Fields: []FieldData{
+							{
+								JSONName:  "name",
+								GoName:    "Name",
+								GoType:    "string",
+								OmitEmpty: false,
 							},
 						},
 					},
@@ -257,22 +234,19 @@ func TestTemplateExecution(t *testing.T) {
 		},
 		{
 			name: "minimal template without enhanced features",
-			data: EnhancedTemplateData{
-				TemplateData: TemplateData{
-					PackageName: "models",
-					JSONLibrary: "github.com/goccy/go-json",
-					Collections: []CollectionData{
-						{
-							CollectionName: "simple",
-							StructName:     "Simple",
-							Fields: []FieldData{
-								{
-									JSONName:     "id",
-									GoName:       "ID",
-									GoType:       "string",
-									OmitEmpty:    false,
-									GetterMethod: "GetString",
-								},
+			data: TemplateData{
+				PackageName: "models",
+				JSONLibrary: "github.com/goccy/go-json",
+				Collections: []CollectionData{
+					{
+						CollectionName: "simple",
+						StructName:     "Simple",
+						Fields: []FieldData{
+							{
+								JSONName:  "id",
+								GoName:    "ID",
+								GoType:    "string",
+								OmitEmpty: false,
 							},
 						},
 					},
@@ -308,7 +282,6 @@ func TestTemplateExecution(t *testing.T) {
 				"package " + tt.data.PackageName,
 				"import (",
 				"github.com/mrchypark/pocketbase-client",
-				"github.com/pocketbase/pocketbase/tools/types",
 			}
 
 			for _, part := range expectedParts {
@@ -317,14 +290,17 @@ func TestTemplateExecution(t *testing.T) {
 				}
 			}
 
+			// 생성된 코드가 PocketBase 모듈에 의존하지 않아야 함
+			if strings.Contains(generatedCode, "github.com/pocketbase/pocketbase") {
+				t.Errorf("Generated code must not import the PocketBase module:\n%s", generatedCode)
+			}
+
 			// 각 컬렉션에 대한 구조체가 생성되었는지 확인
 			for _, collection := range tt.data.Collections {
 				expectedStructParts := []string{
 					"type " + collection.StructName + " struct",
 					"func New" + collection.StructName + "()",
 					"func New" + collection.StructName + "Service(",
-					"func Get" + collection.StructName + "(",
-					"func Get" + collection.StructName + "List(",
 					"var _ pocketbase.RecordModel = (*" + collection.StructName + ")(nil)",
 					"func (m *" + collection.StructName + ") GetID()",
 					"func (m *" + collection.StructName + ") GetCollectionName()",
@@ -446,29 +422,25 @@ func TestTemplateCompilation(t *testing.T) {
 	}
 
 	// 테스트 데이터
-	testData := EnhancedTemplateData{
-		TemplateData: TemplateData{
-			PackageName: "testmodels",
-			JSONLibrary: "encoding/json",
-			Collections: []CollectionData{
-				{
-					CollectionName: "users",
-					StructName:     "User",
-					Fields: []FieldData{
-						{
-							JSONName:     "name",
-							GoName:       "Name",
-							GoType:       "string",
-							OmitEmpty:    false,
-							GetterMethod: "GetString",
-						},
-						{
-							JSONName:     "email",
-							GoName:       "Email",
-							GoType:       "*string",
-							OmitEmpty:    true,
-							GetterMethod: "GetStringPointer",
-						},
+	testData := TemplateData{
+		PackageName: "testmodels",
+		JSONLibrary: "encoding/json",
+		Collections: []CollectionData{
+			{
+				CollectionName: "users",
+				StructName:     "User",
+				Fields: []FieldData{
+					{
+						JSONName:  "name",
+						GoName:    "Name",
+						GoType:    "string",
+						OmitEmpty: false,
+					},
+					{
+						JSONName:  "email",
+						GoName:    "Email",
+						GoType:    "*string",
+						OmitEmpty: true,
 					},
 				},
 			},
@@ -523,15 +495,13 @@ func TestTemplateCompilation(t *testing.T) {
 	// go.mod 파일 생성 (컴파일을 위해 필요)
 	goModContent := `module testmodels
 
-go 1.21
+go 1.25.0
 
 require (
 	github.com/mrchypark/pocketbase-client v0.0.0
-	github.com/pocketbase/pocketbase v0.0.0
 )
 
 replace github.com/mrchypark/pocketbase-client => ../../../
-replace github.com/pocketbase/pocketbase => github.com/pocketbase/pocketbase v0.22.0
 `
 	goModFile := filepath.Join(tempDir, "go.mod")
 	err = os.WriteFile(goModFile, []byte(goModContent), 0644)
@@ -558,8 +528,6 @@ replace github.com/pocketbase/pocketbase => github.com/pocketbase/pocketbase v0.
 		"package testmodels",
 		"type User struct",
 		"func NewUser()",
-		"func GetUser(",
-		"func GetUserList(",
 		"UserStatusActive",
 		"UserStatusInactive",
 		"type ProfileRelation struct",
@@ -594,33 +562,31 @@ func TestTemplateWithDifferentSchemaPatterns(t *testing.T) {
 
 	tests := []struct {
 		name        string
-		data        EnhancedTemplateData
+		data        TemplateData
 		description string
 	}{
 		{
 			name:        "complex_schema_with_all_field_types",
 			description: "복잡한 스키마 패턴 - 모든 필드 타입 포함",
-			data: EnhancedTemplateData{
-				TemplateData: TemplateData{
-					PackageName: "models",
-					JSONLibrary: "github.com/goccy/go-json",
-					Collections: []CollectionData{
-						{
-							CollectionName: "complex_records",
-							StructName:     "ComplexRecord",
-							Fields: []FieldData{
-								{JSONName: "text_field", GoName: "TextField", GoType: "string", OmitEmpty: false, GetterMethod: "GetString"},
-								{JSONName: "number_field", GoName: "NumberField", GoType: "*float64", OmitEmpty: true, GetterMethod: "GetFloatPointer"},
-								{JSONName: "bool_field", GoName: "BoolField", GoType: "*bool", OmitEmpty: true, GetterMethod: "GetBoolPointer"},
-								{JSONName: "date_field", GoName: "DateField", GoType: "*types.DateTime", OmitEmpty: true, GetterMethod: "GetDateTimePointer"},
-								{JSONName: "json_field", GoName: "JsonField", GoType: "json.RawMessage", OmitEmpty: false, GetterMethod: "GetRawMessage"},
-								{JSONName: "select_single", GoName: "SelectSingle", GoType: "*string", OmitEmpty: true, GetterMethod: "GetStringPointer"},
-								{JSONName: "select_multi", GoName: "SelectMulti", GoType: "[]string", OmitEmpty: false, GetterMethod: "GetStringSlice"},
-								{JSONName: "relation_single", GoName: "RelationSingle", GoType: "*string", OmitEmpty: true, GetterMethod: "GetStringPointer"},
-								{JSONName: "relation_multi", GoName: "RelationMulti", GoType: "[]string", OmitEmpty: false, GetterMethod: "GetStringSlice"},
-								{JSONName: "file_single", GoName: "FileSingle", GoType: "*string", OmitEmpty: true, GetterMethod: "GetStringPointer"},
-								{JSONName: "file_multi", GoName: "FileMulti", GoType: "[]string", OmitEmpty: false, GetterMethod: "GetStringSlice"},
-							},
+			data: TemplateData{
+				PackageName: "models",
+				JSONLibrary: "github.com/goccy/go-json",
+				Collections: []CollectionData{
+					{
+						CollectionName: "complex_records",
+						StructName:     "ComplexRecord",
+						Fields: []FieldData{
+							{JSONName: "text_field", GoName: "TextField", GoType: "string", OmitEmpty: false},
+							{JSONName: "number_field", GoName: "NumberField", GoType: "*float64", OmitEmpty: true},
+							{JSONName: "bool_field", GoName: "BoolField", GoType: "*bool", OmitEmpty: true},
+							{JSONName: "date_field", GoName: "DateField", GoType: "*pocketbase.DateTime", OmitEmpty: true},
+							{JSONName: "json_field", GoName: "JsonField", GoType: "json.RawMessage", OmitEmpty: false},
+							{JSONName: "select_single", GoName: "SelectSingle", GoType: "*string", OmitEmpty: true},
+							{JSONName: "select_multi", GoName: "SelectMulti", GoType: "[]string", OmitEmpty: false},
+							{JSONName: "relation_single", GoName: "RelationSingle", GoType: "*string", OmitEmpty: true},
+							{JSONName: "relation_multi", GoName: "RelationMulti", GoType: "[]string", OmitEmpty: false},
+							{JSONName: "file_single", GoName: "FileSingle", GoType: "*string", OmitEmpty: true},
+							{JSONName: "file_multi", GoName: "FileMulti", GoType: "[]string", OmitEmpty: false},
 						},
 					},
 				},
@@ -668,19 +634,17 @@ func TestTemplateWithDifferentSchemaPatterns(t *testing.T) {
 		{
 			name:        "edge_case_empty_collections",
 			description: "엣지 케이스 - 빈 컬렉션",
-			data: EnhancedTemplateData{
-				TemplateData: TemplateData{
-					PackageName: "models",
-					JSONLibrary: "encoding/json",
-					Collections: []CollectionData{
-						{
-							CollectionName: "special_chars_test",
-							StructName:     "SpecialCharsTest",
-							Fields: []FieldData{
-								{JSONName: "field_with_underscores", GoName: "FieldWithUnderscores", GoType: "string", OmitEmpty: false, GetterMethod: "GetString"},
-								{JSONName: "field-with-hyphens", GoName: "FieldWithHyphens", GoType: "string", OmitEmpty: false, GetterMethod: "GetString"},
-								{JSONName: "fieldWithCamelCase", GoName: "FieldWithCamelCase", GoType: "string", OmitEmpty: false, GetterMethod: "GetString"},
-							},
+			data: TemplateData{
+				PackageName: "models",
+				JSONLibrary: "encoding/json",
+				Collections: []CollectionData{
+					{
+						CollectionName: "special_chars_test",
+						StructName:     "SpecialCharsTest",
+						Fields: []FieldData{
+							{JSONName: "field_with_underscores", GoName: "FieldWithUnderscores", GoType: "string", OmitEmpty: false},
+							{JSONName: "field-with-hyphens", GoName: "FieldWithHyphens", GoType: "string", OmitEmpty: false},
+							{JSONName: "fieldWithCamelCase", GoName: "FieldWithCamelCase", GoType: "string", OmitEmpty: false},
 						},
 					},
 				},

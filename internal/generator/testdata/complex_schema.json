@@ -1,155 +1,162 @@
 [
   {
-    "id": "test_users",
-    "name": "users",
-    "type": "auth",
-    "system": false,
     "fields": [
       {
         "id": "users_name",
+        "max": 100,
+        "min": 1,
         "name": "name",
-        "type": "text",
         "required": true,
-        "options": {
-          "min": 1,
-          "max": 100
-        }
+        "type": "text"
       },
       {
         "id": "users_avatar",
+        "maxSelect": 1,
+        "maxSize": 5242880,
+        "mimeTypes": [
+          "image/jpeg",
+          "image/png"
+        ],
         "name": "avatar",
-        "type": "file",
         "required": false,
-        "options": {
-          "maxSelect": 1,
-          "maxSize": 5242880,
-          "mimeTypes": ["image/jpeg", "image/png"],
-          "thumbs": ["100x100", "400x0"]
-        }
+        "thumbs": [
+          "100x100",
+          "400x0"
+        ],
+        "type": "file"
       },
       {
         "id": "users_role",
+        "maxSelect": 1,
         "name": "role",
-        "type": "select",
         "required": true,
-        "options": {
-          "maxSelect": 1,
-          "values": ["admin", "user", "moderator"]
-        }
+        "type": "select",
+        "values": [
+          "admin",
+          "user",
+          "moderator"
+        ]
       }
-    ]
+    ],
+    "id": "test_users",
+    "name": "users",
+    "system": false,
+    "type": "auth"
   },
   {
-    "id": "test_posts",
-    "name": "posts",
-    "type": "base",
-    "system": false,
     "fields": [
       {
         "id": "posts_title",
+        "max": 200,
+        "min": 1,
         "name": "title",
-        "type": "text",
         "required": true,
-        "options": {
-          "min": 1,
-          "max": 200
-        }
+        "type": "text"
       },
       {
         "id": "posts_content",
         "name": "content",
-        "type": "editor",
         "required": false,
-        "options": {}
+        "type": "editor"
       },
       {
+        "cascadeDelete": false,
+        "collectionId": "test_users",
+        "displayFields": [
+          "name"
+        ],
         "id": "posts_author",
+        "maxSelect": 1,
+        "minSelect": null,
         "name": "author",
-        "type": "relation",
         "required": true,
-        "options": {
-          "collectionId": "test_users",
-          "cascadeDelete": false,
-          "minSelect": null,
-          "maxSelect": 1,
-          "displayFields": ["name"]
-        }
+        "type": "relation"
       },
       {
         "id": "posts_tags",
+        "maxSelect": 5,
         "name": "tags",
-        "type": "select",
         "required": false,
-        "options": {
-          "maxSelect": 5,
-          "values": ["tech", "news", "tutorial", "review", "opinion"]
-        }
+        "type": "select",
+        "values": [
+          "tech",
+          "news",
+          "tutorial",
+          "review",
+          "opinion"
+        ]
       },
       {
         "id": "posts_attachments",
+        "maxSelect": 3,
+        "maxSize": 10485760,
+        "mimeTypes": [
+          "image/jpeg",
+          "image/png",
+          "application/pdf"
+        ],
         "name": "attachments",
-        "type": "file",
         "required": false,
-        "options": {
-          "maxSelect": 3,
-          "maxSize": 10485760,
-          "mimeTypes": ["image/jpeg", "image/png", "application/pdf"]
-        }
+        "type": "file"
       },
       {
         "id": "posts_status",
+        "maxSelect": 1,
         "name": "status",
-        "type": "select",
         "required": true,
-        "options": {
-          "maxSelect": 1,
-          "values": ["draft", "published", "archived"]
-        }
+        "type": "select",
+        "values": [
+          "draft",
+          "published",
+          "archived"
+        ]
       }
-    ]
+    ],
+    "id": "test_posts",
+    "name": "posts",
+    "system": false,
+    "type": "base"
   },
   {
-    "id": "test_comments",
-    "name": "comments",
-    "type": "base",
-    "system": false,
     "fields": [
       {
         "id": "comments_content",
+        "max": 1000,
+        "min": 1,
         "name": "content",
-        "type": "text",
         "required": true,
-        "options": {
-          "min": 1,
-          "max": 1000
-        }
+        "type": "text"
       },
       {
+        "cascadeDelete": true,
+        "collectionId": "test_posts",
+        "displayFields": [
+          "title"
+        ],
         "id": "comments_post",
+        "maxSelect": 1,
+        "minSelect": null,
         "name": "post",
-        "type": "relation",
         "required": true,
-        "options": {
-          "collectionId": "test_posts",
-          "cascadeDelete": true,
-          "minSelect": null,
-          "maxSelect": 1,
-          "displayFields": ["title"]
-        }
+        "type": "relation"
       },
       {
+        "cascadeDelete": false,
+        "collectionId": "test_users",
+        "displayFields": [
+          "name"
+        ],
         "id": "comments_author",
+        "maxSelect": 1,
+        "minSelect": null,
         "name": "author",
-        "type": "relation",
         "required": true,
-        "options": {
-          "collectionId": "test_users",
-          "cascadeDelete": false,
-          "minSelect": null,
-          "maxSelect": 1,
-          "displayFields": ["name"]
-        }
+        "type": "relation"
       }
-    ]
+    ],
+    "id": "test_comments",
+    "name": "comments",
+    "system": false,
+    "type": "base"
   }
 ]

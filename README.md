@@ -143,8 +143,10 @@ Perform Create, Read, Update, and Delete operations on your records.
 # Install pbc-gen
 curl -sL https://raw.githubusercontent.com/mrchypark/pocketbase-client/main/install.sh | sh
 
-# Export schema and generate models
-curl http://localhost:8090/api/collections > schema.json
+# Export schema and generate models.
+# pbc-gen accepts the raw /api/collections paginated response directly,
+# a plain array of collections, or a single collection object.
+curl "http://localhost:8090/api/collections?perPage=500" > schema.json
 pbc-gen -schema schema.json -path models.gen.go -pkgname models
 
 # (Optional) disable generating typed services
@@ -155,12 +157,13 @@ pbc-gen -schema schema.json -path models.gen.go -pkgname models
 ```go
 // Generated model (simplified)
 type Posts struct {
-    pocketbase.Record
+    ID   string `json:"id"`
+    Name string `json:"name"`
 }
 
 // Generated typed service constructor
-func NewPostsService(client *pocketbase.Client) *pocketbase.Service[*Posts] {
-    return pocketbase.NewService[*Posts](client, "posts", NewPosts)
+func NewPostsService(client *pocketbase.Client) *pocketbase.TypedRecordService[Posts] {
+    return pocketbase.NewTypedRecordService[Posts](client, "posts")
 }
 ```
 

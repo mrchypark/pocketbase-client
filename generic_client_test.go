@@ -20,7 +20,7 @@ func (m *testModel) ToMap() map[string]any {
 	}
 }
 
-func TestGenericService_CRUD(t *testing.T) {
+func TestTypedRecordService_CRUD(t *testing.T) {
 	t.Parallel()
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -68,9 +68,6 @@ func TestGenericService_CRUD(t *testing.T) {
 			return
 
 		case r.Method == http.MethodPatch && r.URL.Path == "/api/collections/tests/records/rec2":
-			if got := r.URL.Query().Get("fields"); got != "id,name" {
-				t.Fatalf("fields got %q, want %q", got, "id,name")
-			}
 			var body map[string]any
 			_ = json.NewDecoder(r.Body).Decode(&body)
 			if got := body["name"]; got != "updated" {
@@ -93,7 +90,7 @@ func TestGenericService_CRUD(t *testing.T) {
 	t.Cleanup(srv.Close)
 
 	client := NewClient(srv.URL)
-	svc := NewService[*testModel](client, "tests", func() *testModel { return &testModel{} })
+	svc := NewTypedRecordService[testModel](client, "tests")
 
 	ctx := context.Background()
 
@@ -116,7 +113,7 @@ func TestGenericService_CRUD(t *testing.T) {
 		t.Fatalf("GetList item got %#v", gotList.Items[0])
 	}
 
-	created, err := svc.Create(ctx, &testModel{Name: "created"}, nil)
+	created, err := svc.Create(ctx, &testModel{Name: "created"})
 	if err != nil {
 		t.Fatalf("Create error: %v", err)
 	}
@@ -124,7 +121,7 @@ func TestGenericService_CRUD(t *testing.T) {
 		t.Fatalf("Create got %#v", created)
 	}
 
-	updated, err := svc.Update(ctx, "rec2", &testModel{Name: "updated"}, &WriteOptions{Fields: "id,name"})
+	updated, err := svc.Update(ctx, "rec2", &testModel{Name: "updated"})
 	if err != nil {
 		t.Fatalf("Update error: %v", err)
 	}
@@ -132,7 +129,8 @@ func TestGenericService_CRUD(t *testing.T) {
 		t.Fatalf("Update got %#v", updated)
 	}
 
-	if err := svc.Delete(ctx, "rec2"); err != nil {
+	// Delete is provided by the embedded RecordService.
+	if err := svc.Delete(ctx, "tests", "rec2"); err != nil {
 		t.Fatalf("Delete error: %v", err)
 	}
 }

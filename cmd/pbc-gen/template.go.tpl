@@ -3,15 +3,12 @@
 package {{.PackageName}}
 
 import (
-	"context"
-	"encoding/json"
+	{{if .RelationTypes}}"context"{{end}}
+	{{if .HasJSONFields}}"{{.JSONLibrary}}"{{end}}
 	{{with .FileTypes}}"fmt"{{end}}
 
 	"github.com/mrchypark/pocketbase-client"
-	"github.com/pocketbase/pocketbase/tools/types"
 )
-
-var _ = types.DateTime{}
 
 {{with .Enums}}
 // ==============
@@ -56,11 +53,11 @@ func (r {{$relation.TypeName}}) ID() string {
 	return r.id
 }
 
-func (r {{$relation.TypeName}}) Load(ctx context.Context, client pocketbase.RecordServiceAPI) (*{{$relation.TargetTypeName}}, error) {
+func (r {{$relation.TypeName}}) Load(ctx context.Context, client *pocketbase.Client) (*{{$relation.TargetTypeName}}, error) {
 	if r.id == "" {
 		return nil, nil
 	}
-	return Get{{$relation.TargetTypeName}}(client, r.id, nil)
+	return pocketbase.NewTypedRecordService[{{$relation.TargetTypeName}}](client, "{{$relation.TargetCollection}}").GetOne(ctx, r.id, nil)
 }
 
 func (r {{$relation.TypeName}}) IsEmpty() bool {
@@ -82,7 +79,7 @@ func (r {{$relation.TypeName}}s) IDs() []string {
 	return ids
 }
 
-func (r {{$relation.TypeName}}s) LoadAll(ctx context.Context, client pocketbase.RecordServiceAPI) ([]*{{$relation.TargetTypeName}}, error) {
+func (r {{$relation.TypeName}}s) LoadAll(ctx context.Context, client *pocketbase.Client) ([]*{{$relation.TargetTypeName}}, error) {
 	if len(r) == 0 {
 		return nil, nil
 	}
@@ -201,8 +198,8 @@ type {{$collection.StructName}} struct {
 	ID             string         `json:"id"`
 	CollectionID   string         `json:"collectionId"`
 	CollectionName string         `json:"collectionName"`
-	Created        types.DateTime `json:"created"`
-	Updated        types.DateTime `json:"updated"`
+	Created        pocketbase.DateTime `json:"created"`
+	Updated        pocketbase.DateTime `json:"updated"`
 	{{range .Fields}}
 	{{.GoName}} {{.GoType}} {{.StructTag}}{{end}}
 }
@@ -214,14 +211,6 @@ func (m *{{$collection.StructName}}) GetCollectionName() string { return "{{$col
 func (m *{{$collection.StructName}}) SetID(id string)           { m.ID = id }
 func (m *{{$collection.StructName}}) SetCollectionID(id string) { m.CollectionID = id }
 func (m *{{$collection.StructName}}) SetCollectionName(name string) { m.CollectionName = name }
-
-type {{$collection.StructName}}Collection struct {
-	Page       int                      `json:"page"`
-	PerPage    int                      `json:"perPage"`
-	TotalItems int                      `json:"totalItems"`
-	TotalPages int                      `json:"totalPages"`
-	Items      []*{{$collection.StructName}} `json:"items"`
-}
 
 func New{{$collection.StructName}}() *{{$collection.StructName}} {
 	return &{{$collection.StructName}}{CollectionName: "{{$collection.CollectionName}}"}
@@ -279,67 +268,5 @@ func (m *{{$collection.StructName}}) ToMap() map[string]any {
 // New{{.StructName}}Service creates a type-safe service for '{{.CollectionName}}' collection.
 func New{{.StructName}}Service(client *pocketbase.Client) *pocketbase.TypedRecordService[{{.StructName}}] {
 	return pocketbase.NewTypedRecordService[{{.StructName}}](client, "{{.CollectionName}}")
-}
-{{end}}
-
-// ==============
-//  Typed Helpers
-// ==============
-{{range .Collections}}
-
-func Get{{.StructName}}(client pocketbase.RecordServiceAPI, id string, opts *pocketbase.GetOneOptions) (*{{.StructName}}, error) {
-	r, err := client.GetOne(context.Background(), "{{.CollectionName}}", id, opts)
-	if err != nil {
-		return nil, err
-	}
-	result := &{{.StructName}}{}
-	result.SetID(r.ID)
-	result.SetCollectionID(r.CollectionID)
-	result.SetCollectionName(r.CollectionName)
-
-	// Marshal record to JSON and unmarshal into struct to populate all fields
-	data, err := json.Marshal(r)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal record: %w", err)
-	}
-	if err := json.Unmarshal(data, result); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal into {{.StructName}}: %w", err)
-	}
-
-	return result, nil
-}
-
-func Get{{.StructName}}List(client pocketbase.RecordServiceAPI, opts *pocketbase.ListOptions) (*{{.StructName}}Collection, error) {
-	listResult, err := client.GetList(context.Background(), "{{.CollectionName}}", opts)
-	if err != nil {
-		return nil, err
-	}
-
-	typedItems := make([]*{{.StructName}}, len(listResult.Items))
-	for i, r := range listResult.Items {
-		item := &{{.StructName}}{}
-		item.SetID(r.ID)
-		item.SetCollectionID(r.CollectionID)
-		item.SetCollectionName(r.CollectionName)
-
-		// Marshal record to JSON and unmarshal into struct to populate all fields
-		data, err := json.Marshal(r)
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal record: %w", err)
-		}
-		if err := json.Unmarshal(data, item); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal into {{.StructName}}: %w", err)
-		}
-
-		typedItems[i] = item
-	}
-
-	return &{{.StructName}}Collection{
-		Page:       listResult.Page,
-		PerPage:    listResult.PerPage,
-		TotalItems: listResult.TotalItems,
-		TotalPages: listResult.TotalPages,
-		Items:      typedItems,
-	}, nil
 }
 {{end}}

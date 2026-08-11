@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime/debug"
-	"strings"
 	"text/template"
 
 	"github.com/mrchypark/pocketbase-client/internal/generator"
@@ -77,93 +76,20 @@ func main() {
 		log.Fatalf("Configuration validation failed: %v", err)
 	}
 
-	// 기본 TemplateData 생성
-	baseTplData := generator.TemplateData{
-		PackageName: *pkgName,
-		JSONLibrary: *jsonLib,
-		Collections: make([]generator.CollectionData, 0, len(schemas)),
-	}
-
+	// Views without explicit fields generate empty structs; log a heads-up.
 	for _, s := range schemas {
 		if s.Type == "view" && len(s.Fields) == 0 {
 			log.Printf("Collection '%s' is a view, generating an empty struct.", s.Name)
 		}
-
-		collectionData := generator.CollectionData{
-			CollectionName: s.Name,
-			StructName:     generator.ToPascalCase(s.Name),
-			Fields:         make([]generator.FieldData, 0, len(s.Fields)),
-		}
-
-		for _, field := range s.Fields {
-			// Skip system fields and hardcoded fields
-			if field.System {
-				continue
-			}
-			// Skip standard PocketBase fields that are hardcoded in the template
-			lowerName := strings.ToLower(field.Name)
-			if lowerName == "id" || lowerName == "collectionid" || lowerName == "collectionname" || lowerName == "created" || lowerName == "updated" {
-				continue
-			}
-			// --- ✨ Modified part ---
-			// Receive return values as goType, getter.
-			goType, getter := generator.MapPbTypeToGoType(field, !field.Required)
-
-			// 포인터 타입인지 확인하고 기본 타입 추출
-			isPointer := strings.HasPrefix(goType, "*")
-			baseType := goType
-			if isPointer {
-				baseType = strings.TrimPrefix(goType, "*")
-			}
-
-			goName := generator.ToPascalCase(field.Name)
-			collectionData.Fields = append(collectionData.Fields, generator.FieldData{
-				JSONName:     field.Name,
-				GoName:       goName,
-				GoType:       goType,
-				StructTag:    generator.BuildJSONTag(field.Name, !field.Required),
-				OmitEmpty:    !field.Required,
-				GetterMethod: getter, // Assign value to the newly added GetterMethod field.
-				IsPointer:    isPointer,
-				BaseType:     baseType,
-				ToMapBlock:   generator.BuildToMapBlock(field.Name, goName, !field.Required),
-				ValueOrBlock: generator.BuildValueOrBlock(collectionData.StructName, goName, field.Name, baseType, isPointer),
-			})
-		}
-		baseTplData.Collections = append(baseTplData.Collections, collectionData)
 	}
 
-	// Enhanced 기능이 활성화된 경우 EnhancedTemplateData 생성
-	var tplData any
-	if *generateEnums || *generateRelations || *generateFiles {
-		enhancedData := generator.EnhancedTemplateData{
-			TemplateData:      baseTplData,
-			GenerateEnums:     *generateEnums,
-			GenerateRelations: *generateRelations,
-			GenerateFiles:     *generateFiles,
-		}
-
-		// Enhanced 분석 및 데이터 생성
-		if *generateEnums {
-			enumGenerator := generator.NewEnumGenerator()
-			enhancedData.Enums = enumGenerator.GenerateEnums(baseTplData.Collections, schemas)
-		}
-
-		if *generateRelations {
-			relationGenerator := generator.NewRelationGenerator()
-			enhancedData.RelationTypes = relationGenerator.GenerateRelationTypes(baseTplData.Collections, schemas)
-		}
-
-		if *generateFiles {
-			fileGenerator := generator.NewFileGenerator()
-			enhancedData.FileTypes = fileGenerator.GenerateFileTypes(baseTplData.Collections, schemas)
-		}
-
-		tplData = enhancedData
-	} else {
-		// 기존 동작 유지 (하위 호환성)
-		tplData = baseTplData
-	}
+	// Build template data via the single generation pipeline.
+	tplData := generator.BuildTemplateData(schemas, *pkgName, generator.GenerateOptions{
+		JSONLibrary: *jsonLib,
+		Enums:       *generateEnums,
+		Relations:   *generateRelations,
+		Files:       *generateFiles,
+	})
 
 	// Parse template with better error handling
 	tpl, err := template.New("models").Parse(templateFile)

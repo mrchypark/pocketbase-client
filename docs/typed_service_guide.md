@@ -61,14 +61,14 @@ The `TypedRecordService[T]` is a generic service that performs CRUD operations o
 │                    Generated Model (by pbc-gen)                          │
 ├─────────────────────────────────────────────────────────────────────────┤
 │ type Post struct {                                                       │
-│     ID             string         `json:"id"`                            │
-│     CollectionID   string         `json:"collectionId"`                  │
-│     CollectionName string         `json:"collectionName"`                │
-│     Created        types.DateTime `json:"created"`                       │
-│     Updated        types.DateTime `json:"updated"`                       │
-│     Title          string         `json:"title"`                         │
-│     Content        string         `json:"content"`                       │
-│     Published      bool           `json:"published"`                     │
+│     ID             string             `json:"id"`                        │
+│     CollectionID   string             `json:"collectionId"`              │
+│     CollectionName string             `json:"collectionName"`            │
+│     Created        pocketbase.DateTime `json:"created"`                  │
+│     Updated        pocketbase.DateTime `json:"updated"`                  │
+│     Title          string             `json:"title"`                     │
+│     Content        string             `json:"content"`                   │
+│     Published      bool               `json:"published"`                 │
 │ }                                                                         │
 │                                                                          │
 │ Interface Implementations:                                               │
@@ -77,54 +77,41 @@ The `TypedRecordService[T]` is a generic service that performs CRUD operations o
 │   • Mappable (ToMap)                                                    │
 └─────────────────────────────────────────────────────────────────────────┘
                               │
-                              │ Converts via json.Marshal/Unmarshal
+                              │ Decodes raw HTTP response directly (single pass)
                               ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                         Internal: *Record                                │
-├─────────────────────────────────────────────────────────────────────────┤
-│ • Parses raw API response                                               │
-│ • Stores all fields in deserializedData map                            │
-│ • Provides GetString, GetBool, GetFloat, etc.                          │
+│                       Raw HTTP Response Body ([]byte)                    │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Why It Works
 
-The service handles JSON unmarshaling correctly by:
-
-1. **Receiving `*Record`** from the API (via `RecordService.GetList`)
-2. **Converting each item** using `convertRecord[T]()` function
-3. **Marshal/Unmarshal cycle** to populate all fields into the concrete type
+The typed service decodes the raw HTTP response body **directly into `T`** via a
+single `json.Unmarshal` pass. Because generated structs carry plain JSON struct
+tags, unknown fields returned by the server (e.g. `expand`) are ignored and no
+intermediate `*Record` representation or extra `json.Marshal`/`json.Unmarshal`
+round-trip is needed:
 
 ```go
-// records.go:296-323
-func convertRecord[T any](rec *Record) (*T, error) {
-    // Case 1: T is *Record (passthrough)
-    if ptr, ok := any(&t).(**Record); ok {
-        *ptr = rec
-        return &t, nil
+// generic_client.go
+func (s *TypedRecordService[T]) GetOne(ctx context.Context, recordID string, opts *GetOneOptions) (*T, error) {
+    data, err := s.Client.SendRaw(ctx, http.MethodGet, path, nil)
+    if err != nil {
+        return nil, err
     }
-
-    // Case 2: T implements RecordModel (generated types)
-    if model, ok := any(&t).(RecordModel); ok {
-        model.SetID(rec.ID)
-        model.SetCollectionID(rec.CollectionID)
-        model.SetCollectionName(rec.CollectionName)
-
-        // Marshal record to JSON and unmarshal into the model
-        data, err := json.Marshal(rec)
-        if err != nil {
-            return nil, fmt.Errorf("failed to marshal record: %w", err)
-        }
-        if err := json.Unmarshal(data, &t); err != nil {
-            return nil, fmt.Errorf("failed to unmarshal into %T: %w", t, err)
-        }
-        return &t, nil
+    result := new(T)
+    if err := json.Unmarshal(data, result); err != nil {
+        return nil, err
     }
-
-    return nil, fmt.Errorf("cannot convert Record to %T", t)
+    return result, nil
 }
 ```
+
+This is what makes the typed read path effectively **zero-cost serialization**:
+one decode pass instead of the legacy decode → marshal → decode cycle (roughly
+7x faster in serialization benchmarks). Writes (`Create`/`Update`) still
+serialize through `ToMap()` when `T` implements `Mappable`, preserving PATCH
+semantics (empty optional fields are omitted).
 
 ---
 
@@ -143,9 +130,12 @@ type BaseModel interface {
 }
 ```
 
-### 2. RecordModel (Required for most operations)
+### 2. RecordModel (compile-time contract)
 
-Generated types should implement `RecordModel` for population from API responses:
+Generated types implement `RecordModel` and the generated code asserts it via
+`var _ pocketbase.RecordModel = (*Post)(nil)`. It is no longer required for
+response population (that now happens via direct struct decoding), but it
+documents the record contract and enables future helpers:
 
 ```go
 type RecordModel interface {
@@ -174,14 +164,14 @@ The `pbc-gen` tool automatically generates all required interfaces (`cmd/pbc-gen
 // This is AUTO-GENERATED by pbc-gen
 
 type Post struct {
-    ID             string         `json:"id"`
-    CollectionID   string         `json:"collectionId"`
-    CollectionName string         `json:"collectionName"`
-    Created        types.DateTime `json:"created"`
-    Updated        types.DateTime `json:"updated"`
-    Title          string         `json:"title"`
-    Content        string         `json:"content"`
-    Published      bool           `json:"published"`
+    ID             string             `json:"id"`
+    CollectionID   string             `json:"collectionId"`
+    CollectionName string             `json:"collectionName"`
+    Created        pocketbase.DateTime `json:"created"`
+    Updated        pocketbase.DateTime `json:"updated"`
+    Title          string             `json:"title"`
+    Content        string             `json:"content"`
+    Published      bool               `json:"published"`
 }
 
 // BaseModel interface

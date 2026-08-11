@@ -44,13 +44,8 @@ func TestBackwardCompatibility(t *testing.T) {
 	// 기존 방식으로 TemplateData 생성
 	legacyData := BuildTemplateData(schemas, "models")
 
-	// 새로운 방식으로 동일한 데이터 생성 (enhanced 기능 비활성화)
-	enhancedData := EnhancedTemplateData{
-		TemplateData:      legacyData,
-		GenerateEnums:     false,
-		GenerateRelations: false,
-		GenerateFiles:     false,
-	}
+	// Enhanced 기능이 비활성화된 동일 데이터 (단일 파이프라인)
+	enhancedData := BuildTemplateData(schemas, "models")
 
 	// 두 방식 모두로 코드 생성
 	legacyCode := generateCodeWithData(t, legacyData)
@@ -337,15 +332,7 @@ func TestEnhancedDataBackwardCompatibility(t *testing.T) {
 
 	baseData := BuildTemplateData(schemas, "models")
 
-	// Enhanced 데이터로 래핑 (모든 기능 비활성화)
-	enhancedData := EnhancedTemplateData{
-		TemplateData:      baseData,
-		GenerateEnums:     false,
-		GenerateRelations: false,
-		GenerateFiles:     false,
-	}
-
-	// 기존 템플릿이 Enhanced 데이터와 호환되는지 테스트
+	// 기존 템플릿이 단일 파이프라인 데이터와 호환되는지 테스트
 	legacyTemplate := `package {{.PackageName}}
 
 {{range .Collections}}
@@ -361,7 +348,7 @@ type {{.StructName}} struct {
 	}
 
 	var buf bytes.Buffer
-	err = tpl.Execute(&buf, enhancedData)
+	err = tpl.Execute(&buf, baseData)
 	if err != nil {
 		t.Fatalf("Enhanced 데이터로 기존 템플릿 실행 실패: %v", err)
 	}
@@ -438,16 +425,7 @@ type Users struct {
 	}
 
 	// Enhanced 기능 활성화
-	baseData := BuildTemplateData(schemas, "models")
-	enhancedData := EnhancedTemplateData{
-		TemplateData:      baseData,
-		GenerateEnums:     true,
-		GenerateRelations: false,
-		GenerateFiles:     false,
-	}
-
-	enumGenerator := NewEnumGenerator()
-	enhancedData.Enums = enumGenerator.GenerateEnums(baseData.Collections, schemas)
+	enhancedData := BuildTemplateData(schemas, "models", GenerateOptions{Enums: true})
 
 	// 새로운 코드 생성
 	newTemplate := `package {{.PackageName}}

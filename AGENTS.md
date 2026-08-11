@@ -56,7 +56,6 @@ import (
     "fmt"
     
     "github.com/mrchypark/pocketbase-client"
-    "github.com/pocketbase/pocketbase/tools/types"
 )
 ```
 
@@ -71,11 +70,11 @@ import (
 ```go
 // Always include system fields in generated models
 type ModelName struct {
-    ID             string         `json:"id"`
-    CollectionID   string         `json:"collectionId"`
-    CollectionName string         `json:"collectionName"`
-    Created        types.DateTime `json:"created"`
-    Updated        types.DateTime `json:"updated"`
+    ID             string             `json:"id"`
+    CollectionID   string             `json:"collectionId"`
+    CollectionName string             `json:"collectionName"`
+    Created        pocketbase.DateTime `json:"created"`
+    Updated        pocketbase.DateTime `json:"updated"`
     
     // Generated fields follow
     FieldName  FieldType `json:"fieldName,omitempty"`
