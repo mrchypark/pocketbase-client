@@ -18,7 +18,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to authenticate admin: %v", err)
 	}
-	fmt.Printf("Authenticated as admin: %s (ID: %s)\n", adminAuth.Admin.Email, adminAuth.Admin.ID)
+	fmt.Printf("Authenticated as superuser (ID: %s)\n", adminAuth.Record.ID)
 
 	// After authenticating, the client automatically uses the token for subsequent requests.
 	// Let's verify by fetching the admin list, which requires authentication.

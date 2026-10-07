@@ -138,8 +138,87 @@ func TestSendStreamNetworkError(t *testing.T) {
 func TestNewClientWithHTTPClient(t *testing.T) {
 	hc := &http.Client{Timeout: time.Second}
 	c := NewClient("http://example.com", WithHTTPClient(hc))
-	if c.HTTPClient != hc {
-		t.Fatal("custom http client not set")
+	if c.HTTPClient == hc || c.HTTPClient.Timeout != hc.Timeout || hc.Transport != nil {
+		t.Fatal("custom http client settings not copied independently")
+	}
+}
+
+func TestSharedHTTPClientAuthIsolation(t *testing.T) {
+	rt := &recordingRoundTripper{}
+	hc := &http.Client{Transport: rt}
+	a := NewClient("http://example.com", WithHTTPClient(hc))
+	b := NewClient("http://example.com", WithHTTPClient(hc))
+	a.WithToken("A")
+	b.WithToken("B")
+	for _, tc := range []struct {
+		client *http.Client
+		want   string
+	}{{a.HTTPClient, "A"}, {b.HTTPClient, "B"}, {hc, "original"}, {a.HTTPClient, "A"}} {
+		req, err := http.NewRequest(http.MethodGet, "http://example.com/", nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		req.Header.Set("Authorization", "original")
+		res, err := tc.client.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		res.Body.Close()
+		if rt.lastAuth != tc.want {
+			t.Fatalf("authorization = %q, want %q", rt.lastAuth, tc.want)
+		}
+		if req.Header.Get("Authorization") != "original" {
+			t.Fatal("caller request header was modified")
+		}
+	}
+	if hc.Transport != rt {
+		t.Fatal("supplied transport was modified")
+	}
+}
+
+func TestAuthInjectorClonesRequest(t *testing.T) {
+	rt := &recordingRoundTripper{}
+	c := NewClient("http://example.com", WithHTTPClient(&http.Client{Transport: rt}))
+	c.WithToken("injected")
+	req, err := http.NewRequest(http.MethodGet, "http://example.com/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Authorization", "original")
+	res, err := c.HTTPClient.Transport.RoundTrip(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	res.Body.Close()
+	if rt.lastAuth != "injected" || req.Header.Get("Authorization") != "original" {
+		t.Fatalf("sent=%q original=%q", rt.lastAuth, req.Header.Get("Authorization"))
+	}
+}
+
+func TestAuthenticateAsAdminModernRecord(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/collections/_superusers/auth-with-password" {
+			t.Errorf("unexpected path: %s", r.URL.Path)
+		}
+		io.WriteString(w, `{"token":"superuser-token","record":{"id":"superuser1","collectionId":"_pb_users_auth_","collectionName":"_superusers","email":"admin@example.com","verified":true}}`)
+	}))
+	defer srv.Close()
+	c := NewClient(srv.URL)
+	res, err := c.WithAdminPassword(context.Background(), "admin@example.com", "password")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Record == nil || res.Record.ID != "superuser1" || !res.Record.GetBool("verified") {
+		t.Fatalf("record missing: %+v", res.Record)
+	}
+	if res.Admin == nil || res.Admin.ID != res.Record.ID || res.Admin.Email != "admin@example.com" || res.Admin.CollectionName != "_superusers" {
+		t.Fatalf("legacy admin missing: %+v", res.Admin)
+	}
+	if _, ok := c.AuthStore.(*PasswordAuth); !ok {
+		t.Fatal("password strategy replaced")
+	}
+	if token, err := c.AuthStore.Token(c); err != nil || token != res.Token {
+		t.Fatalf("stored token = %q, %v", token, err)
 	}
 }
 

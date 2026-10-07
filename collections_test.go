@@ -143,17 +143,20 @@ func TestCollectionServiceImport(t *testing.T) {
 		if r.URL.Path != "/api/collections/import" {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
-		if r.URL.Query().Get("deleteMissing") != "1" {
-			t.Fatalf("missing deleteMissing query")
+		if r.URL.RawQuery != "" {
+			t.Fatalf("unexpected query")
 		}
-		var v []*Collection
+		var v struct {
+			Collections   []*Collection `json:"collections"`
+			DeleteMissing bool          `json:"deleteMissing"`
+		}
 		if err := json.NewDecoder(r.Body).Decode(&v); err != nil {
 			t.Fatalf("failed decode: %v", err)
 		}
-		if len(v) != 1 || v[0].Name != "posts" {
+		if len(v.Collections) != 1 || v.Collections[0].Name != "posts" || !v.DeleteMissing {
 			t.Fatalf("unexpected body: %v", v)
 		}
-		_ = json.NewEncoder(w).Encode([]*Collection{})
+		w.WriteHeader(http.StatusNoContent)
 	}))
 	defer srv.Close()
 
@@ -163,8 +166,8 @@ func TestCollectionServiceImport(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if returned == nil {
-		t.Fatal("expected collections, got nil")
+	if returned != nil {
+		t.Fatal("expected nil after 204")
 	}
 	if len(returned) != 0 {
 		t.Fatalf("expected 0 collections, got %d", len(returned))

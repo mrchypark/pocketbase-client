@@ -35,13 +35,18 @@ echo -e "\n${YELLOW}🔍 Go 버전 확인${NC}"
 go version
 
 # 1. 포맷 검사 (Format)
-run_step "코드 포맷 검사" "gofmt -w . && git diff --exit-code"
+run_step "코드 포맷 검사" 'test -z "$(gofmt -l .)"'
 
 # 2. Vet 검사
 run_step "Go Vet 검사" "go vet ./..."
+run_step "Installer integrity" "sh docs/tests/install_test.sh"
 
 # 3. 일반 테스트
 run_step "단위 테스트" "go test ./..."
+
+if [ -n "${POCKETBASE_BIN:-}" ]; then
+    run_step "PocketBase 0.39.10 contracts" "go test -run '^(TestPocketBaseContract|TestRuntimePocketBaseFileModifiers)$' -count=1 -timeout=3m ."
+fi
 
 # 4. Race 조건 테스트
 run_step "Race 조건 테스트" "go test -race ./..."

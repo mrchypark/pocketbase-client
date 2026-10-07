@@ -27,10 +27,15 @@ endif
 pb: ./database/pocketbase
 
 ./database/pocketbase:
-	wget https://github.com/pocketbase/pocketbase/releases/download/v$(PB_VERSION)/pocketbase_$(PB_VERSION)_$(UNAME_S)_$(ARCH).zip \
-  && unzip pocketbase_$(PB_VERSION)_$(UNAME_S)_$(ARCH).zip \
-  && rm CHANGELOG.md LICENSE.md pocketbase_$(PB_VERSION)_$(UNAME_S)_$(ARCH).zip \
-  && mv pocketbase ./database/pocketbase
+	@set -eu; tmp=$$(mktemp -d); trap 'rm -rf "$$tmp"' EXIT HUP INT TERM; \
+	asset=pocketbase_$(PB_VERSION)_$(UNAME_S)_$(ARCH).zip; \
+	base=https://github.com/pocketbase/pocketbase/releases/download/v$(PB_VERSION); \
+	curl -fsSL "$$base/$$asset" -o "$$tmp/$$asset"; \
+	curl -fsSL "$$base/checksums.txt" -o "$$tmp/checksums.txt"; \
+	awk -v asset="$$asset" '$$2 == asset {print; found=1} END {if (!found) exit 1}' "$$tmp/checksums.txt" > "$$tmp/checksum"; \
+	(cd "$$tmp"; if command -v sha256sum >/dev/null; then sha256sum -c checksum; else shasum -a 256 -c checksum; fi); \
+	unzip -q "$$tmp/$$asset" -d "$$tmp/extracted"; \
+	mkdir -p database; mv "$$tmp/extracted/pocketbase" "$@"
 
 .PHONY: pb_run
 pb_run: ./database/pocketbase
@@ -47,4 +52,3 @@ pb_snapshot pb_snap pb_ss: ./database/pocketbase
 .PHONY: gen
 gen:
 	go run ./cmd/pbc-gen
-

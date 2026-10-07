@@ -15,12 +15,28 @@ jobs:
       with:
         go-version: '1.26'
     - name: Format
-      run: gofmt -w . && git diff --exit-code
+      run: test -z "$(gofmt -l .)"
     - name: Vet
       run: go vet ./...
+    - name: Installer integrity
+      run: sh docs/tests/install_test.sh
     - name: Test
       run: go test ./...
     - name: Race Test
       run: go test -race ./...
     - name: Bench Test
       run: go test -bench=. -benchmem ./...
+
+  pocketbase-contract:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-go@v4
+      with:
+        go-version: '1.26'
+    - name: Download and verify PocketBase 0.39.10
+      run: make pb
+    - name: Real PocketBase contracts
+      env:
+        POCKETBASE_BIN: ${{ github.workspace }}/database/pocketbase
+      run: go test -run '^(TestPocketBaseContract|TestRuntimePocketBaseFileModifiers)$' -count=1 -timeout=3m .

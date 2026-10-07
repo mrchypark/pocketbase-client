@@ -83,6 +83,7 @@ func (s *UserService) GetOAuth2Providers(ctx context.Context, collection string)
 }
 
 // AuthWithOAuth2 authenticates with an OAuth2 code.
+// Call Client.UseAuthResponse with the result to store its token.
 func (s *UserService) AuthWithOAuth2(ctx context.Context, collection, provider, code, verifier, redirect string, createData map[string]any) (*AuthResponse, error) {
 	path := fmt.Sprintf("/api/collections/%s/auth-with-oauth2", url.PathEscape(collection))
 	body := map[string]any{
@@ -102,7 +103,8 @@ func (s *UserService) AuthWithOAuth2(ctx context.Context, collection, provider, 
 	return &res, nil
 }
 
-// AuthRefresh refreshes the stored token.
+// AuthRefresh returns a refreshed auth response without changing the stored token.
+// Call Client.UseAuthResponse with the result to store its token.
 func (s *UserService) AuthRefresh(ctx context.Context, collection string) (*AuthResponse, error) {
 	path := fmt.Sprintf("/api/collections/%s/auth-refresh", url.PathEscape(collection))
 	var res AuthResponse
@@ -125,6 +127,7 @@ func (s *UserService) RequestOTP(ctx context.Context, collection, email string) 
 }
 
 // AuthWithOTP authenticates with an OTP ID and password.
+// Call Client.UseAuthResponse with the result to store its token.
 func (s *UserService) AuthWithOTP(ctx context.Context, collection, otpID, password string) (*AuthResponse, error) {
 	path := fmt.Sprintf("/api/collections/%s/auth-with-otp", url.PathEscape(collection))
 	body := map[string]string{"otpId": otpID, "password": password}

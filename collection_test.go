@@ -5,8 +5,68 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"testing"
 )
+
+func TestCollectionModernWireRoundTrip(t *testing.T) {
+	fixture := `{"id":"pbc_123","created":"2026-10-07 01:02:03.000Z","updated":"2026-10-07 01:02:03.000Z","name":"members","type":"auth","system":false,"fields":[{"id":"number123","name":"score","type":"number","required":true,"presentable":false,"system":false,"hidden":false,"min":0,"max":100,"onlyInt":true},{"id":"relation123","name":"friends","type":"relation","required":false,"presentable":false,"system":false,"hidden":false,"collectionId":"pbc_456","maxSelect":3,"cascadeDelete":false}],"indexes":["CREATE INDEX idx_score ON members (score)"],"listRule":null,"viewRule":"","createRule":null,"updateRule":"id = @request.auth.id","deleteRule":null,"manageRule":null,"authRule":"verified = true","passwordAuth":{"enabled":true,"identityFields":["email"]},"viewQuery":"SELECT id FROM members"}`
+	var col Collection
+	if err := json.Unmarshal([]byte(fixture), &col); err != nil {
+		t.Fatal(err)
+	}
+	if col.GetID() != "pbc_123" || col.GetCollectionName() != "members" || col.ListRule != nil || col.ViewRule == nil || *col.ViewRule != "" {
+		t.Fatalf("incorrect identity/rules: %+v", col)
+	}
+	if len(col.Fields) != 2 || col.Fields[0].Options["max"] != float64(100) || col.Fields[1].Options["maxSelect"] != float64(3) {
+		t.Fatalf("lost field options: %+v", col.Fields)
+	}
+	data, err := json.Marshal(col)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var want, got map[string]any
+	if err := json.Unmarshal([]byte(fixture), &want); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(data, &got); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("round trip changed contract:\ngot %s\nwant %s", data, fixture)
+	}
+}
+
+func TestCollectionUpdateNullableRules(t *testing.T) {
+	public := ""
+	for _, rule := range []*string{nil, &public} {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			var body map[string]json.RawMessage
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				t.Error(err)
+			}
+			want := "null"
+			if rule != nil {
+				want = `""`
+			}
+			for _, key := range []string{"listRule", "viewRule", "createRule", "updateRule", "deleteRule"} {
+				if string(body[key]) != want {
+					t.Errorf("%s: got %s want %s", key, body[key], want)
+				}
+			}
+			if string(body["indexes"]) != "[]" {
+				t.Errorf("cannot clear indexes: %s", body["indexes"])
+			}
+			_, _ = w.Write([]byte(`{"id":"pbc_123","name":"posts"}`))
+		}))
+		col := &Collection{Name: "posts", ListRule: rule, ViewRule: rule, CreateRule: rule, UpdateRule: rule, DeleteRule: rule, Indexes: []string{}, Options: map[string]any{"listRule": ""}}
+		_, err := NewClient(srv.URL).Collections.Update(context.Background(), "posts", col)
+		srv.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+}
 
 func TestCollectionService_GetList(t *testing.T) {
 	// Mock server
@@ -196,14 +256,17 @@ func TestCollectionService_Import(t *testing.T) {
 			t.Fatalf("unexpected method: %s", r.Method)
 		}
 
-		var reqCols []*Collection
-		json.NewDecoder(r.Body).Decode(&reqCols)
-
-		resp := make([]*Collection, len(reqCols))
-		for i, col := range reqCols {
-			resp[i] = &Collection{Name: "imported_" + col.Name, Type: col.Type}
+		var body struct {
+			Collections   []*Collection `json:"collections"`
+			DeleteMissing bool          `json:"deleteMissing"`
 		}
-		json.NewEncoder(w).Encode(resp)
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Error(err)
+		}
+		if len(body.Collections) != 2 || !body.DeleteMissing || r.URL.RawQuery != "" {
+			t.Errorf("unexpected import body/query: %+v %s", body, r.URL.RawQuery)
+		}
+		w.WriteHeader(http.StatusNoContent)
 	}))
 	defer srv.Close()
 
@@ -222,10 +285,7 @@ func TestCollectionService_Import(t *testing.T) {
 	}
 
 	// Assertions
-	if len(res) != 2 {
-		t.Fatalf("expected 2 imported collections, got %d", len(res))
-	}
-	if res[0].Name != "imported_col1" || res[1].Name != "imported_col2" {
-		t.Fatalf("unexpected imported collection names: %v", res)
+	if res != nil {
+		t.Fatalf("expected nil after 204, got %v", res)
 	}
 }

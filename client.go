@@ -60,6 +60,7 @@ func (t *authInjector) RoundTrip(req *http.Request) (*http.Response, error) {
 			return nil, err
 		}
 		if tok != "" {
+			req = req.Clone(req.Context())
 			req.Header.Set("Authorization", tok)
 		}
 	}
@@ -312,9 +313,17 @@ func (c *Client) WithPassword(ctx context.Context, collection, identity, passwor
 	return res, nil
 }
 
-// WithAdminPassword is a convenience method for WithPassword.
+// WithAdminPassword authenticates against _superusers and stores the password strategy.
+// Record contains the superuser; Admin is also populated for legacy callers.
 func (c *Client) WithAdminPassword(ctx context.Context, identity, password string) (*AuthResponse, error) {
-	return c.WithPassword(ctx, "_superusers", identity, password)
+	res, err := c.WithPassword(ctx, "_superusers", identity, password)
+	if err != nil {
+		return nil, err
+	}
+	if res.Record != nil && res.Admin == nil {
+		res.Admin, err = adminFromRecord(res.Record, nil)
+	}
+	return res, err
 }
 
 // WithToken sets a TokenAuth strategy to the client.

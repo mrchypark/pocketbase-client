@@ -428,11 +428,11 @@ func TestIntegration_CRUD(t *testing.T) {
 	// ============================================================
 	t.Run("TypedService", func(t *testing.T) {
 		type Post struct {
-			ID             string   `json:"id"`
-			CollectionID   string   `json:"collectionId"`
-			CollectionName string   `json:"collectionName"`
-			Title          string   `json:"title"`
-			Views          float64  `json:"views"`
+			ID             string  `json:"id"`
+			CollectionID   string  `json:"collectionId"`
+			CollectionName string  `json:"collectionName"`
+			Title          string  `json:"title"`
+			Views          float64 `json:"views"`
 		}
 
 		postService := NewTypedRecordService[Post](client, "posts")

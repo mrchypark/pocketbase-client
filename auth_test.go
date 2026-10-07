@@ -1,14 +1,70 @@
 package pocketbase
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 )
+
+func TestPasswordAuthCallerCancellationIsolation(t *testing.T) {
+	started := make(chan struct{})
+	release := make(chan struct{})
+	var startOnce, releaseOnce sync.Once
+	var requests atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests.Add(1)
+		startOnce.Do(func() { close(started) })
+		select {
+		case <-release:
+			fmt.Fprint(w, `{"token":"shared-token","record":{"id":"user1"}}`)
+		case <-r.Context().Done():
+		}
+	}))
+	defer srv.Close()
+	defer releaseOnce.Do(func() { close(release) })
+	c := NewClient(srv.URL)
+	a := NewPasswordAuth(c, "users", "user", "password")
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	first := make(chan error, 1)
+	go func() { _, err := a.TokenWithContext(ctx, c); first <- err }()
+	select {
+	case <-started:
+	case <-time.After(time.Second):
+		t.Fatal("auth did not start")
+	}
+	cancel()
+	select {
+	case err := <-first:
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("first error = %v", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("canceled caller did not return")
+	}
+	// A canceled waiter must return even while the independent shared operation continues.
+	if _, err := a.TokenWithContext(ctx, c); !errors.Is(err, context.Canceled) {
+		t.Fatalf("canceled waiter = %v", err)
+	}
+	releaseOnce.Do(func() { close(release) })
+	waitCtx, waitCancel := context.WithTimeout(context.Background(), time.Second)
+	defer waitCancel()
+	token, err := a.TokenWithContext(waitCtx, c)
+	if err != nil || token != "shared-token" {
+		t.Fatalf("surviving caller = %q, %v", token, err)
+	}
+	if requests.Load() != 1 {
+		t.Fatalf("authentication requests = %d, want 1", requests.Load())
+	}
+}
 
 func TestNilAuth(t *testing.T) {
 	auth := &NilAuth{}

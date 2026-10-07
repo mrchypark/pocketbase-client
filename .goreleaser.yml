@@ -39,7 +39,7 @@ archives:
   - # Archive settings for compressing generated binaries
     id: "pbc-gen-archive"
     # Maps to the `id` in builds configuration
-    builds:
+    ids:
       - "pbc-gen"
     # Specify archive file name format
     name_template: >-
@@ -48,7 +48,7 @@ archives:
       {{- .Os }}_
       {{- .Arch }}
     # Archive format to generate (tar.gz and zip)
-    format: binary
+    formats: [binary]
     # Additional files to include in release
     files:
       - README.md

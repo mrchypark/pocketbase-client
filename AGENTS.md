@@ -109,14 +109,14 @@ pocketbase-client/
 ├── client.go                 # Main client with auth management
 ├── records.go                # RecordServiceAPI + TypedRecordService
 ├── models.go                  # Base models and interfaces
-├── generic_client.go          # Generic Service[T] implementation
+├── generic_client.go          # TypedRecordService[T] implementation
 ├── cmd/pbc-gen/              # Code generator CLI
 ├── internal/generator/        # Generation logic
 │   ├── schema.go            # PocketBase schema parsing
 │   ├── mapper.go            # Type mapping utilities
 │   ├── models.go            # Template data structures
-│   ├── parser.go            # Schema loading logic
-│   └── template.go.tpl       # Code generation template
+│   └── parser.go            # LoadSchema and BuildTemplateData pipeline
+├── cmd/pbc-gen/template.go.tpl # Embedded generation template
 └── examples/                  # Usage examples
 ```
 
@@ -145,52 +145,12 @@ type Model = Mappable
 ## 🔧 Generator Development
 
 ### Template Modification Guidelines
-```go
-// For type-safe field population
-func Get{{.StructName}}(client pocketbase.RecordServiceAPI, id string, opts *pocketbase.GetOneOptions) (*{{.StructName}}, error) {
-    r, err := client.GetOne(context.Background(), "{{.CollectionName}}", id, opts)
-    if err != nil {
-        return nil, err
-    }
-    result := &{{.StructName}}{}
-    result.SetID(r.ID)
-    result.SetCollectionID(r.CollectionID)
-    result.SetCollectionName(r.CollectionName)
 
-    // Marshal record to JSON and unmarshal into struct to populate all fields
-    data, err := json.Marshal(r)
-    if err != nil {
-        return nil, fmt.Errorf("failed to marshal record: %w", err)
-    }
-    if err := json.Unmarshal(data, result); err != nil {
-        return nil, fmt.Errorf("failed to unmarshal into {{.StructName}}: %w", err)
-    }
-
-    return result, nil
-}
-```
+The embedded master template is `cmd/pbc-gen/template.go.tpl`. Generated `NewXService` helpers use `TypedRecordService[T]`, which decodes server JSON directly into the generated type. Do not add the old GetX/GetXList JSON round-trip helpers. `BuildTemplateData` is the single generation pipeline.
 
 ### Schema Handling
-```go
-// Support both legacy and new PocketBase schema formats
-func (cs *CollectionSchema) UnmarshalJSON(data []byte) error {
-    type Alias CollectionSchema
-    aux := &struct {
-        SchemaRaw json.RawMessage `json:"schema"`
-        FieldsRaw json.RawMessage `json:"fields"`
-        *Alias
-    }{
-        Alias: (*Alias)(cs),
-    }
-    
-    // Handle both format variants
-    if len(aux.SchemaRaw) > 0 && string(aux.SchemaRaw) != "null" {
-        return json.Unmarshal(aux.SchemaRaw, &cs.Fields)
-    } else if len(aux.FieldsRaw) > 0 && string(aux.FieldsRaw) != "null" {
-        return json.Unmarshal(aux.FieldsRaw, &cs.Fields)
-    }
-}
-```
+
+Target PocketBase v0.39.10: only modern `fields` arrays and flattened field options are accepted. `LoadSchema` accepts collection arrays, paginated `items`, and single collection objects. The template declares standard ID, metadata, created, and updated fields once; custom autodate fields are readable but excluded from writes. Other system/hidden fields are skipped except readable auth email, emailVisibility, and verified. Auth credentials are pointer fields excluded from JSON and included only in `ToMap` when set. Auth email uses a pointer for sparse PATCH requests; required base fields retain their existing behavior.
 
 ## 🧪 Testing Guidelines
 

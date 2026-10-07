@@ -7,6 +7,25 @@
 
 A robust, type-safe Go client for the [PocketBase API](https://pocketbase.io/). Provides compile-time type safety, automatic pagination, real-time subscriptions, and code generation from PocketBase schema.
 
+## Supported PocketBase contract
+
+The supported and CI-tested server is **PocketBase v0.39.10**. Superusers are records in `_superusers`. `WithAdminPassword` installs authentication and returns the superuser in `AuthResponse.Record`; `Admin` is also populated for compatibility. The `Admins` service adapts to modern superuser record endpoints.
+
+Direct `Users.AuthWithOAuth2`, `Users.AuthWithOTP`, and `Users.AuthRefresh` calls return an authentication response without installing it. After checking the error, call `client.UseAuthResponse(response)` to apply its token and record. `WithPassword` and `WithAdminPassword` apply authentication automatically.
+
+Collection callers must migrate `Schema` to `Fields []SchemaField`, `Indexes` to `[]string`, and access rules to `*string`. A nil rule means locked (JSON `null`); a pointer to `""` means public. Collection and field `Options` hold flattened wire properties, such as `passwordAuth`, `viewQuery`, and `maxSelect`; do not nest them under an `options` key. `Collections.Import` accepts the server's empty 204 response and returns no collection items.
+
+Re-export schemas using modern `fields` and regenerate models. Generated auth models expose pointer credentials (`Password`, `PasswordConfirm`, `OldPassword`) only for writes through `ToMap`; JSON serialization and server reads exclude them. Use setters to send explicit zero values; leave pointers nil to omit a PATCH field. Auth email is also a pointer so a fresh model can update a display field without resetting email. Ordinary required base fields retain their existing behavior. The standard ID, collection metadata, created, and updated fields are declared once and omitted from `ToMap`; custom `autodate` fields are decoded but omitted from writes. Other system and hidden fields are skipped, except readable auth email, emailVisibility, and verified.
+
+Run the isolated real-server regression check with:
+
+```sh
+make pb # downloads v0.39.10 and verifies its release checksum
+POCKETBASE_BIN="$PWD/database/pocketbase" go test -run '^TestPocketBaseContract$' -count=1 -timeout=3m .
+```
+
+The test skips when `POCKETBASE_BIN` is unset and uses temporary data and a loopback port. The installer supports Linux and macOS and verifies `checksums.txt` before replacing `pbc-gen`.
+
 ## ✨ Key Features
 
   * **Full API Coverage**: Interact with all PocketBase endpoints, including Records, Collections, Admins, Users, Logs, and Settings.
@@ -149,8 +168,6 @@ curl -sL https://raw.githubusercontent.com/mrchypark/pocketbase-client/main/inst
 curl "http://localhost:8090/api/collections?perPage=500" > schema.json
 pbc-gen -schema schema.json -path models.gen.go -pkgname models
 
-# (Optional) disable generating typed services
-# pbc-gen ... -services=false
 ```
 
 **Generated code example:**

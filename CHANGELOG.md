@@ -1,5 +1,32 @@
 # Changelog
 
+## [v0.5.0] - 2026-10-07
+
+### Breaking Changes
+
+- **Collection API**: replace `Collection.Schema` with `Fields []SchemaField`, string `Indexes` with `[]string`, and string access rules with `*string`. Nil rules serialize as `null` (locked); pointers to empty strings mean public access. Collection ID/timestamps are concrete fields rather than an embedded `BaseModel`. Collection and field `Options` now serialize as flattened properties. Replace removed `SchemaField.Unique` with a unique SQL index in `Collection.Indexes`.
+- **Generated auth models**: regenerate models from modern PocketBase schemas. Readable auth email, emailVisibility, and verified fields are retained as pointers for sparse PATCH requests. `Password`, `PasswordConfirm`, and `OldPassword` are write-only pointers with `json:"-"`; setters and `ToMap` send them only when set. Ordinary required base fields retain their existing behavior.
+- **Generator system policy**: all system collections are skipped. Custom autodate fields are decoded but excluded from writes; standard ID, metadata, created, and updated fields remain declared once and excluded from `ToMap`. Relation helpers are generated only for visible fields whose targets have generated models.
+
+### Fixes
+
+- Align collection field metadata, indexes, nullable rules, and flattened auth/view options with PocketBase v0.39.10. Import sends `{collections, deleteMissing}` and accepts the server's 204 response, returning no collection items.
+- Adapt the deprecated Admin service to `_superusers` record endpoints. `WithAdminPassword` returns both modern `Record` and legacy `Admin` data.
+- Isolate authentication transport wrapping from caller-owned HTTP clients and clone requests before injecting tokens. Shared password authentication respects each caller's cancellation without canceling other waiters, with a bounded refresh timeout.
+- Normalize single-object and array relation expansions to `Record.Expand` slices, clear stale expansions on reuse, and report malformed expansion data.
+- Continue automatic pagination using the server's effective page size when requested `perPage` exceeds its cap, including `skipTotal` queries.
+- Delete single and multiple files with the server's `field-` modifier, avoiding a read/rewrite race; reject empty filenames.
+- Re-register realtime subscriptions after reconnects without blocking on repeated connection notifications; suppress expected cancellation errors.
+- Preserve explicit zero PATCH values and omitted auth fields in regenerated models. Retain multi-relation helpers when single and multiple relations share a target; avoid references to skipped system models.
+- Verify release checksums before replacing `pbc-gen`; support Linux/macOS installation. Download and verify pinned PocketBase in temporary extraction directories instead of overwriting or deleting repository documentation. Format checks no longer modify source files.
+- Replace deprecated GoReleaser archive keys with `ids` and `formats`, preserving raw binary asset names and checksum output.
+- Clarify that direct Users OAuth2, OTP, and refresh calls require `UseAuthResponse` to install the returned authentication state.
+
+### Validation
+
+- Full Go tests, race tests, vet, and build passed. Isolated PocketBase v0.39.10 contract tests cover authentication, Admin compatibility, collection rules/import/indexes, generated auth CRUD and sparse/zero PATCH, relation expansion, pagination beyond 1000 records, and single/multiple file deletion.
+- Installer regressions verify successful installation and preservation of an existing binary on mismatched or missing checksums. CI runs both live contract tests against the pinned server; local contract tests skip when `POCKETBASE_BIN` is unset.
+
 ## [v0.4.0] - 2026-08-11
 
 ### Breaking Changes

@@ -167,8 +167,7 @@ func BuildTemplateData(schemas []CollectionSchema, packageName string, opts ...G
 	}
 
 	for _, s := range schemas {
-		// System collections can be skipped. (e.g., _superusers)
-		if s.System && s.Name == "_superusers" {
+		if s.System {
 			continue
 		}
 
@@ -178,21 +177,41 @@ func BuildTemplateData(schemas []CollectionSchema, packageName string, opts ...G
 			Fields:         make([]FieldData, 0, len(s.Fields)),
 		}
 
-		for _, f := range s.Fields {
-			if isSkippedField(f) {
+		fields := s.Fields
+		if s.Type == "auth" {
+			fields = append([]FieldSchema(nil), fields...)
+			for _, name := range []string{"password", "passwordConfirm", "oldPassword"} {
+				found := false
+				for _, f := range fields {
+					found = found || f.Name == name
+				}
+				if !found {
+					fields = append(fields, FieldSchema{Name: name, Type: "password"})
+				}
+			}
+		}
+		for _, f := range fields {
+			if isSkippedField(f, s.Type == "auth") {
 				continue
 			}
 
-			goType, _ := MapPbTypeToGoType(f, !f.Required)
+			writeOnly := s.Type == "auth" && isAuthCredential(f.Name)
+			omitEmpty := !f.Required || writeOnly || (s.Type == "auth" && (f.Name == "email" || f.Name == "emailVisibility" || f.Name == "verified"))
+			goType, _ := MapPbTypeToGoType(f, omitEmpty)
+			tag := BuildJSONTag(f.Name, omitEmpty)
+			if writeOnly {
+				tag = BuildJSONTag("-", false)
+			}
 
 			collection.Fields = append(collection.Fields, FieldData{
 				JSONName:  f.Name,
 				GoName:    ToPascalCase(f.Name),
 				GoType:    goType,
-				StructTag: BuildJSONTag(f.Name, !f.Required),
-				OmitEmpty: !f.Required,
+				StructTag: tag,
+				OmitEmpty: omitEmpty,
 				IsPointer: strings.HasPrefix(goType, "*"),
 				BaseType:  strings.TrimPrefix(goType, "*"),
+				ReadOnly:  f.Type == "autodate",
 			})
 		}
 
@@ -227,11 +246,21 @@ func hasJSONField(collections []CollectionData) bool {
 }
 
 // isSkippedField reports whether a field should be excluded from generated models.
-// System fields, hidden fields, and autodate fields are always skipped. Additionally,
-// the standard PocketBase fields that are hardcoded in the template (id, collectionId,
-// collectionName, created, updated) are skipped by name as a safety net.
-func isSkippedField(f FieldSchema) bool {
-	if f.System || f.Hidden || f.Type == "autodate" {
+// Auth credentials are write-only; readable auth system fields are retained.
+// Standard fields already declared in the template are skipped by name.
+func isSkippedField(f FieldSchema, auth bool) bool {
+	if auth {
+		if f.Name == "tokenKey" {
+			return true
+		}
+		if isAuthCredential(f.Name) {
+			return false
+		}
+		if !f.Hidden && (f.Name == "email" || f.Name == "emailVisibility" || f.Name == "verified") {
+			return false
+		}
+	}
+	if f.System || f.Hidden {
 		return true
 	}
 	switch strings.ToLower(f.Name) {
@@ -239,4 +268,8 @@ func isSkippedField(f FieldSchema) bool {
 		return true
 	}
 	return false
+}
+
+func isAuthCredential(name string) bool {
+	return name == "password" || name == "passwordConfirm" || name == "oldPassword"
 }

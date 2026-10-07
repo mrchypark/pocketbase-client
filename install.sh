@@ -7,13 +7,13 @@
 #   - To install the latest version: ./install.sh
 #   - To install a specific version: ./install.sh v0.1.2
 
-set -e
+set -eu
 
 # --- Helper Functions ---
 get_latest_release() {
     # Get the latest release tag name using GitHub API.
     # While jq would provide more stable parsing, we use grep/sed for compatibility.
-    curl --silent "https://api.github.com/repos/mrchypark/pocketbase-client/releases/latest" |
+    curl -fsSL "https://api.github.com/repos/mrchypark/pocketbase-client/releases/latest" |
         grep '"tag_name":' |
         sed -E 's/.*"([^"]+)".*/\1/'
 }
@@ -33,6 +33,10 @@ echo "Installing version: ${VERSION}"
 
 # Auto-detect OS and architecture
 OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+case $OS in
+    linux | darwin) ;;
+    *) echo "Error: Supported operating systems are Linux and macOS"; exit 1 ;;
+esac
 ARCH=$(uname -m)
 case $ARCH in
     x86_64) ARCH="amd64" ;;
@@ -50,9 +54,15 @@ DOWNLOAD_URL="https://github.com/mrchypark/pocketbase-client/releases/download/$
 
 echo "Downloading pbc-gen from ${DOWNLOAD_URL}..."
 
-# Download binary with curl and grant execution permission
-curl -L -o "pbc-gen" "$DOWNLOAD_URL"
-chmod +x "pbc-gen"
+# Verify the release artifact before replacing an existing installation.
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT HUP INT TERM
+curl -fsSL -o "$tmp/$FILENAME" "$DOWNLOAD_URL"
+curl -fsSL -o "$tmp/checksums.txt" "https://github.com/mrchypark/pocketbase-client/releases/download/${VERSION}/checksums.txt"
+awk -v asset="$FILENAME" '$2 == asset {print; found=1} END {if (!found) exit 1}' "$tmp/checksums.txt" > "$tmp/checksum"
+(cd "$tmp"; if command -v sha256sum >/dev/null; then sha256sum -c checksum; else shasum -a 256 -c checksum; fi)
+chmod +x "$tmp/$FILENAME"
+mv "$tmp/$FILENAME" pbc-gen
 
 echo ""
 echo "✅ pbc-gen (${VERSION}) has been downloaded successfully to the current directory."

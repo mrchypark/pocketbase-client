@@ -146,8 +146,12 @@ func (s *TypedRecordService[T]) GetAll(ctx context.Context, opts *ListOptions) (
 		all = append(all, res.Items...)
 		// With skipTotal the server reports totalPages as -1, so only rely on
 		// TotalPages when it is a positive value; otherwise stop when a page
-		// comes back empty or shorter than requested (short page).
-		if len(res.Items) == 0 || len(res.Items) < base.PerPage ||
+		// comes back empty or shorter than the server's effective page size.
+		perPage := res.PerPage
+		if perPage <= 0 {
+			perPage = base.PerPage
+		}
+		if len(res.Items) == 0 || len(res.Items) < perPage ||
 			(res.TotalPages > 0 && res.Page >= res.TotalPages) {
 			break
 		}

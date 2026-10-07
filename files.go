@@ -141,52 +141,10 @@ func (s *FileService) Delete(ctx context.Context, collection, recordID, fieldNam
 		return nil, fmt.Errorf("field name is required")
 	}
 
-	// First, get the current record to see the current file list
-	record, err := s.Client.Records.GetOne(ctx, collection, recordID, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get current record: %w", err)
+	if filename == "" {
+		return nil, fmt.Errorf("filename is required")
 	}
-
-	// Get the current value of the file field
-	currentValue := record.Get(fieldName)
-	if currentValue == nil {
-		return record, nil // Field doesn't exist, nothing to delete
-	}
-
-	var updatedValue any
-
-	// Handle different field types (single file vs multiple files)
-	switch v := currentValue.(type) {
-	case string:
-		// Single file field
-		if v == filename {
-			updatedValue = "" // Remove the file
-		} else {
-			return record, nil // File not found in this field
-		}
-	case []any:
-		// Multiple files field
-		var newFiles []string
-		found := false
-		for _, item := range v {
-			if str, ok := item.(string); ok && str != filename {
-				newFiles = append(newFiles, str)
-			} else if str == filename {
-				found = true
-			}
-		}
-		if !found {
-			return record, nil // File not found in this field
-		}
-		updatedValue = newFiles
-	default:
-		return nil, fmt.Errorf("unsupported field type for file deletion")
-	}
-
-	// Update the record with the new file list
-	updateData := map[string]interface{}{
-		fieldName: updatedValue,
-	}
-
-	return s.Client.Records.Update(ctx, collection, recordID, updateData)
+	return s.Client.Records.Update(ctx, collection, recordID, map[string]any{
+		fieldName + "-": []string{filename},
+	})
 }
