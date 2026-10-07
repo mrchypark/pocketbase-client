@@ -71,6 +71,7 @@ type PasswordAuth struct {
 }
 
 const tokenExpiryLeeway = 30 * time.Second
+const passwordAuthTimeout = 30 * time.Second
 
 type authToken struct {
 	token    string
@@ -92,6 +93,9 @@ func (a *PasswordAuth) Token(client *Client) (string, error) {
 }
 
 func (a *PasswordAuth) TokenWithContext(ctx context.Context, client *Client) (string, error) {
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
 	currentAuth := a.auth.Load()
 
 	// Return immediately if token is valid (no lock)
@@ -100,11 +104,22 @@ func (a *PasswordAuth) TokenWithContext(ctx context.Context, client *Client) (st
 	}
 
 	// If token is missing or expired, execute refresh only once with singleflight
-	_, err, _ := a.refreshSingle.Do("refresh", func() (any, error) {
-		return nil, a.refreshToken(ctx, client)
+	result := a.refreshSingle.DoChan("refresh", func() (any, error) {
+		// One caller's cancellation must not cancel authentication for other callers.
+		refreshCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), passwordAuthTimeout)
+		defer cancel()
+		return nil, a.refreshToken(refreshCtx, client)
 	})
-	if err != nil {
-		return "", err
+	select {
+	case <-ctx.Done():
+		return "", ctx.Err()
+	case refreshed := <-result:
+		if err := ctx.Err(); err != nil {
+			return "", err
+		}
+		if refreshed.Err != nil {
+			return "", refreshed.Err
+		}
 	}
 
 	// Reload with refreshed information

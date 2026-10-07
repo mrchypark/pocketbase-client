@@ -107,12 +107,11 @@ type Record struct {
 type CollectionSchema struct {
     Name   string        `json:"name"`
     Type   string        `json:"type"`
-    Schema []FieldSchema `json:"schema"` // Legacy (PB < 0.22)
-    Fields []FieldSchema `json:"fields"` // Modern (PB >= 0.22)
+    Fields []FieldSchema `json:"fields"` // PocketBase v0.39.10
 }
 핵심: 커스텀 UnmarshalJSON
-- schema 또는 fields 배열 모두 처리 (하위 호환성)
-- maxSelect가 필드 레벨 또는 options 내부에 있는 경우 모두 처리
+- `fields` 배열과 필드에 직접 선언된 `maxSelect` 등의 옵션을 처리합니다.
+- 이전 `schema` 배열과 중첩된 `options` 형식은 지원하지 않습니다.
 3. internal/generator/mapper.go - 타입 매핑
 | PocketBase Type | Go Type (Required) | Go Type (Optional) |
 |-----------------|-------------------|-------------------|

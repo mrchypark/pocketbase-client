@@ -128,8 +128,9 @@ The generator only accepts the latest format:
 1. Collections must expose fields under the `fields` array
 2. Field options are read from the field top-level (flattened keys); a nested `options` object is ignored
 3. `minSelect`/`maxSelect` are always read from the field top-level
-4. System fields (`id`, `created`, `updated`) exist as explicit fields and are skipped during generation
+4. Standard ID, metadata, created, and updated fields are declared once by the template and omitted from writes; custom autodate fields are decoded but never included in `ToMap`. Other system/hidden fields are skipped except readable auth email, emailVisibility, and verified.
 5. For relation/select/file, `maxSelect` > 1 maps to slices (`[]string`) and `maxSelect == 1` to single values
+6. Auth credentials are write-only pointers; auth email is a pointer so sparse PATCH requests preserve existing email. Regenerate existing models after schema or generator changes.
 
 The schema input can be provided in any of the shapes PocketBase produces:
 

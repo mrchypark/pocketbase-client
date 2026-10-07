@@ -12,7 +12,7 @@ import (
 // TestAdminServiceGetList tests the GetList method of AdminService.
 func TestAdminServiceGetList(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/api/admins" {
+		if r.URL.Path != "/api/collections/_superusers/records" {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
 		if r.URL.Query().Get("page") != "2" {
@@ -31,10 +31,10 @@ func TestAdminServiceGetList(t *testing.T) {
 // TestAdminServiceGetOne tests the GetOne method of AdminService.
 func TestAdminServiceGetOne(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/api/admins/1" {
+		if r.URL.Path != "/api/collections/_superusers/records/1" {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
-		_ = json.NewEncoder(w).Encode(Admin{ID: "1"})
+		_, _ = w.Write([]byte(`{"id":"1","collectionId":"pbc_3142635823","collectionName":"_superusers","email":"root@example.com"}`))
 	}))
 	defer srv.Close()
 
@@ -43,7 +43,7 @@ func TestAdminServiceGetOne(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if adm.ID != "1" {
+	if adm.ID != "1" || adm.Email != "root@example.com" || adm.CollectionName != "_superusers" {
 		t.Fatalf("unexpected id: %s", adm.ID)
 	}
 }
@@ -69,7 +69,7 @@ func TestAdminServiceCreate(t *testing.T) {
 
 func TestAdminServiceUpdate(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/api/admins/1" {
+		if r.URL.Path != "/api/collections/_superusers/records/1" {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
 		if r.Method != http.MethodPatch {
@@ -91,7 +91,7 @@ func TestAdminServiceUpdate(t *testing.T) {
 
 func TestAdminServiceDelete(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/api/admins/1" {
+		if r.URL.Path != "/api/collections/_superusers/records/1" {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
 		if r.Method != http.MethodDelete {

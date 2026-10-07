@@ -104,17 +104,8 @@ func BenchmarkUnmarshalEager(b *testing.B) {
 func TestRecordUnmarshalInvalidExpand(t *testing.T) {
 	data := []byte(`{"id":"1","collectionId":"col","collectionName":"names","expand":"bad","foo":"bar"}`)
 	var r Record
-	if err := json.Unmarshal(data, &r); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if r.ID != "1" {
-		t.Fatalf("id mismatch: %s", r.ID)
-	}
-	if r.Expand != nil {
-		t.Fatalf("expected nil expand: %#v", r.Expand)
-	}
-	if r.GetString("foo") != "bar" {
-		t.Fatalf("unexpected data: %#v", r.deserializedData)
+	if err := json.Unmarshal(data, &r); err == nil {
+		t.Fatal("expected invalid expand error")
 	}
 }
 

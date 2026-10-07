@@ -31,20 +31,20 @@ import (
 
 // Post represents a record from the 'posts' collection
 type Post struct {
-	ID             string             `json:"id"`
-	CollectionID   string             `json:"collectionId"`
-	CollectionName string             `json:"collectionName"`
+	ID             string              `json:"id"`
+	CollectionID   string              `json:"collectionId"`
+	CollectionName string              `json:"collectionName"`
 	Created        pocketbase.DateTime `json:"created"`
 	Updated        pocketbase.DateTime `json:"updated"`
-	Title          string             `json:"title"`
-	Content        *string            `json:"content,omitempty"`
-	Published      bool               `json:"published"`
-	ViewCount      float64            `json:"view_count"`
-	Author         string             `json:"author"`
-	Tags           []string           `json:"tags"`
+	Title          string              `json:"title"`
+	Content        *string             `json:"content,omitempty"`
+	Published      bool                `json:"published"`
+	ViewCount      float64             `json:"view_count"`
+	Author         string              `json:"author"`
+	Tags           []string            `json:"tags"`
 }
 
-func (p *Post) GetID() string                { return p.ID }
+func (p *Post) GetID() string                 { return p.ID }
 func (p *Post) GetCollectionName() string     { return p.CollectionName }
 func (p *Post) SetID(id string)               { p.ID = id }
 func (p *Post) SetCollectionID(id string)     { p.CollectionID = id }
@@ -75,18 +75,18 @@ func (p *Post) ToMap() map[string]any {
 
 // Author represents a record from the 'authors' collection
 type Author struct {
-	ID             string             `json:"id"`
-	CollectionID   string             `json:"collectionId"`
-	CollectionName string             `json:"collectionName"`
+	ID             string              `json:"id"`
+	CollectionID   string              `json:"collectionId"`
+	CollectionName string              `json:"collectionName"`
 	Created        pocketbase.DateTime `json:"created"`
 	Updated        pocketbase.DateTime `json:"updated"`
-	Name           string             `json:"name"`
-	Email          string             `json:"email"`
-	Bio            string             `json:"bio"`
-	Avatar         string             `json:"avatar"`
+	Name           string              `json:"name"`
+	Email          string              `json:"email"`
+	Bio            string              `json:"bio"`
+	Avatar         string              `json:"avatar"`
 }
 
-func (a *Author) GetID() string                { return a.ID }
+func (a *Author) GetID() string                 { return a.ID }
 func (a *Author) GetCollectionName() string     { return a.CollectionName }
 func (a *Author) SetID(id string)               { a.ID = id }
 func (a *Author) SetCollectionID(id string)     { a.CollectionID = id }

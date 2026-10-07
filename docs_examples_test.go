@@ -22,7 +22,7 @@ type docPost struct {
 	Published      bool     `json:"published"`
 }
 
-func (p *docPost) GetID() string                { return p.ID }
+func (p *docPost) GetID() string                 { return p.ID }
 func (p *docPost) GetCollectionName() string     { return p.CollectionName }
 func (p *docPost) SetID(id string)               { p.ID = id }
 func (p *docPost) SetCollectionID(id string)     { p.CollectionID = id }

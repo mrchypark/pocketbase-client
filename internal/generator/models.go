@@ -42,6 +42,7 @@ type FieldData struct {
 	OmitEmpty bool   // Whether to add omitempty tag for optional fields
 	IsPointer bool   // Whether this field is a pointer type (for ValueOr method generation)
 	BaseType  string // Base type without pointer (e.g., 'string' for '*string')
+	ReadOnly  bool   // Decode server-managed fields without including them in writes.
 }
 
 // EnumData represents data for generating enum constants from select fields.

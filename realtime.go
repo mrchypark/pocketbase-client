@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"sync"
 	"time"
 
 	"github.com/goccy/go-json"
@@ -53,29 +54,43 @@ func (s *RealtimeService) Subscribe(ctx context.Context, topics []string, callba
 	conn := sseClient.NewConnection(req)
 
 	connectErrChan := make(chan error, 1)
+	var initialConnect sync.Once
+	reportConnect := func(err error) {
+		initial := false
+		initialConnect.Do(func() {
+			initial = true
+			select {
+			case connectErrChan <- err:
+			case <-subCtx.Done():
+			}
+		})
+		if !initial && err != nil && subCtx.Err() == nil {
+			callback(nil, err)
+		}
+	}
 
 	// Register event handler
 	conn.SubscribeToAll(func(event sse.Event) {
-		// --- Initial Connection Handling ---
+		// Register subscriptions again for each new server connection.
 		if event.Type == "PB_CONNECT" {
 			var connectEvent struct {
 				ClientID string `json:"clientId"`
 			}
 			if err := json.Unmarshal([]byte(event.Data), &connectEvent); err != nil {
-				connectErrChan <- fmt.Errorf("pocketbase: failed to unmarshal PB_CONNECT event: %w", err)
+				reportConnect(fmt.Errorf("pocketbase: failed to unmarshal PB_CONNECT event: %w", err))
 				return
 			}
 			if connectEvent.ClientID == "" {
-				connectErrChan <- fmt.Errorf("pocketbase: PB_CONNECT event missing clientId")
+				reportConnect(fmt.Errorf("pocketbase: PB_CONNECT event missing clientId"))
 				return
 			}
 
 			// Send subscription request using the main client's send method
 			body := map[string]any{"clientId": connectEvent.ClientID, "subscriptions": topics}
 			if err := s.Client.send(subCtx, http.MethodPost, path, body, nil); err != nil {
-				connectErrChan <- fmt.Errorf("pocketbase: failed to send subscription request: %w", err)
+				reportConnect(fmt.Errorf("pocketbase: failed to send subscription request: %w", err))
 			} else {
-				connectErrChan <- nil // Success
+				reportConnect(nil)
 			}
 			return
 		}
@@ -96,7 +111,7 @@ func (s *RealtimeService) Subscribe(ctx context.Context, topics []string, callba
 	// Start connection in a separate goroutine.
 	go func() {
 		// Connect() blocks until the connection is closed.
-		if err := conn.Connect(); err != nil && !errors.Is(err, context.Canceled) {
+		if err := conn.Connect(); err != nil && subCtx.Err() == nil && !errors.Is(err, context.Canceled) {
 			callback(nil, fmt.Errorf("pocketbase: sse subscription failed: %w", err))
 		}
 	}()

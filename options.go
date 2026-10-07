@@ -9,10 +9,14 @@ import (
 // ClientOption configures a Client instance.
 type ClientOption func(*Client)
 
-// WithHTTPClient sets the HTTP client used for requests.
+// WithHTTPClient uses a shallow copy of hc, sharing its transport and settings.
+// Authentication wrapping does not modify the supplied client.
 func WithHTTPClient(hc *http.Client) ClientOption {
 	return func(c *Client) {
-		c.HTTPClient = hc
+		if hc != nil {
+			copied := *hc
+			c.HTTPClient = &copied
+		}
 	}
 }
 

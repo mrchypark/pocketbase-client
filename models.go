@@ -1,6 +1,7 @@
 package pocketbase
 
 import (
+	"fmt"
 	"maps"
 	"net/url"
 
@@ -142,9 +143,39 @@ func (r *Record) UnmarshalJSON(data []byte) error {
 	if raw, ok := allData["collectionName"]; ok {
 		_ = json.Unmarshal(raw, &r.CollectionName)
 	}
-	// Also handle Expand field.
+	// Normalize single and multiple relations to the public slice representation.
+	r.Expand = nil
 	if raw, ok := allData["expand"]; ok {
-		_ = json.Unmarshal(raw, &r.Expand)
+		var expanded map[string]json.RawMessage
+		if err := json.Unmarshal(raw, &expanded); err != nil {
+			return fmt.Errorf("pocketbase: decode expand: %w", err)
+		}
+		if expanded != nil {
+			r.Expand = make(map[string][]*Record, len(expanded))
+		}
+		for name, value := range expanded {
+			var records []*Record
+			switch value[0] {
+			case '{':
+				var record Record
+				if err := json.Unmarshal(value, &record); err != nil {
+					return fmt.Errorf("pocketbase: decode expand %q: %w", name, err)
+				}
+				records = []*Record{&record}
+			case '[':
+				if err := json.Unmarshal(value, &records); err != nil {
+					return fmt.Errorf("pocketbase: decode expand %q: %w", name, err)
+				}
+				for _, record := range records {
+					if record == nil {
+						return fmt.Errorf("pocketbase: decode expand %q: expected record object", name)
+					}
+				}
+			default:
+				return fmt.Errorf("pocketbase: decode expand %q: expected record object or array", name)
+			}
+			r.Expand[name] = records
+		}
 	}
 
 	delete(allData, "id")

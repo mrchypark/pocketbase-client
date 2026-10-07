@@ -1,13 +1,9 @@
 package pocketbase
 
-import (
-	"context"
-	"fmt"
-	"net/http"
-	"net/url"
-)
+import "context"
 
 // AdminServiceAPI defines the API operations for admin accounts.
+// Deprecated: use Records with the _superusers collection.
 type AdminServiceAPI interface {
 	GetList(ctx context.Context, opts *ListOptions) (*ListResult, error)
 	GetOne(ctx context.Context, adminID string) (*Admin, error)
@@ -16,64 +12,40 @@ type AdminServiceAPI interface {
 	Delete(ctx context.Context, adminID string) error
 }
 
-// AdminService provides API for managing admin accounts.
-type AdminService struct {
-	Client *Client
-}
+// AdminService provides API for managing superuser accounts.
+// Deprecated: use Records with the _superusers collection.
+type AdminService struct{ Client *Client }
 
 var _ AdminServiceAPI = (*AdminService)(nil)
 
-// GetList retrieves a list of administrators.
-// ListOptions can be used to specify page numbers, etc.
 func (s *AdminService) GetList(ctx context.Context, opts *ListOptions) (*ListResult, error) {
-	path := "/api/admins"
-	q := url.Values{}
-	applyListOptions(q, opts)
-	if qs := q.Encode(); qs != "" {
-		path += "?" + qs
-	}
-	var res ListResult
-	if err := s.Client.send(ctx, http.MethodGet, path, nil, &res); err != nil {
-		return nil, err
-	}
-	return &res, nil
+	return s.Client.Records.GetList(ctx, "_superusers", opts)
 }
 
-// GetOne retrieves a single administrator.
 func (s *AdminService) GetOne(ctx context.Context, adminID string) (*Admin, error) {
-	path := fmt.Sprintf("/api/admins/%s", url.PathEscape(adminID))
-	var adm Admin
-	if err := s.Client.send(ctx, http.MethodGet, path, nil, &adm); err != nil {
-		return nil, err
-	}
-	return &adm, nil
+	record, err := s.Client.Records.GetOne(ctx, "_superusers", adminID, nil)
+	return adminFromRecord(record, err)
 }
 
-// Create creates a new administrator.
 func (s *AdminService) Create(ctx context.Context, body any) (*Admin, error) {
-	path := "/api/admins"
-	var adm Admin
-	if err := s.Client.send(ctx, http.MethodPost, path, body, &adm); err != nil {
-		return nil, err
-	}
-	return &adm, nil
+	record, err := s.Client.Records.Create(ctx, "_superusers", body)
+	return adminFromRecord(record, err)
 }
 
-// Update modifies administrator information.
 func (s *AdminService) Update(ctx context.Context, adminID string, body any) (*Admin, error) {
-	path := fmt.Sprintf("/api/admins/%s", url.PathEscape(adminID))
-	var adm Admin
-	if err := s.Client.send(ctx, http.MethodPatch, path, body, &adm); err != nil {
-		return nil, err
-	}
-	return &adm, nil
+	record, err := s.Client.Records.Update(ctx, "_superusers", adminID, body)
+	return adminFromRecord(record, err)
 }
 
-// Delete deletes an administrator.
 func (s *AdminService) Delete(ctx context.Context, adminID string) error {
-	path := fmt.Sprintf("/api/admins/%s", url.PathEscape(adminID))
-	if err := s.Client.send(ctx, http.MethodDelete, path, nil, nil); err != nil {
-		return err
+	return s.Client.Records.Delete(ctx, "_superusers", adminID)
+}
+
+func adminFromRecord(record *Record, err error) (*Admin, error) {
+	if err != nil {
+		return nil, err
 	}
-	return nil
+	return &Admin{ID: record.ID, CollectionID: record.CollectionID,
+		CollectionName: record.CollectionName, Email: record.GetString("email"),
+		Avatar: int(record.GetFloat("avatar"))}, nil
 }

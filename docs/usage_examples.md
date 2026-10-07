@@ -15,7 +15,7 @@ auth, err := client.WithAdminPassword(ctx, "admin@example.com", "secret123")
 if err != nil {
     log.Fatal(err)
 }
-fmt.Printf("Logged in as admin: %s\n", auth.Admin.Id)
+fmt.Printf("Logged in as superuser: %s\n", auth.Record.ID)
 ```
 
 ### 2. User Authentication (Password)

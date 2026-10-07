@@ -226,6 +226,7 @@ func (m *{{$collection.StructName}}) Set{{.GoName}}(v {{.GoType}}) { m.{{.GoName
 func (m *{{$collection.StructName}}) ToMap() map[string]any {
 	data := make(map[string]any)
 	{{- range .Fields}}
+	{{- if not .ReadOnly}}
 	{{- if .OmitEmpty}}
 	{{- if .IsPointer}}
 	if m.{{.GoName}} != nil {
@@ -254,6 +255,7 @@ func (m *{{$collection.StructName}}) ToMap() map[string]any {
 	{{- end}}
 	{{- else}}
 	data["{{.JSONName}}"] = m.{{.GoName}}
+	{{- end}}
 	{{- end}}
 	{{- end}}
 	return data

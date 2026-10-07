@@ -21,11 +21,15 @@ func (g *RelationGenerator) GenerateRelationTypes(collections []CollectionData, 
 	}
 
 	relationTypes := make([]RelationTypeData, 0, estimatedRelations)
-	seenRelations := make(map[string]bool) // 중복 제거를 위한 맵
+	seenRelations := make(map[string]int) // Type name -> generated helper index.
 
 	// 성능 최적화: 스키마를 맵으로 변환하여 O(1) 조회
 	schemaMap := make(map[string]CollectionSchema, len(schemas))
 	collectionIDMap := make(map[string]string, len(schemas)) // ID -> Name 매핑
+	generated := make(map[string]bool, len(collections))
+	for _, collection := range collections {
+		generated[collection.CollectionName] = true
+	}
 	for _, schema := range schemas {
 		schemaMap[schema.Name] = schema
 		if schema.ID != "" {
@@ -40,18 +44,20 @@ func (g *RelationGenerator) GenerateRelationTypes(collections []CollectionData, 
 		}
 
 		for _, field := range schema.Fields {
-			if field.System || field.Type != "relation" {
+			if field.System || field.Hidden || field.Type != "relation" {
 				continue
 			}
 
 			// 성능 최적화: 직접 relation 정보 추출
 			if field.Options != nil && field.Options.CollectionID != "" {
 				targetCollection, exists := collectionIDMap[field.Options.CollectionID]
-				if exists {
+				if exists && generated[targetCollection] {
 					relationType := g.generateRelationTypeDataOptimized(field, collection.CollectionName, targetCollection)
 					// 중복 제거: 같은 타입명이 이미 존재하는지 확인
-					if !seenRelations[relationType.TypeName] {
-						seenRelations[relationType.TypeName] = true
+					if index, seen := seenRelations[relationType.TypeName]; seen {
+						relationTypes[index].IsMulti = relationTypes[index].IsMulti || relationType.IsMulti
+					} else {
+						seenRelations[relationType.TypeName] = len(relationTypes)
 						relationTypes = append(relationTypes, relationType)
 					}
 				}

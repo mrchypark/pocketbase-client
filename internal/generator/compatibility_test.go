@@ -245,12 +245,11 @@ func TestSystemCollectionFiltering(t *testing.T) {
 
 	templateData := BuildTemplateData(schemas, "models")
 
-	// 현재 구현에서는 _superusers만 제외되므로 3개 컬렉션이 포함됨
-	if len(templateData.Collections) != 3 {
-		t.Errorf("예상 컬렉션 수: 3, 실제: %d", len(templateData.Collections))
+	if len(templateData.Collections) != 2 {
+		t.Errorf("예상 컬렉션 수: 2, 실제: %d", len(templateData.Collections))
 	}
 
-	expectedNames := []string{"users", "_pb_users_auth_", "posts"}
+	expectedNames := []string{"users", "posts"}
 	for i, expected := range expectedNames {
 		if i >= len(templateData.Collections) {
 			t.Fatalf("컬렉션 인덱스 %d가 범위를 벗어났습니다", i)

@@ -12,8 +12,8 @@ func TestWithHTTPClient(t *testing.T) {
 
 	WithHTTPClient(hc)(c)
 
-	if c.HTTPClient != hc {
-		t.Errorf("WithHTTPClient did not set the HTTP client correctly")
+	if c.HTTPClient == hc || c.HTTPClient.Transport != hc.Transport || c.HTTPClient.Timeout != hc.Timeout || c.HTTPClient.Jar != hc.Jar {
+		t.Errorf("WithHTTPClient must copy the HTTP client settings")
 	}
 }
 
